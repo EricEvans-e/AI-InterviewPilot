@@ -1,0 +1,36 @@
+package com.interviewpilot.interview.service;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.interviewpilot.interview.api.io.req.InterviewConversationPageReqDTO;
+import com.interviewpilot.interview.api.io.req.InterviewFromBankReqDTO;
+import com.interviewpilot.interview.api.io.resp.InterviewConversationRespDTO;
+import com.interviewpilot.interview.api.io.resp.InterviewSessionCreateRespDTO;
+import com.interviewpilot.interview.dao.entity.InterviewSession;
+
+public interface InterviewSessionService {
+
+    InterviewSessionCreateRespDTO createSession(Long userId);
+
+    /**
+     * 从题库创建面试会话
+     */
+    InterviewSessionCreateRespDTO createFromBank(Long userId, InterviewFromBankReqDTO req);
+
+    IPage<InterviewConversationRespDTO> pageConversations(Long userId, InterviewConversationPageReqDTO requestParam);
+
+    InterviewSession getBySessionId(String sessionId);
+
+    InterviewSession requireOwnedSession(String sessionId, Long userId);
+
+    void markResumeUploading(String sessionId, Long userId);
+
+    void markReady(String sessionId, Long userId, String resumeFileUrl, String interviewType);
+
+    void markDraft(String sessionId, Long userId);
+
+    void markInProgressIfReady(String sessionId, Long userId);
+
+    void finishSession(String sessionId, Long userId);
+
+    void abandonActiveSessions(Long userId);
+}

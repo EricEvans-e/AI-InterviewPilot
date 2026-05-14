@@ -1,0 +1,10 @@
+package com.interviewpilot.interview.dao.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.interviewpilot.interview.dao.entity.InterviewRecordDO;
+
+/**
+ * 面试记录Mapper
+ */
+public interface InterviewRecordMapper extends BaseMapper<InterviewRecordDO> {
+}
