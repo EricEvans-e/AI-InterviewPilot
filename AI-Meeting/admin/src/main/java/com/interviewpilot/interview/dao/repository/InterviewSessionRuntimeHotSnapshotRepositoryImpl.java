@@ -18,7 +18,6 @@ import java.util.Date;
  * 提供面试会话热快照字段级 Patch 的 Mongo 实现，
  * 用于通过 sessionId 对高频运行态做最小字段更新而不是整包覆盖。
  *
- * @author 程序员牛肉
  */
 @RequiredArgsConstructor
 @Repository

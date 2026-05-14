@@ -78,10 +78,15 @@ Each domain follows internal layering: `api/` (controllers) → `service/` → `
 - **MongoDB** (`interview_pilot`) — document data: conversations, messages, interview sessions, questions, runtime snapshots (hot/cold split)
 - **Redis** — Sa-Token session store, distributed locks, SingleFlight dedup, BloomFilter, interview flow state cache
 
-### AI Integration — Two Engines
+### AI Integration — Three Engines
 
-1. **Spring AI** (`UniversalAiChatHandler`) — general chat. Dynamically creates `ChatClient` per `aiType` (DeepSeek uses `DeepSeekChatModel`, others use `OpenAiChatModel` via OpenAI-compatible protocol). Supports streaming with `reasoning_content` extraction.
-2. **讯飞星辰 Workflow Agents** — interview-specific. 5 agent scenarios defined in `BusinessAgentScene`: question extraction, answer evaluation, demeanor analysis, question asking, general agent chat. Config stored in `agent_properties` table.
+1. **Spring AI** (`UniversalAiChatHandler`) — general chat for OpenAI-compatible providers. Dynamically creates `ChatClient` per `aiType` (DeepSeek uses `DeepSeekChatModel`, others use `OpenAiChatModel`). Supports streaming with `reasoning_content` extraction.
+2. **Mimo / Anthropic** (`MimoChatHandler`) — Anthropic Messages API protocol. Separate handler because request/response format differs from OpenAI (SSE event chain: `message_start` → `content_block_delta` → `message_stop`). Supports `thinking` (extended reasoning) for `mimo-v2.5-pro`/`v2-pro` models. Auth via `x-api-key` header.
+3. **讯飞星辰 Workflow Agents** — interview-specific. 5 agent scenarios defined in `BusinessAgentScene`: question extraction, answer evaluation, demeanor analysis, question asking, general agent chat. Config stored in `agent_properties` table. Also supports **Mimo** as alternative provider via `ai_provider` field — `InterviewAiInvoker.doChat()` routes to `MimoChatHandler.callSync()` when `ai_provider=mimo`, using `MimoPromptBuilder` to convert structured parameters to text prompts.
+
+**AI Handler routing**: `AiChatHandlerFactory` dispatches by `aiType` string. `mimo` → `MimoChatHandler`; all other supported types → `UniversalAiChatHandler`. Both implement `AiChatHandler` interface (`streamToSink` + `callSync`). Model config stored in `ai_properties` table.
+
+> 详细的模型配置与使用说明见 [`docs/ai-model-configuration.md`](docs/ai-model-configuration.md)。
 
 ### Interview Flow State Machine
 
@@ -112,12 +117,23 @@ All APIs prefixed: `/api/ip/v1/`
 
 | Frontend Service | Backend Controller | Protocol |
 |-----------------|-------------------|----------|
-| `authService` | `UserController` | REST |
+| `authService` | `UserController` | REST (login returns `{ token, username, role }`) |
 | `aiService` | `AiMessageController` | SSE (POST) |
 | `agentService` | `AgentController` | SSE (POST) |
 | `interviewService` | `InterviewSessionController` | REST |
 | `xunfeiTtsService` | `XunfeiTtsController` | REST |
 | `AudioToTextWebSocket` | `AudioTranscriptionWebSocketHandler` | WebSocket |
+
+## Auth & Role System
+
+Single source of truth for user roles: `t_user.role` column (`student` / `teacher` / `admin`).
+
+- `StpInterfaceImpl` (Sa-Token) reads `t_user.role` for both `getRoleList()` and `getPermissionList()`.
+- Login/checkLogin/phoneLogin endpoints return `role` field in response. Frontend `RoleGuard` uses this for route protection.
+- Legacy `admin_permission` table is deprecated — do not add new logic depending on it.
+- Admin panel (`/admin`) requires `role=admin`. Backend `pageUsers` and `addAdmin` endpoints are guarded by `@SaCheckRole("admin")`.
+- Default admin account: username `admin`, password `admin` (defined in `admin/src/main/resources/sql/t_user.sql`). Passwords are stored in plain text.
+- Initial SQL: `t_user.sql` contains the single admin user; `admin_permission.sql` is cleared (deprecated).
 
 ## Key Domain Constraints (Interview)
 
@@ -135,7 +151,7 @@ The `AI-Meeting/skills/` directory contains Claude Code domain knowledge skills.
 
 - `interview-pilot-repo-map` — route requirements to the correct domain
 - `interview-pilot-interview-domain` — interview flow, state machine, answer pipeline, scoring
-- `interview-pilot-domain` — 讯飞 Agent integration
+- `interview-pilot-agent-domain` — 讯飞 Agent integration
 - `interview-pilot-ai-runtime` — rate limiting, circuit breaking, SingleFlight, thread pools
 - `interview-pilot-media-domain` — ASR, TTS, WebSocket
 - `interview-pilot-auth-user` — authentication, permissions

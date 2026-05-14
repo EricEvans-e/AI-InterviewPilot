@@ -15,7 +15,6 @@ import java.util.Map;
  * 定义面试会话运行态快照持久化实体，
  * 用于保存会话恢复所需的题目、流程、得分聚合、追问和最近轮次等关键状态。
  *
- * @author 程序员牛肉
  */
 @Data
 public class InterviewSessionRuntimeSnapshot {

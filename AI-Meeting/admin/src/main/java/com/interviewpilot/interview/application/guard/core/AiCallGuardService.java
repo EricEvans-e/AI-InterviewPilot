@@ -33,7 +33,16 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Unified AI guard service with timeout/circuit-breaker/bulkhead/retry.
+ * AI 调用统一保护服务
+ * 所有 AI 调用（评分、追问、出题、神态分析）都经过此服务保护
+ *
+ * 4 层保护机制（执行顺序）：
+ * 1. CircuitBreaker（熔断器）— 失败率 > 50% 时熔断，30秒后半开探测
+ * 2. Bulkhead（限流器）— 每阶段最多 N 个并发调用
+ * 3. Retry（重试）— 超时或IO异常自动重试
+ * 4. TimeLimiter（超时）— 每阶段独立超时控制
+ *
+ * 错误分类：AI_TIMEOUT / AI_OVERLOADED / AI_UNAVAILABLE
  */
 @Service
 @Slf4j

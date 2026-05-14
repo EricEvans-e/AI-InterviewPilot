@@ -4,7 +4,6 @@ import lombok.Data;
 
 /**
  * AI会话创建响应DTO
- * @author nageoffer
  */
 @Data
 public class AiSessionCreateRespDTO {

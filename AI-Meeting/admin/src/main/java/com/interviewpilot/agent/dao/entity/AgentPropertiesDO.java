@@ -33,9 +33,14 @@ public class AgentPropertiesDO {
     private String apiKey;
 
     /**
-     * 工作流id
+     * 工作流id（xingchen 模式）或 API URL（mimo 模式）
      */
     private String apiFlowId;
+
+    /**
+     * AI 提供商标识: xingchen（默认）, mimo
+     */
+    private String aiProvider;
 
     /**
      * 创建时间

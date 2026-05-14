@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
  * 定义面试热快照合并写与防抖刷新的配置参数，
  * 用于控制防抖窗口、最大聚合窗口、强制刷新等待时长和失败重试节奏。
  *
- * @author 程序员牛肉
  */
 @Data
 @Component

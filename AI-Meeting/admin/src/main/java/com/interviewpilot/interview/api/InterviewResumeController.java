@@ -21,6 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * 简历预览控制器
+ * 提供在线预览简历 PDF 文件的接口，支持浏览器内嵌展示
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/ip/v1/interview")
@@ -29,6 +33,15 @@ public class InterviewResumeController {
 
     private final InterviewSessionFacade interviewSessionFacade;
 
+    /**
+     * 在线预览简历 PDF
+     * 直接返回 PDF 二进制流，浏览器可内嵌展示（Content-Disposition: inline）
+     * 设置了 no-cache 避免浏览器缓存旧版本简历
+     *
+     * @param sessionId   面试会话ID
+     * @param currentUser 当前登录用户（用于校验数据归属）
+     * @return PDF 文件字节流，或错误信息文本
+     */
     @GetMapping(value = "/sessions/{sessionId}/resume/preview", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> previewResume(
             @PathVariable String sessionId,

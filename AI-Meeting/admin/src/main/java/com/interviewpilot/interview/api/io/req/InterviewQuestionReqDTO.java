@@ -5,7 +5,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 面试题抽取请求DTO
- * @author system
  */
 @Data
 public class InterviewQuestionReqDTO {

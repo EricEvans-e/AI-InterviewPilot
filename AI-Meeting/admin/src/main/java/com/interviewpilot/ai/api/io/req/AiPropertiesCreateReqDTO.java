@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 
 /**
  * AI配置创建请求DTO
- * @author nageoffer
  */
 @Data
 public class AiPropertiesCreateReqDTO {

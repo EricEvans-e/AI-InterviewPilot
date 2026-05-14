@@ -7,7 +7,6 @@ import java.util.Date;
 
 /**
  * AI会话响应DTO
- * @author nageoffer
  */
 @Data
 public class AiConversationRespDTO {

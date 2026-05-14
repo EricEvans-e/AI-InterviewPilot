@@ -12,5 +12,12 @@ public interface AiChatHandler {
 
     void streamToSink(AiPropertiesDO aiProperties, String userMessage, List<AiMessageHistoryRespDTO> historyMessages,
                       FluxSink<String> sink, AIContentAccumulator accumulator) throws Exception;
+
+    /**
+     * 同步调用 AI（非流式）
+     */
+    default String callSync(AiPropertiesDO aiProperties, String userMessage) {
+        throw new UnsupportedOperationException("该 AI Handler 不支持同步调用");
+    }
 }
 

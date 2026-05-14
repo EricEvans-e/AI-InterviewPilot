@@ -11,7 +11,6 @@ import java.util.Map;
  * 定义面试会话低频材料的增量更新载体，
  * 用于按字段 Patch 冷快照中的题目、简历上下文和评分材料信息。
  *
- * @author 程序员牛肉
  */
 @Data
 @Builder

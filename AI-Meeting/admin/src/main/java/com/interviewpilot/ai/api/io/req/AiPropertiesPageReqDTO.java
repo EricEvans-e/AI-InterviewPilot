@@ -6,7 +6,6 @@ import lombok.Data;
 
 /**
  * AI配置分页查询请求DTO
- * @author nageoffer
  */
 @Data
 public class AiPropertiesPageReqDTO extends Page<AiPropertiesDO> {

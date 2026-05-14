@@ -14,7 +14,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * REST endpoints for websocket status checks and server-side push.
+ * WebSocket 管理控制器
+ * 提供 WebSocket 连接状态查询和服务端主动推送消息的 REST 接口
+ * 主要用于实时语音识别（ASR）场景，服务端将识别结果推送给前端
  */
 @RestController
 @RequestMapping("/api/ip/v1/websocket")
@@ -23,6 +25,9 @@ public class WebSocketController {
 
     private final WebSocketMessageService webSocketMessageService;
 
+    /**
+     * 查询用户是否在线（WebSocket 是否已连接）
+     */
     @GetMapping("/user/{userId}/status")
     public ResponseEntity<Map<String, Object>> checkUserStatus(@PathVariable String userId) {
         boolean isOnline = webSocketMessageService.isUserOnline(userId);
@@ -32,6 +37,9 @@ public class WebSocketController {
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * 向指定用户推送消息（通用）
+     */
     @PostMapping("/send-message")
     public ResponseEntity<Map<String, Object>> sendMessage(
             @RequestParam String userId,
@@ -45,6 +53,9 @@ public class WebSocketController {
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * 向指定用户推送系统通知
+     */
     @PostMapping("/notification/{userId}")
     public ResponseEntity<Map<String, Object>> sendNotification(
             @PathVariable String userId,
@@ -56,6 +67,9 @@ public class WebSocketController {
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * 推送语音识别结果（ASR 中间结果或最终结果）
+     */
     @PostMapping("/transcription/{userId}")
     public ResponseEntity<Map<String, Object>> sendTranscriptionResult(
             @PathVariable String userId,
@@ -68,6 +82,9 @@ public class WebSocketController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * 向指定用户推送错误信息
+     */
     @PostMapping("/error/{userId}")
     public ResponseEntity<Map<String, Object>> sendErrorMessage(
             @PathVariable String userId,

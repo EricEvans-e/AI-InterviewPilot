@@ -8,7 +8,10 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Session-level lock used by interview finalize flow to avoid duplicate finish/save races.
+ * 面试终结锁服务
+ * 面试结束时（finishSession）加锁，防止重复触发报告生成
+ * 锁 key：interview:finalize:lock:{sessionId}
+ * 等待时间：0ms（拿不到直接失败）| 过期时间：120秒（自动释放防死锁）
  */
 @Service
 public class InterviewFinalizeLockService {

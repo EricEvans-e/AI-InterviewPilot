@@ -11,10 +11,16 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 面试流程状态机
+ * 控制面试流程的状态转换，保证只允许合法的状态跳转
+ * 状态存储在 Redis 中（通过 InterviewQuestionCacheService）
+ */
 @Component
 @RequiredArgsConstructor
 public class InterviewFlowStateMachine {
 
+    /** 合法状态转换表：key=当前状态，value=允许跳转的目标状态集合 */
     private static final Map<InterviewFlowStatus, Set<InterviewFlowStatus>> LEGAL_TRANSITIONS = new EnumMap<>(InterviewFlowStatus.class);
 
     static {

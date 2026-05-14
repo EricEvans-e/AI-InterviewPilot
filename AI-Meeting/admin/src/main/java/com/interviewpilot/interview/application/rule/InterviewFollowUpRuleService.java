@@ -10,7 +10,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * LiteFlow-based follow-up rule service.
+ * 追问规则引擎服务（基于 LiteFlow）
+ * 负责执行追问决策规则链，综合 AI 建议、低分检测、遗漏点检测等多维度判断是否需要追问。
+ *
+ * <p>执行流程：
+ * <ol>
+ *   <li>填充上下文（hydrateContext）— 设置默认链 ID、追问上限、低分阈值等</li>
+ *   <li>执行 LiteFlow 规则链 — 7 个节点依次执行：LoadContext → CompletedGuard → LimitGuard → AiSuggestion → LowScore → MissingPoints → Finalize</li>
+ *   <li>异常降级 — 规则引擎异常时根据 failOpen 配置决定降级为传统策略或直接抛异常</li>
+ * </ol>
+ * </p>
+ *
+ * @see InterviewFollowUpRuleContext 规则链上下文
+ * @see InterviewFollowUpRuleDecision 追问决策结果
  */
 @Service
 @RequiredArgsConstructor

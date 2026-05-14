@@ -21,7 +21,6 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.core.bean.BeanUtil;
 import jakarta.validation.Valid;
 import com.interviewpilot.auth.application.LoginSessionService;
-import com.interviewpilot.auth.application.PermissionService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.interviewpilot.common.convention.annotation.CurrentUser;
 import com.interviewpilot.common.convention.result.Result;
@@ -53,7 +52,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * User management controller.
+ * 用户管理控制器
+ * 提供用户注册、登录（账号密码 + 手机验证码）、登出、权限管理等接口
+ * 使用 Sa-Token 进行会话管理，token 存储在 Redis 中
  */
 @RestController
 @RequestMapping("/api/ip/v1/users")
@@ -63,30 +64,45 @@ public class UserController {
     private final UserService userService;
     private final AdminPermissionService adminPermissionService;
     private final LoginSessionService loginSessionService;
-    private final PermissionService permissionService;
     private final SmsCodeService smsCodeService;
 
+    /**
+     * 根据用户名查询用户信息
+     */
     @GetMapping("/{username}")
     public Result<UserRespDTO> getUserByUsername(@PathVariable("username") String username) {
         return Results.success(userService.getUserByUsername(username));
     }
 
+    /**
+     * 查询用户详细信息（含敏感字段，仅管理员可用）
+     */
     @GetMapping("/actual/{username}")
     public Result<UserActualRespDTO> getActualUserByUsername(@PathVariable("username") String username) {
         return Results.success(BeanUtil.toBean(userService.getUserByUsername(username), UserActualRespDTO.class));
     }
 
+    /**
+     * 检查用户名是否已被注册（用于前端实时校验）
+     */
     @GetMapping("/has-username")
     public Result<Boolean> hasUsername(@RequestParam("username") String username) {
         return Results.success(userService.hasUsername(username));
     }
 
+    /**
+     * 用户注册（账号密码方式）
+     * 使用 BloomFilter + 分布式锁防止重复注册
+     */
     @PostMapping("/register")
     public Result<Void> register(@RequestBody UserRegisterReqDTO requestParam) {
         userService.register(requestParam);
         return Results.success();
     }
 
+    /**
+     * 更新用户信息
+     */
     @PutMapping
     public Result<Void> update(@RequestBody UserUpdateReqDTO requestParam,
                                @CurrentUser String currentUsername) {
@@ -94,36 +110,56 @@ public class UserController {
         return Results.success();
     }
 
+    /**
+     * 账号密码登录
+     * 登录成功返回 token，后续请求需在 Header 中携带 Authorization: Bearer {token}
+     */
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody UserLoginReqDTO requestParam) {
         userService.login(requestParam);
         loginSessionService.login(requestParam.getUsername());
 
+        UserDO user = userService.getByUsername(requestParam.getUsername());
         Map<String, Object> result = new HashMap<>();
         result.put("token", loginSessionService.getCurrentToken());
         result.put("username", requestParam.getUsername());
-        result.put("isAdmin", permissionService.isAdmin(requestParam.getUsername()));
+        result.put("role", resolveRole(user));
         return Results.success(result);
     }
 
+    /**
+     * 检查当前是否已登录（前端刷新页面时调用，恢复登录态）
+     */
     @GetMapping("/check-login")
     public Result<Map<String, Object>> checkLogin() {
         Map<String, Object> result = new HashMap<>();
         boolean isLogin = loginSessionService.isCurrentLoggedIn();
         result.put("isLogin", isLogin);
         if (isLogin) {
-            result.put("username", loginSessionService.getCurrentLoginId());
+            String username = loginSessionService.getCurrentLoginId();
+            result.put("username", username);
             result.put("token", loginSessionService.getCurrentToken());
+            UserDO user = userService.getByUsername(username);
+            result.put("role", resolveRole(user));
         }
         return Results.success(result);
     }
 
+    /**
+     * 登出（清除 Redis 中的会话）
+     */
     @PostMapping("/logout")
     public Result<Void> logout() {
         loginSessionService.logoutCurrent();
         return Results.success();
     }
 
+    /**
+     * 发送手机验证码
+     *
+     * @param phone   手机号
+     * @param bizType 业务类型（login=登录, register=注册）
+     */
     @PostMapping("/send-sms-code")
     public Result<Void> sendSmsCode(@RequestParam String phone,
                                     @RequestParam(defaultValue = "login") String bizType) {
@@ -131,6 +167,9 @@ public class UserController {
         return Results.success();
     }
 
+    /**
+     * 手机验证码登录（未注册用户自动创建账号）
+     */
     @PostMapping("/phone-login")
     public Result<Map<String, Object>> phoneLogin(@RequestBody @Valid UserPhoneLoginReqDTO req) {
         if (!smsCodeService.verifyCode(req.getPhone(), req.getCode(), "login")) {
@@ -152,23 +191,13 @@ public class UserController {
         Map<String, Object> result = new HashMap<>();
         result.put("token", loginSessionService.getCurrentToken());
         result.put("username", user.getUsername());
-        result.put("isAdmin", permissionService.isAdmin(user.getUsername()));
+        result.put("role", resolveRole(user));
         return Results.success(result);
     }
 
-    @GetMapping("/is-admin")
-    public Result<Map<String, Object>> isAdmin() {
-        Map<String, Object> result = new HashMap<>();
-        if (loginSessionService.isCurrentLoggedIn()) {
-            String username = loginSessionService.getCurrentLoginId();
-            result.put("isAdmin", permissionService.isAdmin(username));
-            result.put("username", username);
-        } else {
-            result.put("isAdmin", false);
-        }
-        return Results.success(result);
-    }
-
+    /**
+     * 设置用户为管理员（仅管理员可操作）
+     */
     @PostMapping("/admin")
     @SaCheckRole("admin")
     public Result<Void> addAdmin(@RequestBody String username) {
@@ -176,8 +205,16 @@ public class UserController {
         return Results.success();
     }
 
+    /**
+     * 分页查询用户列表（仅管理员）
+     */
     @GetMapping("/page")
+    @SaCheckRole("admin")
     public Result<IPage<UserPageRespDTO>> pageUsers(UserPageReqDTO requestParam) {
         return Results.success(userService.pageUsers(requestParam));
+    }
+
+    private String resolveRole(UserDO user) {
+        return (user != null && user.getRole() != null) ? user.getRole() : "student";
     }
 }

@@ -106,8 +106,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void register(UserRegisterReqDTO requestParam) {
+        // Bloom filter 说"已存在"时，再查数据库确认（避免误判）
         if (!hasUsername(requestParam.getUsername())) {
-            throw new ClientException(USER_NAME_EXIST);
+            UserDO existing = baseMapper.selectOne(
+                    Wrappers.lambdaQuery(UserDO.class)
+                            .eq(UserDO::getUsername, requestParam.getUsername())
+                            .eq(UserDO::getDelFlag, 0));
+            if (existing != null) {
+                throw new ClientException(USER_NAME_EXIST);
+            }
         }
         RLock lock = redissonClient.getLock(LOCK_USER_REGISTER_KEY + requestParam.getUsername());
         if (!lock.tryLock()) {
@@ -146,13 +153,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
     @Override
     public UserLoginRespDTO login(UserLoginReqDTO requestParam) {
-        LambdaQueryWrapper<UserDO> queryWrapper = Wrappers.lambdaQuery(UserDO.class)
-                .eq(UserDO::getUsername, requestParam.getUsername())
-                .eq(UserDO::getPassword, requestParam.getPassword())
-                .eq(UserDO::getDelFlag, 0);
-        UserDO userDO = baseMapper.selectOne(queryWrapper);
+        UserDO userDO = baseMapper.selectOne(
+                Wrappers.lambdaQuery(UserDO.class)
+                        .eq(UserDO::getUsername, requestParam.getUsername())
+                        .eq(UserDO::getDelFlag, 0));
         if (userDO == null) {
             throw new ClientException("user does not exist");
+        }
+        if (!userDO.getPassword().equals(requestParam.getPassword())) {
+            throw new ClientException("incorrect password");
         }
 
         Map<Object, Object> hasLoginMap = stringRedisTemplate.opsForHash().entries(USER_LOGIN_KEY + requestParam.getUsername());

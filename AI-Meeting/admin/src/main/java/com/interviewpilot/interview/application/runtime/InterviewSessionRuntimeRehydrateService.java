@@ -38,7 +38,6 @@ import java.util.concurrent.TimeUnit;
  * 提供面试会话运行态的懒恢复与缓存重建能力，
  * 用于在 Redis 运行态缺失时按需从快照、报告和主数据中恢复题目流转与得分状态。
  *
- * @author 程序员牛肉
  */
 @Service
 @Slf4j

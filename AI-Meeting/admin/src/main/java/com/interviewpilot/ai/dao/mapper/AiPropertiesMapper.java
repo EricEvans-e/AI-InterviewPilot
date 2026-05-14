@@ -6,7 +6,6 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * AI配置Mapper接口
- * @author nageoffer
  */
 @Mapper
 public interface AiPropertiesMapper extends BaseMapper<AiPropertiesDO> {

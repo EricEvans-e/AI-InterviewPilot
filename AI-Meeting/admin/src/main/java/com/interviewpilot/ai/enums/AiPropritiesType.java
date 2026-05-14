@@ -13,6 +13,7 @@ public enum AiPropritiesType {
     DOUBAO(2, "doubao", "豆包", "https://ark.cn-beijing.volces.com/api/v3"),
     SPARK(3, "spark", "讯飞星火", "https://spark-api-open.xf-yun.com/v1"),
     DEEPSEEK(4, "deepseek", "DeepSeek", "https://api.deepseek.com"),
+    MIMO(5, "mimo", "Mimo", "https://api.xiaomimimo.com/anthropic/v1"),
     OTHER(99, "other", "其他", "");
 
     private final Integer code;

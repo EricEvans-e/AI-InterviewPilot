@@ -10,7 +10,6 @@ import java.util.concurrent.ScheduledFuture;
  * 定义单个面试会话的热刷新聚合桶，
  * 用于在本地节点内暂存同一 session 的待刷新意图、定时任务句柄和刷新中状态。
  *
- * @author 程序员牛肉
  */
 @Getter
 public class InterviewSessionRuntimeHotRefreshBucket {

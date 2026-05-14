@@ -6,7 +6,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-122333}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-mainshi_agent}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci

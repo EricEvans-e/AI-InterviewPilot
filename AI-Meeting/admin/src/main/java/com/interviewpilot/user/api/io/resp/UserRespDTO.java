@@ -53,4 +53,9 @@ public class UserRespDTO {
      * 邮箱
      */
     private String mail;
+
+    /**
+     * 角色: student, teacher, admin
+     */
+    private String role;
 }

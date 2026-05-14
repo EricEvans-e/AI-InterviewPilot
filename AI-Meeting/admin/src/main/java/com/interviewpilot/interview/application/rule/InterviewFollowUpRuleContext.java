@@ -5,7 +5,24 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * Follow-up rule context used by LiteFlow nodes.
+ * 追问规则引擎上下文（LiteFlow 规则链共享数据载体）
+ * 在 LiteFlow 规则链执行过程中，各节点通过此上下文传递和读取数据，最终产出追问决策。
+ *
+ * <p>生命周期：由 InterviewFollowUpRuleService.decide() 创建并填充 → 规则链各节点读写 → 最终产出 InterviewFollowUpRuleDecision</p>
+ *
+ * <p>关键字段说明：
+ * <ul>
+ *   <li>followUpCount / maxFollowUp — 当前追问次数与上限</li>
+ *   <li>score / lowScoreThreshold — 当前得分与低分阈值</li>
+ *   <li>followUpNeededFromAi — AI 评分结果中是否建议追问</li>
+ *   <li>missingPoints / followUpQuestionHint — AI 识别的回答遗漏点与追问提示</li>
+ *   <li>terminated — 标记规则链是否已提前终止（不再执行后续节点）</li>
+ *   <li>decision — 最终追问决策输出</li>
+ * </ul>
+ * </p>
+ *
+ * @see InterviewFollowUpRuleService 规则引擎入口
+ * @see InterviewFollowUpRuleDecision 追问决策结果
  */
 @Data
 public class InterviewFollowUpRuleContext {

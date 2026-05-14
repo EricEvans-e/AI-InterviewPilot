@@ -13,7 +13,6 @@ import java.io.PipedOutputStream;
  * 支持16kHz采样率、16位深度、单声道PCM格式音频采集；
  * 基于后台线程提供非阻塞式的录音操作并输出符合语音服务要求的原始音频字节数据。
  *
- * @author kaili23
  */
 public class MicrophoneRecorderUtil {
 

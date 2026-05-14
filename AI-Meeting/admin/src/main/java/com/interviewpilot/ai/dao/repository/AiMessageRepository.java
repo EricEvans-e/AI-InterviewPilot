@@ -10,7 +10,6 @@ import java.util.List;
 
 /**
  * AI消息Repository接口
- * @author nageoffer
  */
 @Repository
 public interface AiMessageRepository extends MongoRepository<AiMessage, String> {

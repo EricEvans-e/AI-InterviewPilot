@@ -4,7 +4,6 @@ import lombok.Data;
 
 /**
  * AI会话分页查询请求DTO
- * @author nageoffer
  */
 @Data
 public class AiConversationPageReqDTO {

@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
-SCENE_FILE = ROOT / "admin" / "src" / "main" / "java" / "com" / "hewei" / "hzyjy" / "xunzhi" / "agent" / "application" / "BusinessAgentScene.java"
+SCENE_FILE = ROOT / "admin" / "src" / "main" / "java" / "com" / "interviewpilot" / "agent" / "application" / "BusinessAgentScene.java"
 APP_YAML = ROOT / "admin" / "src" / "main" / "resources" / "application.yaml"
 OUT = Path(__file__).resolve().parents[1] / "references" / "generated-agent-scene-map.md"
 PATTERN = re.compile(r'\s*([A-Z_]+)\("([^"]+)",\s*"([^"]+)"(.*)\),?')
@@ -15,7 +15,7 @@ PATTERN = re.compile(r'\s*([A-Z_]+)\("([^"]+)",\s*"([^"]+)"(.*)\),?')
 def load_bindings() -> dict[str, str]:
     with APP_YAML.open("r", encoding="utf-8") as fp:
         data = yaml.safe_load(fp) or {}
-    return (((data.get("xunzhi-agent") or {}).get("agent-binding")) or {})
+    return (((data.get("interview-pilot") or {}).get("agent-binding")) or {})
 
 
 def parse_aliases(raw_tail: str) -> list[str]:
@@ -27,7 +27,7 @@ def main() -> None:
     lines = [
         "# Agent 场景索引（自动生成）",
         "",
-        "该文档从 `BusinessAgentScene.java` 和 `application.yaml` 的 `xunzhi-agent.agent-binding` 自动提取。",
+        "该文档从 `BusinessAgentScene.java` 和 `application.yaml` 的 `interview-pilot.agent-binding` 自动提取。",
         "",
         "| 枚举名 | 场景 code | 默认名 | 别名 | 当前配置绑定 |",
         "| --- | --- | --- | --- | --- |",

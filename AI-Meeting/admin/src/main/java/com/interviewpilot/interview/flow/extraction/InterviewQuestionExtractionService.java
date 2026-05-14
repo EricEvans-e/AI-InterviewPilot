@@ -141,6 +141,11 @@ public class InterviewQuestionExtractionService {
             response.setErrorMessage("resume file does not exist");
             return null;
         }
+        // Mimo 没有文件上传 API，跳过上传，直接返回空字符串（后续走纯文本 prompt）
+        if ("mimo".equalsIgnoreCase(agentProperties.getAiProvider())) {
+            log.info("Mimo provider detected, skipping file upload for extraction");
+            return "";
+        }
         try {
             String fileUrl = xingChenAIClient.uploadFile(
                     reqDTO.getResumePdf(),

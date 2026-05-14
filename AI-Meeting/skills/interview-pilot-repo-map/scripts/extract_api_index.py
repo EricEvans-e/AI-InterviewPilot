@@ -11,7 +11,7 @@ OUT = Path(__file__).resolve().parents[1] / "references" / "generated-api-index.
 
 METHOD_RE = re.compile(r"\bpublic\b.*?\b([A-Za-z0-9_]+)\s*\(")
 STRING_RE = re.compile(r'"([^"]+)"')
-PACKAGE_RE = re.compile(r"xunzhi/([^/]+)/")
+PACKAGE_RE = re.compile(r"interviewpilot/([^/]+)/")
 
 
 def parse_path(annotation: str | None) -> str:

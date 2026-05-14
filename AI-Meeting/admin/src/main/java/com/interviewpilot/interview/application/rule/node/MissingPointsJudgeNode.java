@@ -6,6 +6,11 @@ import com.interviewpilot.interview.application.rule.InterviewFollowUpRuleContex
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.core.NodeComponent;
 
+/**
+ * LiteFlow 规则链节点：遗漏点追问判断
+ * 检查 AI 是否识别到回答中的遗漏关键点（missingPoints）或追问提示（followUpQuestionHint），
+ * 若存在则标记需要追问（MISSING_POINTS）。
+ */
 @LiteflowComponent("missingPointsJudge")
 public class MissingPointsJudgeNode extends NodeComponent {
 

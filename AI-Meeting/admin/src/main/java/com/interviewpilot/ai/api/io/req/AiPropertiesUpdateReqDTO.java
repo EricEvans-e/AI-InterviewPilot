@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 
 /**
  * AI配置更新请求DTO
- * @author nageoffer
  */
 @Data
 public class AiPropertiesUpdateReqDTO {

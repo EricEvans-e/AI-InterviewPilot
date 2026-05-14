@@ -10,7 +10,10 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Session-level lock for heavy AI operations.
+ * 面试会话级 AI 操作分布式锁
+ * 同一个面试会话的重操作（如出题、生成报告）需要加锁，防止并发
+ * 锁 key：interview:ai:heavy:lock:{stage}:{sessionId}
+ * 等待时间：0ms（拿不到直接失败）| 过期时间：45秒（自动释放防死锁）
  */
 @Service
 @RequiredArgsConstructor

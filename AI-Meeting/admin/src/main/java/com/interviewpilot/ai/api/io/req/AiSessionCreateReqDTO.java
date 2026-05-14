@@ -3,7 +3,6 @@ package com.interviewpilot.ai.api.io.req;
 import lombok.Data;
 /**
  * AI会话创建请求DTO
- * @author nageoffer
  */
 @Data
 public class AiSessionCreateReqDTO {

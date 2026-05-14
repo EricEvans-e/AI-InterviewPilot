@@ -6,7 +6,8 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
 import com.interviewpilot.ai.service.AiPropertiesService;
-import com.interviewpilot.ai.service.chat.UniversalAiChatHandler;
+import com.interviewpilot.ai.service.chat.AiChatHandler;
+import com.interviewpilot.ai.service.chat.AiChatHandlerFactory;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.questionbank.api.io.req.QuestionGenerateReqDTO;
 import com.interviewpilot.questionbank.dao.entity.QuestionDO;
@@ -25,7 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class QuestionAiGenerateService {
 
-    private final UniversalAiChatHandler universalAiChatHandler;
+    private final AiChatHandlerFactory aiChatHandlerFactory;
     private final AiPropertiesService aiPropertiesService;
 
     /**
@@ -108,7 +109,11 @@ public class QuestionAiGenerateService {
         }
 
         try {
-            String response = universalAiChatHandler.callSync(aiProperties, prompt);
+            AiChatHandler handler = aiChatHandlerFactory.getHandler(aiProperties.getAiType());
+            if (handler == null) {
+                throw new ClientException("不支持的 AI 类型: " + aiProperties.getAiType());
+            }
+            String response = handler.callSync(aiProperties, prompt);
             if (StrUtil.isBlank(response)) {
                 throw new ClientException("AI 返回为空，请稍后重试");
             }

@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
  * Redisson配置类
  * 如果项目中还没有RedissonClient Bean，则使用此配置
  * 
- * @author nageoffer
  */
 @Configuration
 public class RedissonConfig {

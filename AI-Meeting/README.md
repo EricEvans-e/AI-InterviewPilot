@@ -12,8 +12,6 @@
 
 </div>
 
-![项目概览](docs/assets/首页登陆.png)
-
 这是一个基于 Spring Boot 3 + Java 17 + Spring AI + MySQL + MongoDB + Redis 构建的 AI 智能助手后端项目，聚焦 AI 对话、智能体会话、模拟面试、实时语音转写和长文本语音合成等场景。项目采用模块化单体架构，支持 HTTP、SSE、WebSocket 多链路交互，兼顾业务完整性、工程规范性和开箱即用性。
 
 演示视频：[Bilibili 项目展示]( https://www.bilibili.com/video/BV1ccR9B9EEm/?share_source=copy_web&vd_source=2147a1677cc5a940112d07c6f03c4bc9)
@@ -32,8 +30,7 @@
 
 如果需要领取文档，请添加我的微信：JavaAndGo8888，又或者是我朋友的微信：hqy2004hw 领取对应的飞书文档
 
-## 系统架构：
-![系统架构图](docs/assets/项目架构图.svg)
+## 系统架构
 
 ## 功能特性
 
@@ -49,7 +46,7 @@
 
 ### AI 对话模块
 
-- **多模型统一接入**：基于 Spring AI 封装 `UniversalAiChatHandler`，通过 OpenAI 兼容协议统一接入 DeepSeek、星火、豆包等模型，运行时可切换。
+- **多模型统一接入**：基于 `AiChatHandlerFactory` 策略路由，`UniversalAiChatHandler`（Spring AI，OpenAI 兼容协议）接入 DeepSeek、星火、豆包等模型，`MimoChatHandler`（Anthropic Messages API）接入 Mimo 系列模型，运行时可切换。
 - **SSE 流式响应**：基于 WebFlux Flux + SSE 实现打字机式流式输出，支持 DeepSeek `reasoning_content` 思维链展示。
 - **会话管理**：支持创建、分页查询、结束、删除对话，消息持久化至 MongoDB，支持历史消息回溯。
 
@@ -79,12 +76,6 @@
 4. 设计并优化基于 WebSocket + Xunfei AST 的实时 ASR 链路，实现分段增量去重，解决重复文本等问题，借鉴 NIO Buffer 的异步缓冲思想设计会话级 TranscriptionSessionContext，实现音频接收与下游推流解耦，并基于 TreeMap + seg_id/pgs/rg/bg/ed 完成分段增量去重与有序重建，解决重复文本、前缀误删和结果抖动问题
 5. 设计并推动面向 AI Coding 的 Skill 业务知识体系，将分散、过时、不可持续维护的传统文档升级为可被 Code Agent 直接消费的模块化业务知识单元，解决复杂业务开发中的知识断层与隐性规则丢失问题。
 
-## 文档展示
-
-![文档首页截图](docs/assets/文档首页截图.png)
-![文档部分截图](docs/assets/文档截图.png)
-![文档部分截图](docs/assets/文档截图2.png)
-
 ## 技术栈
 
 ### 后端技术
@@ -93,7 +84,7 @@
 | --- | --- | --- |
 | Java | 17 | 开发语言 |
 | Spring Boot | 3.4.4 | 应用框架 |
-| Spring AI | 1.0.0 | AI 集成框架，统一多模型接入（DeepSeek / 星辰） |
+| Spring AI | 1.0.0 | AI 集成框架，统一多模型接入（DeepSeek / 星火 / 豆包 / Mimo） |
 | MyBatis-Plus | 3.5.9 | ORM 持久层框架 |
 | MySQL | 8.0 | 关系型数据库 |
 | MongoDB | 6.x | 文档数据库，存储运行态快照与对话消息 |
@@ -159,38 +150,7 @@
 
 ### 简历与面试
 
-首页登录：
-
-![首页登录](docs/assets/首页登陆.png)
-
-上传简历：
-
-![上传简历](docs/assets/上传简历.png)
-
-在线解析并出题：
-
-![在线解析并出题](docs/assets/在线解析并出题.png)
-
-面试入口：
-
-![面试入口](docs/assets/面试入口.png)
-
-提问环节：
-
-![提问环节](docs/assets/提问环节.png)
-
-追问环节：
-
-![追问环节](docs/assets/追问环节.png)
-
-结果复盘：
-
-![结果复盘](docs/assets/结果复盘.png)
-
-面试结果分析：
-
-![面试结果分析](docs/assets/面试结果分析.png)
-
+（截图待补充）
 
 ## 开源协作
 

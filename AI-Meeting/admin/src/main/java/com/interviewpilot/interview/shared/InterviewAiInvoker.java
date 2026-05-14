@@ -2,12 +2,15 @@ package com.interviewpilot.interview.shared;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
+import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
+import com.interviewpilot.ai.service.chat.MimoChatHandler;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
 import com.interviewpilot.interview.application.guard.core.AiCallGuardService;
 import com.interviewpilot.interview.application.guard.core.InterviewAiGuardStage;
 import com.interviewpilot.interview.application.guard.singleflight.service.DistributedInterviewAiSingleFlightService;
 import com.interviewpilot.toolkit.xunfei.XingChenAIClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.OutputStream;
@@ -19,13 +22,14 @@ import java.util.concurrent.Callable;
  * 面试 AI 的统一调用入口，负责生成请求指纹、串联限流熔断保护、
  * 分布式 single-flight 复用以及最终的模型调用过程。
  *
- * @author 程序员牛肉
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class InterviewAiInvoker {
 
     private final XingChenAIClient xingChenAIClient;
+    private final MimoChatHandler mimoChatHandler;
     private final AiCallGuardService aiCallGuardService;
     private final DistributedInterviewAiSingleFlightService distributedInterviewAiSingleFlightService;
 
@@ -130,8 +134,20 @@ public class InterviewAiInvoker {
             AgentPropertiesDO agentProperties,
             String fileUrl,
             Map<String, Object> parameters) throws Exception {
+        String aiProvider = agentProperties.getAiProvider();
+        if ("mimo".equalsIgnoreCase(aiProvider)) {
+            return doChatMimo(input, sessionId, agentProperties, parameters);
+        }
+        return doChatXingChen(input, sessionId, agentProperties, fileUrl, parameters);
+    }
+
+    private String doChatXingChen(
+            String input,
+            String sessionId,
+            AgentPropertiesDO agentProperties,
+            String fileUrl,
+            Map<String, Object> parameters) throws Exception {
         StringBuilder aiResponse = new StringBuilder();
-        // 3) 最后统一走底层 chat，并把流式片段拼成完整响应字符串返回上层解析。
         xingChenAIClient.chat(
                 input,
                 StrUtil.isNotBlank(sessionId) ? sessionId : "evaluation_" + System.currentTimeMillis(),
@@ -156,5 +172,27 @@ public class InterviewAiInvoker {
                 parameters
         );
         return aiResponse.toString();
+    }
+
+    /**
+     * Mimo 调用：将 XingChen 结构化参数转换为纯文本 prompt，通过 MimoChatHandler.callSync 调用。
+     * field reuse: apiKey=Mimo API Key, apiSecret=模型名, apiFlowId=API URL
+     */
+    private String doChatMimo(
+            String input,
+            String sessionId,
+            AgentPropertiesDO agentProperties,
+            Map<String, Object> parameters) {
+        String prompt = MimoPromptBuilder.build(input, parameters);
+        log.info("[InterviewAiInvoker] Mimo 调用 sessionId={}, prompt前100字={}", sessionId,
+                prompt.length() > 100 ? prompt.substring(0, 100) : prompt);
+
+        AiPropertiesDO aiProps = new AiPropertiesDO();
+        aiProps.setApiKey(agentProperties.getApiKey());
+        aiProps.setModelName(agentProperties.getApiSecret());
+        aiProps.setApiUrl(agentProperties.getApiFlowId());
+        aiProps.setMaxTokens(8192);
+
+        return mimoChatHandler.callSync(aiProps, prompt);
     }
 }

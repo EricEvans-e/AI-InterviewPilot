@@ -3,6 +3,19 @@ package com.interviewpilot.interview.application.strategy;
 import com.interviewpilot.interview.api.io.resp.RadarChartDTO;
 import org.springframework.stereotype.Component;
 
+/**
+ * 加权雷达图计算策略（默认实现）
+ * 将简历评分、面试评分、神态评分按权重合成综合指数，并计算专业技能分。
+ *
+ * <p>权重配置：
+ * <ul>
+ *   <li>综合潜力指数 = 简历 25% + 面试 55% + 神态 20%</li>
+ *   <li>专业技能 = 简历 30% + 面试 70%</li>
+ * </ul>
+ * </p>
+ *
+ * <p>同时支持通过 fillDimensionScores() 填充 7 维细粒度评分（内容、逻辑、专业、表达、应变、时间控制、礼仪）。</p>
+ */
 @Component
 public class WeightedRadarComputationStrategy implements RadarComputationStrategy {
 

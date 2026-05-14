@@ -15,7 +15,6 @@ import java.util.Map;
  * 定义面试会话低频材料快照持久化实体，
  * 用于保存题目、简历上下文、面试方向和评分材料等不需要每轮答题都重写的恢复数据。
  *
- * @author 程序员牛肉
  */
 @Data
 @Document(collection = "interview_session_runtime_cold_snapshot")

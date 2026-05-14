@@ -11,7 +11,6 @@ import java.util.Optional;
 
 /**
  * AI会话Repository接口
- * @author nageoffer
  */
 @Repository
 public interface AiConversationRepository extends MongoRepository<AiConversation, String> {

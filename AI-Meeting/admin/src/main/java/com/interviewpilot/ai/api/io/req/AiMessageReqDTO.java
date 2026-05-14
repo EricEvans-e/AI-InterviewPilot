@@ -7,7 +7,6 @@ import java.util.List;
 
 /**
  * AI消息请求DTO
- * @author nageoffer
  */
 @Data
 public class AiMessageReqDTO {

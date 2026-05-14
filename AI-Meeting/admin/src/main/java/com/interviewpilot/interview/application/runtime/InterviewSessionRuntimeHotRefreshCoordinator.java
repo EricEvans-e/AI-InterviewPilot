@@ -17,7 +17,6 @@ import java.util.concurrent.TimeUnit;
  * 提供面试会话热快照合并写与防抖刷新的本地协调能力，
  * 用于按 session 聚合热刷新意图、延迟普通中间态刷盘并保证关键检查点立即落盘。
  *
- * @author 程序员牛肉
  */
 @Slf4j
 @Service

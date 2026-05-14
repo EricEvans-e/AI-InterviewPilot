@@ -4,7 +4,6 @@ package com.interviewpilot.interview.application.runtime;
  * 定义热快照刷新触发类型及其默认策略，
  * 用于区分普通中间态刷新与关键检查点立即刷新场景。
  *
- * @author 程序员牛肉
  */
 public enum InterviewSessionRuntimeHotRefreshTrigger {
 

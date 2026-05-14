@@ -44,7 +44,6 @@ import java.util.stream.Collectors;
  * 提供面试会话运行态快照与轮次归档的持久化能力，
  * 用于在关键业务节点保存恢复材料并支持软回放幂等与会话重建。
  *
- * @author 程序员牛肉
  */
 @Service
 @Slf4j

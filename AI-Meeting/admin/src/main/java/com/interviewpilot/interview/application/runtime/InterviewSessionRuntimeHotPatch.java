@@ -15,7 +15,6 @@ import java.util.Map;
  * 定义面试会话高频运行态的增量更新载体，
  * 用于按字段 Patch 热快照中的 flow、得分、最近轮次和幂等信息。
  *
- * @author 程序员牛肉
  */
 @Data
 @Builder

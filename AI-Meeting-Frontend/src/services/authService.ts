@@ -44,7 +44,7 @@ const normalizeUser = (raw: unknown): UserRespDTO | null => {
     phone: toString(raw.phone),
     mail: toString(raw.mail),
     avatar: toString(raw.avatar),
-    role: toString(raw.role) as UserRole | undefined,
+    role: (toString(raw.role) || (raw.isAdmin ? "admin" : undefined)) as UserRole | undefined,
     deletionTime: toNumber(raw.deletionTime ?? raw.deletion_time),
     createTime: toString(raw.createTime ?? raw.create_time),
     updateTime: toString(raw.updateTime ?? raw.update_time),

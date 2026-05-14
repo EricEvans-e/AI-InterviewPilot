@@ -5,6 +5,18 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * 平均分面试评分聚合策略（默认实现）
+ * 从面试轮次记录中计算主问题（非追问）的平均得分。
+ *
+ * <p>计算逻辑：
+ * <ul>
+ *   <li>过滤掉追问轮次（isFollowUp=true）和无分数轮次</li>
+ *   <li>对剩余主问题的得分取算术平均值</li>
+ *   <li>所有分数截断到 0-100 范围</li>
+ * </ul>
+ * </p>
+ */
 @Component
 public class AverageInterviewScoreAggregatorStrategy implements InterviewScoreAggregatorStrategy {
 

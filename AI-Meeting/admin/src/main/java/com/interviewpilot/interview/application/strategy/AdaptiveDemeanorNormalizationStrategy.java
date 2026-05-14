@@ -2,6 +2,12 @@ package com.interviewpilot.interview.application.strategy;
 
 import org.springframework.stereotype.Component;
 
+/**
+ * 自适应神态评分归一化策略（默认实现）
+ * 自动检测 AI 返回的评分是否为 10 分制，若是则乘以 10 转换为百分制。
+ *
+ * <p>检测逻辑：若所有输入分数都在 0-10 范围内，则判定为 10 分制并自动转换。</p>
+ */
 @Component
 public class AdaptiveDemeanorNormalizationStrategy implements DemeanorNormalizationStrategy {
 

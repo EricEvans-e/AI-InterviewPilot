@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
  * 提供面试会话运行态懒恢复过程中的分布式互斥锁能力，
  * 用于避免同一会话在并发恢复时重复重建缓存或产生状态覆盖。
  *
- * @author 程序员牛肉
  */
 @Service
 @RequiredArgsConstructor

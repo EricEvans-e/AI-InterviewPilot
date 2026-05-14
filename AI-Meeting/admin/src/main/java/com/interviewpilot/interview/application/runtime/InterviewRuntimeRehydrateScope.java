@@ -4,7 +4,6 @@ package com.interviewpilot.interview.application.runtime;
  * 定义面试会话运行态懒恢复的范围枚举，
  * 用于区分只恢复流程、得分、回放、材料或整包运行态等不同场景。
  *
- * @author 程序员牛肉
  */
 public enum InterviewRuntimeRehydrateScope {
 

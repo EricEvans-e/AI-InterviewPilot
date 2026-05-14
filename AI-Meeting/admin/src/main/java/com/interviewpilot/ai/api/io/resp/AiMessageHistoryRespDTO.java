@@ -7,7 +7,6 @@ import java.util.Date;
 
 /**
  * AI消息历史响应DTO
- * @author nageoffer
  */
 @Data
 public class AiMessageHistoryRespDTO implements BaseMessageHistoryRespDTO {

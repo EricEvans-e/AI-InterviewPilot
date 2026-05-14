@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 音频调起麦克风播放工具类
  * 支持16kHz采样率、16位深度、单声道PCM格式音频播放；
  *
- * @author zyding6
  */
 public class AudioPlayer {
     private static final Logger logger = LoggerFactory.getLogger(AudioPlayer.class);

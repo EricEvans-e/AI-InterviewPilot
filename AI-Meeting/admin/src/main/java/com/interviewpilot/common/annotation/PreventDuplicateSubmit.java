@@ -10,7 +10,6 @@ import java.lang.annotation.Target;
  * 防重提交注解
  * 基于Redisson实现分布式锁，防止重复提交
  * 
- * @author nageoffer
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

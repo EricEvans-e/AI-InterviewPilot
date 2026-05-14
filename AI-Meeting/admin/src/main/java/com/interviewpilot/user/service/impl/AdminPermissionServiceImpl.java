@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
-* @author 20866
 * @description 针对表【admin_permission(管理员权限表)】的数据库操作Service实现
 * @createDate 2025-06-08 08:55:34
 */

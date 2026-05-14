@@ -17,15 +17,24 @@
 
 package com.interviewpilot.common.config.redis;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.interviewpilot.user.dao.entity.UserDO;
+import com.interviewpilot.user.dao.mapper.UserMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RedissonClient;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.List;
+
 /**
  * 布隆过滤器配置
- 
+
  */
+@Slf4j
 @Configuration(value = "rBloomFilterConfigurationByAdmin")
 public class RBloomFilterConfiguration {
 
@@ -37,6 +46,37 @@ public class RBloomFilterConfiguration {
         RBloomFilter<String> cachePenetrationBloomFilter = redissonClient.getBloomFilter("userRegisterCachePenetrationBloomFilter");
         cachePenetrationBloomFilter.tryInit(100000000L, 0.001);
         return cachePenetrationBloomFilter;
+    }
+
+    /**
+     * 应用启动时将已有用户名预加载到布隆过滤器，避免误判
+     */
+    @Bean
+    public ApplicationRunner bloomFilterPreloader(
+            RBloomFilter<String> userRegisterCachePenetrationBloomFilter,
+            UserMapper userMapper) {
+        return new ApplicationRunner() {
+            @Override
+            public void run(ApplicationArguments args) {
+                List<UserDO> users = userMapper.selectList(
+                        Wrappers.lambdaQuery(UserDO.class)
+                                .select(UserDO::getUsername)
+                                .eq(UserDO::getDelFlag, 0)
+                );
+                if (users == null || users.isEmpty()) {
+                    log.info("Bloom filter preloader: no existing usernames found, skipping");
+                    return;
+                }
+                int count = 0;
+                for (UserDO user : users) {
+                    if (user.getUsername() != null) {
+                        userRegisterCachePenetrationBloomFilter.add(user.getUsername());
+                        count++;
+                    }
+                }
+                log.info("Bloom filter preloader: loaded {} usernames into filter", count);
+            }
+        };
     }
 
     /**

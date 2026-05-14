@@ -2,7 +2,6 @@ package com.interviewpilot.common.config.satoken;
 
 import cn.dev33.satoken.stp.StpInterface;
 import com.interviewpilot.user.dao.entity.UserDO;
-import com.interviewpilot.user.service.AdminPermissionService;
 import com.interviewpilot.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,40 +15,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StpInterfaceImpl implements StpInterface {
 
-    private final AdminPermissionService adminPermissionService;
     private final UserService userService;
 
     /**
      * 返回一个账号所拥有的权限码集合
+     * 统一从 t_user.role 字段读取，默认为 student
      */
     @Override
     public List<String> getPermissionList(Object loginId, String loginType) {
-        String username = String.valueOf(loginId);
-        UserDO user = userService.getByUsername(username);
-        if (user != null && "admin".equals(user.getRole())) {
-            return List.of("admin");
-        }
-        if (user != null && "teacher".equals(user.getRole())) {
-            return List.of("teacher");
-        }
-        return List.of("student");
+        return List.of(resolveRole(loginId));
     }
 
     /**
-     * 返回一个账号所拥有的角色标识集合 (权限与角色可分开校验)
+     * 返回一个账号所拥有的角色标识集合
+     * 统一从 t_user.role 字段读取，默认为 student
      */
     @Override
     public List<String> getRoleList(Object loginId, String loginType) {
-        String username = String.valueOf(loginId);
-        // 优先从数据库读取 role 字段
-        UserDO user = userService.getByUsername(username);
-        if (user != null && user.getRole() != null) {
-            return List.of(user.getRole());
-        }
-        // 兼容旧逻辑
-        if (adminPermissionService.isAdmin(username)) {
-            return List.of("admin");
-        }
-        return List.of("student");
+        return List.of(resolveRole(loginId));
+    }
+
+    private String resolveRole(Object loginId) {
+        UserDO user = userService.getByUsername(String.valueOf(loginId));
+        return (user != null && user.getRole() != null) ? user.getRole() : "student";
     }
 }

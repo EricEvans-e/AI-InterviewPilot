@@ -20,7 +20,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 /**
- * Short-living single-flight deduplication for AI requests.
+ * 本地 AI 请求 SingleFlight 去重服务（JVM 内级别）
+ * 同一个 key 的并发请求只允许一个 leader 执行真实 AI 调用，其余 follower 复用结果。
+ * 适用于单机部署或作为分布式模式的降级回退。
+ *
+ * <p>核心机制：ConcurrentHashMap + CompletableFuture，leader 写入 future，follower 等待 future 完成。
+ * TTL 过期自动清理，防止 future 泄漏。</p>
+ *
+ * @see DistributedInterviewAiSingleFlightService 分布式版本（跨 JVM 协调）
  */
 @Service
 @RequiredArgsConstructor

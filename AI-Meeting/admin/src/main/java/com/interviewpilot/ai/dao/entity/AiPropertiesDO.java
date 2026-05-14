@@ -10,7 +10,6 @@ import java.util.Date;
 
 /**
  * AI配置实体类
- * @author nageoffer
  */
 @Data
 @TableName("ai_properties")

@@ -6,7 +6,6 @@ import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeH
  * 定义热快照字段级 Patch 持久化扩展接口，
  * 用于按 session 维度增量更新高频运行态字段。
  *
- * @author 程序员牛肉
  */
 public interface InterviewSessionRuntimeHotSnapshotRepositoryCustom {
 

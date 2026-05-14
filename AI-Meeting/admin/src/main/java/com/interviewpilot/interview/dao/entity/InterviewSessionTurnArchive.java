@@ -13,7 +13,6 @@ import java.util.Date;
  * 定义面试会话轮次归档持久化实体，
  * 用于保存每次答题提交后的轮次回放数据并支撑会话重建与软回放幂等。
  *
- * @author 程序员牛肉
  */
 @Data
 @Document(collection = "interview_session_turn_archive")

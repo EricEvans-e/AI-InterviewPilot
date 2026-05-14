@@ -14,7 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoints for Xunfei long-text TTS tasks.
+ * 讯飞长文本语音合成（TTS）控制器
+ * 将面试报告、AI 回复等长文本转换为语音，支持异步任务模式
  */
 @RestController
 @RequestMapping("/api/ip/v1/xunfei/tts")
@@ -24,7 +25,11 @@ public class XunfeiTtsController {
     private final XunfeiLongTextTtsService xunfeiLongTextTtsService;
 
     /**
-     * Create an asynchronous TTS task.
+     * 创建异步 TTS 任务
+     * 提交文本后立即返回 taskId，后台异步合成语音
+     *
+     * @param requestParam 包含待合成的文本内容
+     * @return 任务ID和初始状态
      */
     @PostMapping("/tasks")
     public Result<LongTextTtsTaskRespDTO> createTask(@RequestBody LongTextTtsReqDTO requestParam) {
@@ -32,7 +37,7 @@ public class XunfeiTtsController {
     }
 
     /**
-     * Query the current task status.
+     * 查询 TTS 任务状态（轮询用，检查合成是否完成）
      */
     @GetMapping("/tasks/{taskId}")
     public Result<LongTextTtsTaskRespDTO> queryTask(@PathVariable String taskId) {
@@ -40,7 +45,8 @@ public class XunfeiTtsController {
     }
 
     /**
-     * Create a task and wait for completion within the same request.
+     * 同步合成语音（创建任务并等待完成，适合短文本）
+     * 阻塞直到合成完成或超时，返回完整的音频文件信息
      */
     @PostMapping("/synthesize")
     public Result<LongTextTtsTaskRespDTO> synthesizeAndWait(@RequestBody LongTextTtsReqDTO requestParam) {

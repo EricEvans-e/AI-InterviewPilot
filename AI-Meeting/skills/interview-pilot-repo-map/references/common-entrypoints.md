@@ -2,17 +2,17 @@
 
 ## 先看这些入口
 
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/interview/api/InterviewSessionController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/interview/api/InterviewResumeController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/agent/api/AgentController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/agent/api/AgentFileController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/agent/api/AgentPropertiesController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/media/api/WebSocketController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/media/api/XunfeiTtsController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/auth/infrastructure/web/CurrentUserArgumentResolver.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/auth/infrastructure/websocket/SaTokenWebSocketAuthService.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/interview/application/flow/InterviewFlowStateMachine.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/interview/flow/answer/InterviewAnswerPipeline.java`
+- `admin/src/main/java/com/interviewpilot/interview/api/InterviewSessionController.java`
+- `admin/src/main/java/com/interviewpilot/interview/api/InterviewResumeController.java`
+- `admin/src/main/java/com/interviewpilot/agent/api/AgentController.java`
+- `admin/src/main/java/com/interviewpilot/agent/api/AgentFileController.java`
+- `admin/src/main/java/com/interviewpilot/agent/api/AgentPropertiesController.java`
+- `admin/src/main/java/com/interviewpilot/media/api/WebSocketController.java`
+- `admin/src/main/java/com/interviewpilot/media/api/XunfeiTtsController.java`
+- `admin/src/main/java/com/interviewpilot/auth/infrastructure/web/CurrentUserArgumentResolver.java`
+- `admin/src/main/java/com/interviewpilot/auth/infrastructure/websocket/SaTokenWebSocketAuthService.java`
+- `admin/src/main/java/com/interviewpilot/interview/application/flow/InterviewFlowStateMachine.java`
+- `admin/src/main/java/com/interviewpilot/interview/flow/answer/InterviewAnswerPipeline.java`
 
 ## 入口对应的事情
 

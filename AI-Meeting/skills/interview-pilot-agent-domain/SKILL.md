@@ -17,12 +17,12 @@ description: AI-Meeting 通用 Agent 业务知识 Skill。用于处理通用 Age
 
 ## 关键入口
 
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/agent/api/AgentController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/agent/api/AgentFileController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/agent/api/AgentPropertiesController.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/agent/service/impl/AgentMessageServiceImpl.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/agent/application/BusinessAgentScene.java`
-- `admin/src/main/java/com/hewei/hzyjy/interviewpilot/agent/application/BusinessAgentResolver.java`
+- `admin/src/main/java/com/interviewpilot/agent/api/AgentController.java`
+- `admin/src/main/java/com/interviewpilot/agent/api/AgentFileController.java`
+- `admin/src/main/java/com/interviewpilot/agent/api/AgentPropertiesController.java`
+- `admin/src/main/java/com/interviewpilot/agent/service/impl/AgentMessageServiceImpl.java`
+- `admin/src/main/java/com/interviewpilot/agent/application/BusinessAgentScene.java`
+- `admin/src/main/java/com/interviewpilot/agent/application/BusinessAgentResolver.java`
 
 ## 必守约束
 

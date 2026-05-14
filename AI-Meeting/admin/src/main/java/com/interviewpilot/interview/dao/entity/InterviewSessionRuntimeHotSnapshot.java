@@ -19,7 +19,6 @@ import java.util.Map;
  * 定义面试会话高频运行态快照持久化实体，
  * 用于保存可快速恢复当前面试流程所需的 flow、得分聚合、最近轮次与幂等控制状态。
  *
- * @author 程序员牛肉
  */
 @Data
 @Document(collection = "interview_session_runtime_hot_snapshot")

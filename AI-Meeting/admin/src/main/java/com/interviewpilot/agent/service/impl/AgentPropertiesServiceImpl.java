@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* @author 20866
 * @description 针对表【agent_properties】的数据库操作Service实现
 * @createDate 2025-05-27 10:08:58
 */

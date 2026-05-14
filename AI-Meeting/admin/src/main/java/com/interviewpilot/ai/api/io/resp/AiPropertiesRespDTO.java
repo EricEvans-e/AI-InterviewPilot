@@ -8,7 +8,6 @@ import java.util.Date;
 
 /**
  * AI配置响应DTO
- * @author nageoffer
  */
 @Data
 public class AiPropertiesRespDTO {
