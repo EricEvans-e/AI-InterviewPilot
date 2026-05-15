@@ -17,14 +17,14 @@ public class QuestionGenerateReqDTO {
     private Integer count = 5;
 
     /**
-     * 目标院校名称
+     * 目标院校ID
      */
-    private String collegeName;
+    private Long collegeId;
 
     /**
-     * 目标专业名称
+     * 目标专业ID
      */
-    private String majorName;
+    private Long majorId;
 
     /**
      * 题型
@@ -56,4 +56,9 @@ public class QuestionGenerateReqDTO {
      * AI类型（可选，默认使用系统默认AI）
      */
     private String aiType;
+
+    /**
+     * AI配置ID（可选，优先于aiType）
+     */
+    private Long aiPropertiesId;
 }

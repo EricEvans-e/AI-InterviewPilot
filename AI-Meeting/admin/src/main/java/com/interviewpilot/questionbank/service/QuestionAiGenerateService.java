@@ -10,7 +10,11 @@ import com.interviewpilot.ai.service.chat.AiChatHandler;
 import com.interviewpilot.ai.service.chat.AiChatHandlerFactory;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.questionbank.api.io.req.QuestionGenerateReqDTO;
+import com.interviewpilot.questionbank.dao.entity.CollegeDO;
+import com.interviewpilot.questionbank.dao.entity.MajorDO;
 import com.interviewpilot.questionbank.dao.entity.QuestionDO;
+import com.interviewpilot.questionbank.service.CollegeService;
+import com.interviewpilot.questionbank.service.MajorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +32,8 @@ public class QuestionAiGenerateService {
 
     private final AiChatHandlerFactory aiChatHandlerFactory;
     private final AiPropertiesService aiPropertiesService;
+    private final CollegeService collegeService;
+    private final MajorService majorService;
 
     /**
      * 基于条件 AI 生成题目
@@ -40,7 +46,7 @@ public class QuestionAiGenerateService {
         String prompt = buildGeneratePrompt(req);
 
         // 2. Call AI (sync mode, non-streaming)
-        String response = callAiSync(prompt, req.getAiType());
+        String response = callAiSync(prompt, req.getAiType(), req.getAiPropertiesId());
 
         // 3. Parse JSON response to QuestionDO list
         List<QuestionDO> questions = parseQuestionsFromAi(response, req);
@@ -55,6 +61,21 @@ public class QuestionAiGenerateService {
     }
 
     private String buildGeneratePrompt(QuestionGenerateReqDTO req) {
+        String collegeName = "通用";
+        if (req.getCollegeId() != null) {
+            CollegeDO college = collegeService.getById(req.getCollegeId());
+            if (college != null) {
+                collegeName = college.getName();
+            }
+        }
+        String majorName = "通用";
+        if (req.getMajorId() != null) {
+            MajorDO major = majorService.getById(req.getMajorId());
+            if (major != null) {
+                majorName = major.getName();
+            }
+        }
+
         return String.format("""
             你是一位浙江高职提前招生面试出题专家。请根据以下条件生成 %d 道面试题：
 
@@ -81,8 +102,8 @@ public class QuestionAiGenerateService {
             只返回 JSON 数组，不要其他文字。
             """,
                 req.getCount(),
-                req.getCollegeName() != null ? req.getCollegeName() : "通用",
-                req.getMajorName() != null ? req.getMajorName() : "通用",
+                collegeName,
+                majorName,
                 req.getQuestionType(),
                 req.getAbilityTag() != null ? req.getAbilityTag() : "综合",
                 req.getDifficulty() != null ? req.getDifficulty() : "medium",
@@ -91,10 +112,15 @@ public class QuestionAiGenerateService {
         );
     }
 
-    private String callAiSync(String prompt, String aiType) {
+    private String callAiSync(String prompt, String aiType, Long aiPropertiesId) {
         AiPropertiesDO aiProperties;
 
-        if (StrUtil.isNotBlank(aiType)) {
+        if (aiPropertiesId != null) {
+            aiProperties = aiPropertiesService.getById(aiPropertiesId);
+            if (aiProperties == null || aiProperties.getDelFlag() == 1 || aiProperties.getIsEnabled() != 1) {
+                throw new ClientException("指定的AI配置不存在或未启用");
+            }
+        } else if (StrUtil.isNotBlank(aiType)) {
             aiProperties = aiPropertiesService.getEnabledByAiType(aiType);
         } else {
             // 使用默认AI配置（优先 DeepSeek）

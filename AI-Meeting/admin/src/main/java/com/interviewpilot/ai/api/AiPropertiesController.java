@@ -1,5 +1,7 @@
 package com.interviewpilot.ai.api;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.interviewpilot.ai.service.AiPropertiesService;
 import com.interviewpilot.common.convention.result.Result;
@@ -38,6 +40,7 @@ public class AiPropertiesController {
      * 新增 AI 模型配置
      */
     @PostMapping
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<Void> createAiProperties(@RequestBody AiPropertiesCreateReqDTO requestParam) {
         aiPropertiesService.createAiProperties(requestParam);
         return Results.success();
@@ -47,6 +50,7 @@ public class AiPropertiesController {
      * 更新 AI 模型配置
      */
     @PutMapping
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<Void> updateAiProperties(@RequestBody AiPropertiesUpdateReqDTO requestParam) {
         aiPropertiesService.updateAiProperties(requestParam);
         return Results.success();
@@ -56,6 +60,7 @@ public class AiPropertiesController {
      * 删除 AI 模型配置
      */
     @DeleteMapping("/{id}")
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<Void> deleteAiProperties(@PathVariable Long id) {
         aiPropertiesService.deleteAiProperties(id);
         return Results.success();
@@ -92,8 +97,19 @@ public class AiPropertiesController {
      * 切换 AI 模型启用/禁用状态
      */
     @PutMapping("/{id}/status")
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<Void> toggleAiPropertiesStatus(@PathVariable Long id, @RequestParam Integer isEnabled) {
         aiPropertiesService.toggleAiPropertiesStatus(id, isEnabled);
+        return Results.success();
+    }
+
+    /**
+     * 设为同类型默认模型
+     */
+    @PutMapping("/{id}/default")
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
+    public Result<Void> setDefaultAiProperties(@PathVariable Long id) {
+        aiPropertiesService.setDefaultAiProperties(id);
         return Results.success();
     }
 }

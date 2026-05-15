@@ -81,4 +81,14 @@ public class QuestionSaveReqDTO {
      * 年份
      */
     private Integer year;
+
+    /**
+     * 是否AI生成
+     */
+    private Boolean isAiGenerated;
+
+    /**
+     * 状态（draft/pending_review/approved/rejected）
+     */
+    private String status;
 }

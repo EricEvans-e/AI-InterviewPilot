@@ -1,16 +1,6 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ClipboardList,
-  Timer,
-  Hash,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  CircleDot,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { ClipboardList } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -271,7 +261,6 @@ function ReportDetailPanel({
   const {
     isRecordLoading,
     recordError,
-    record,
     resumeScore,
     interviewScore,
     compositeScore,

@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Bot, Save, X } from "lucide-react";
 import { teacherService } from "@/services/teacherService";
-import type { QuestionCreateDTO, AiGenerateParams } from "@/services/teacherService";
+import type { QuestionCreateDTO, AiGenerateParams, AiPropertiesDTO } from "@/services/teacherService";
 import type { CollegeRespDTO, MajorRespDTO } from "@/services/questionBankService";
 import {
   QUESTION_TYPE_OPTIONS,
@@ -45,15 +45,18 @@ export default function AiGenerateDialog({
 
   const [colleges, setColleges] = useState<CollegeRespDTO[]>([]);
   const [majors, setMajors] = useState<MajorRespDTO[]>([]);
+  const [aiModels, setAiModels] = useState<AiPropertiesDTO[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<number | "">("");
 
   const [generatedQuestions, setGeneratedQuestions] = useState<QuestionCreateDTO[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load colleges
+  // Load colleges and AI models
   useEffect(() => {
     if (open) {
       teacherService.listColleges().then(setColleges).catch(() => {});
+      teacherService.getEnabledAiProperties().then(setAiModels).catch(() => {});
       resetState();
     }
   }, [open]);
@@ -78,6 +81,7 @@ export default function AiGenerateDialog({
   function resetState() {
     setGeneratedQuestions([]);
     setError(null);
+    setSelectedModelId("");
   }
 
   function handleCollegeChange(value: string) {
@@ -102,10 +106,11 @@ export default function AiGenerateDialog({
         difficulty: difficulty || undefined,
         generateFollowUp,
         generateScoringRule,
+        aiPropertiesId: selectedModelId ? (selectedModelId as number) : undefined,
       };
 
       const result = await teacherService.aiGenerateQuestions(params);
-      setGeneratedQuestions(result.questions ?? []);
+      setGeneratedQuestions(Array.isArray(result) ? result : (result.questions ?? []));
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI 出题失败，请重试");
     } finally {
@@ -119,7 +124,12 @@ export default function AiGenerateDialog({
 
   function handleSaveAll() {
     if (generatedQuestions.length === 0) return;
-    onBatchSave(generatedQuestions);
+    const questionsWithMeta = generatedQuestions.map((q) => ({
+      ...q,
+      isAiGenerated: true,
+      status: "pending_review" as const,
+    }));
+    onBatchSave(questionsWithMeta);
   }
 
   function getQuestionTypeLabel(value?: string): string {
@@ -139,7 +149,7 @@ export default function AiGenerateDialog({
 
         <div className="space-y-4">
           {/* Config form */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label>院校</Label>
               <select
@@ -175,17 +185,36 @@ export default function AiGenerateDialog({
                 ))}
               </select>
             </div>
+            <div className="space-y-1.5">
+              <Label>AI 模型</Label>
+              <select
+                value={selectedModelId}
+                onChange={(e) =>
+                  setSelectedModelId(e.target.value ? Number(e.target.value) : "")
+                }
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">系统默认</option>
+                {aiModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.aiName} ({m.modelName})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <Label>题型</Label>
+              <Label>
+                题型 <span className="text-red-500">*</span>
+              </Label>
               <select
                 value={questionType}
                 onChange={(e) => setQuestionType(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <option value="">不限</option>
+                <option value="">请选择题型</option>
                 {QUESTION_TYPE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
@@ -266,7 +295,7 @@ export default function AiGenerateDialog({
 
           <Button
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || !questionType}
             className="w-full"
           >
             {isGenerating ? "AI 生成中..." : "开始生成"}

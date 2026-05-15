@@ -28,6 +28,8 @@ public interface AiPropertiesService extends IService<AiPropertiesDO> {
 
     void toggleAiPropertiesStatus(Long id, Integer isEnabled);
 
+    void setDefaultAiProperties(Long id);
+
     List<AiPropertiesRespDTO> getAllEnabledAiProperties();
 
     AiPropertiesDO getEnabledByAiType(String aiType);

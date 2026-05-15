@@ -12,7 +12,7 @@ import type { InterviewRecordResult } from "@/services/interviewService";
 
 export interface QuestionCreateDTO {
   title: string;
-  content?: string;
+  content: string;
   questionType: string;
   collegeId?: number;
   majorId?: number;
@@ -22,6 +22,11 @@ export interface QuestionCreateDTO {
   referenceAnswer?: string;
   scoringRule?: string;
   followUpRule?: string;
+  followUpQuestions?: string;
+  sourceRef?: string;
+  year?: number;
+  status?: string;
+  isAiGenerated?: boolean;
 }
 
 export type QuestionUpdateDTO = Partial<QuestionCreateDTO>;
@@ -35,6 +40,8 @@ export interface AiGenerateParams {
   difficulty?: string;
   generateFollowUp?: boolean;
   generateScoringRule?: boolean;
+  aiType?: string;
+  aiPropertiesId?: number;
 }
 
 export interface AiGenerateResult {
@@ -73,6 +80,42 @@ export interface TeacherReviewRespDTO {
   isModelMisjudge?: boolean;
   createTime?: string;
 }
+
+// ── AI Properties DTOs ──
+
+export interface AiPropertiesDTO {
+  id: number;
+  aiName: string;
+  aiType: string;
+  apiKey: string;
+  apiUrl: string;
+  modelName: string;
+  maxTokens: number;
+  temperature: number;
+  systemPrompt: string;
+  isEnabled: number;
+  isDefault: number;
+  createTime: string;
+  updateTime: string;
+}
+
+export interface AiPropertiesCreateDTO {
+  aiName: string;
+  aiType: string;
+  apiKey: string;
+  apiSecret?: string;
+  projectId?: string;
+  organizationId?: string;
+  apiUrl: string;
+  modelName: string;
+  maxTokens?: number;
+  temperature?: number;
+  systemPrompt?: string;
+  isEnabled?: number;
+  isDefault?: number;
+}
+
+export type AiPropertiesUpdateDTO = AiPropertiesCreateDTO & { id: number };
 
 // ── Service ──
 
@@ -114,6 +157,7 @@ export const teacherService = {
     return service.post<AiGenerateResult>(
       "/ip/v1/questions/ai-generate",
       params,
+      { timeout: 120_000 },
     );
   },
 
@@ -157,5 +201,46 @@ export const teacherService = {
     return service.get<InterviewRecordResult>(
       `/ip/v1/teacher/sessions/${encodeURIComponent(sessionId)}/report`,
     );
+  },
+
+  // ── AI Properties ──
+  getEnabledAiProperties(): Promise<AiPropertiesDTO[]> {
+    return service.get<AiPropertiesDTO[]>("/ip/v1/ai-properties/enabled");
+  },
+
+  pageAiProperties(params: {
+    current?: number;
+    size?: number;
+    aiName?: string;
+    aiType?: string;
+    isEnabled?: number;
+  }): Promise<{ records: AiPropertiesDTO[]; total: number; current: number; size: number }> {
+    return service.get("/ip/v1/ai-properties", { params });
+  },
+
+  getAiPropertiesById(id: number): Promise<AiPropertiesDTO> {
+    return service.get<AiPropertiesDTO>(`/ip/v1/ai-properties/${id}`);
+  },
+
+  createAiProperties(data: AiPropertiesCreateDTO): Promise<void> {
+    return service.post<void>("/ip/v1/ai-properties", data);
+  },
+
+  updateAiProperties(data: AiPropertiesUpdateDTO): Promise<void> {
+    return service.put<void>("/ip/v1/ai-properties", data);
+  },
+
+  deleteAiProperties(id: number): Promise<void> {
+    return service.delete<void>(`/ip/v1/ai-properties/${id}`);
+  },
+
+  toggleAiPropertiesStatus(id: number, isEnabled: number): Promise<void> {
+    return service.put<void>(`/ip/v1/ai-properties/${id}/status`, null, {
+      params: { isEnabled },
+    });
+  },
+
+  setDefaultAiProperties(id: number): Promise<void> {
+    return service.put<void>(`/ip/v1/ai-properties/${id}/default`);
   },
 };

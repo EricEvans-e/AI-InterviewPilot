@@ -127,11 +127,11 @@ export default function QuestionFormDialog({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !questionType) return;
+    if (!title.trim() || !content.trim() || !questionType) return;
 
     onSubmit({
       title: title.trim(),
-      content: content.trim() || undefined,
+      content: content.trim(),
       questionType,
       collegeId: collegeId ? (collegeId as number) : undefined,
       majorId: majorId ? (majorId as number) : undefined,
@@ -174,12 +174,15 @@ export default function QuestionFormDialog({
 
               {/* Content */}
               <div className="space-y-1.5">
-                <Label>正文</Label>
+                <Label>
+                  正文 <span className="text-red-500">*</span>
+                </Label>
                 <Textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="请输入题目正文描述"
                   rows={3}
+                  required
                 />
               </div>
 
@@ -337,7 +340,7 @@ export default function QuestionFormDialog({
             >
               取消
             </Button>
-            <Button type="submit" disabled={isSubmitting || !title.trim() || !questionType}>
+            <Button type="submit" disabled={isSubmitting || !title.trim() || !content.trim() || !questionType}>
               {isSubmitting ? "保存中..." : isEditing ? "保存修改" : "创建题目"}
             </Button>
           </DialogFooter>

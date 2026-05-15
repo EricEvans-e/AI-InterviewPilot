@@ -3,6 +3,10 @@ package com.interviewpilot.ai.service.chat;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
+import java.time.Duration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import reactor.netty.http.client.HttpClient;
 import com.interviewpilot.ai.api.io.resp.AiChatStreamRespDTO;
 import com.interviewpilot.ai.api.io.resp.AiMessageHistoryRespDTO;
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
@@ -145,7 +149,12 @@ public class UniversalAiChatHandler implements AiChatHandler {
             throw new ClientException("AI API Key 未配置");
         }
 
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout((int) Duration.ofSeconds(30).toMillis());
+        requestFactory.setReadTimeout((int) Duration.ofMinutes(3).toMillis());
+
         RestClient.Builder restClientBuilder = RestClient.builder()
+                .requestFactory(requestFactory)
                 .defaultHeaders(headers -> {
                     if (StrUtil.isNotBlank(aiProperties.getProjectId())) {
                         headers.add("OpenAI-Project", aiProperties.getProjectId());
@@ -155,6 +164,11 @@ public class UniversalAiChatHandler implements AiChatHandler {
                     }
                 });
 
+        HttpClient httpClient = HttpClient.create()
+                .responseTimeout(Duration.ofMinutes(3));
+        WebClient.Builder webClientBuilder = WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient));
+
         if (AiPropritiesType.DEEPSEEK.getType().equalsIgnoreCase(aiProperties.getAiType())) {
             DeepSeekApi deepSeekApi = new DeepSeekApi(
                     baseUrl,
@@ -163,7 +177,7 @@ public class UniversalAiChatHandler implements AiChatHandler {
                     "/chat/completions",
                     "/beta",
                     restClientBuilder,
-                    WebClient.builder(),
+                    webClientBuilder,
                     new DefaultResponseErrorHandler()
             );
 
@@ -196,7 +210,7 @@ public class UniversalAiChatHandler implements AiChatHandler {
                 "/chat/completions",
                 "/embeddings",
                 restClientBuilder,
-                WebClient.builder(),
+                webClientBuilder,
                 new DefaultResponseErrorHandler()
         );
 

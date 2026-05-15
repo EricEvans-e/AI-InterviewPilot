@@ -51,6 +51,9 @@ const TeacherCollegesPage = lazy(
 const TeacherInterviewRecordsPage = lazy(
   () => import("@/pages/teacher/TeacherInterviewRecordsPage"),
 );
+const TeacherAiConfigPage = lazy(
+  () => import("@/pages/teacher/TeacherAiConfigPage"),
+);
 
 // Admin pages
 const AdminDashboardPage = lazy(
@@ -161,6 +164,10 @@ export const appRoutes: RouteObject[] = [
                   {
                     path: ROUTES.teacherRecords,
                     element: withRouteSuspense(<TeacherInterviewRecordsPage />),
+                  },
+                  {
+                    path: ROUTES.teacherAiConfig,
+                    element: withRouteSuspense(<TeacherAiConfigPage />),
                   },
                 ],
               },

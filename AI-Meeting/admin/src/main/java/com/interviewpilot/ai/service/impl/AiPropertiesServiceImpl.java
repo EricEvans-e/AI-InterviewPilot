@@ -186,6 +186,30 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
     }
 
     @Override
+    public void setDefaultAiProperties(Long id) {
+        AiPropertiesDO target = baseMapper.selectById(id);
+        if (target == null || target.getDelFlag() == 1) {
+            throw new ClientException("AI配置不存在");
+        }
+
+        // Unset other defaults of the same type
+        LambdaUpdateWrapper<AiPropertiesDO> unsetWrapper = Wrappers.lambdaUpdate(AiPropertiesDO.class)
+                .eq(AiPropertiesDO::getAiType, target.getAiType())
+                .eq(AiPropertiesDO::getDelFlag, 0)
+                .ne(AiPropertiesDO::getId, id)
+                .set(AiPropertiesDO::getIsDefault, 0)
+                .set(AiPropertiesDO::getUpdateTime, new Date());
+        baseMapper.update(null, unsetWrapper);
+
+        // Set this one as default
+        LambdaUpdateWrapper<AiPropertiesDO> setWrapper = Wrappers.lambdaUpdate(AiPropertiesDO.class)
+                .eq(AiPropertiesDO::getId, id)
+                .set(AiPropertiesDO::getIsDefault, 1)
+                .set(AiPropertiesDO::getUpdateTime, new Date());
+        baseMapper.update(null, setWrapper);
+    }
+
+    @Override
     public List<AiPropertiesRespDTO> getAllEnabledAiProperties() {
         return listEnabledAiProperties();
     }
@@ -196,6 +220,7 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
                 .eq(AiPropertiesDO::getDelFlag, 0)
                 .eq(AiPropertiesDO::getIsEnabled, 1)
                 .eq(AiPropertiesDO::getAiType, aiType)
+                .orderByDesc(AiPropertiesDO::getIsDefault)
                 .orderByDesc(AiPropertiesDO::getCreateTime)
                 .last("LIMIT 1");
 

@@ -16,6 +16,7 @@ export const ROUTES = {
   teacherQuestions: "/teacher/questions",
   teacherColleges: "/teacher/colleges",
   teacherRecords: "/teacher/records",
+  teacherAiConfig: "/teacher/ai-config",
   // admin routes
   adminDashboard: "/admin",
   adminUsers: "/admin/users",

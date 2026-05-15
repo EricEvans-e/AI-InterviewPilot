@@ -122,6 +122,7 @@ All APIs prefixed: `/api/ip/v1/`
 | `agentService` | `AgentController` | SSE (POST) |
 | `interviewService` | `InterviewSessionController` | REST |
 | `xunfeiTtsService` | `XunfeiTtsController` | REST |
+| `teacherService` | `AiPropertiesController` + `QuestionController` | REST (AI config CRUD, question CRUD, AI generate) |
 | `AudioToTextWebSocket` | `AudioTranscriptionWebSocketHandler` | WebSocket |
 
 ### Frontend Route Structure
@@ -140,6 +141,7 @@ Defined in `src/lib/constants.ts` as `ROUTES`. All routes are children of `/` (A
 | `/teacher/questions` | QuestionBank management | teacher, admin |
 | `/teacher/records` | Interview records & reports | teacher, admin |
 | `/teacher/colleges` | College management | teacher, admin |
+| `/teacher/ai-config` | AI model configuration (CRUD, enable/disable, set default) | teacher, admin |
 | `/admin` | AdminDashboard (stats) | admin |
 | `/admin/users` | User management | admin |
 

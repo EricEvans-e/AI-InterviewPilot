@@ -42,8 +42,15 @@ public class QuestionBankServiceImpl extends ServiceImpl<QuestionMapper, Questio
         QuestionDO questionDO = new QuestionDO();
         BeanUtils.copyProperties(requestParam, questionDO);
         questionDO.setCreatorId(creatorId);
-        questionDO.setIsAiGenerated(false);
-        questionDO.setStatus("draft");
+
+        boolean aiGenerated = Boolean.TRUE.equals(requestParam.getIsAiGenerated());
+        questionDO.setIsAiGenerated(aiGenerated);
+        if (aiGenerated && requestParam.getStatus() != null) {
+            questionDO.setStatus(requestParam.getStatus());
+        } else {
+            questionDO.setStatus("draft");
+        }
+
         questionDO.setCreateTime(new Date());
         questionDO.setUpdateTime(new Date());
         questionDO.setDelFlag(0);

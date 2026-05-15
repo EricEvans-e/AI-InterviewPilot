@@ -1,6 +1,7 @@
 package com.interviewpilot.questionbank.api;
 
 import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.interviewpilot.common.convention.annotation.CurrentUser;
 import com.interviewpilot.common.convention.context.UserContext;
 import com.interviewpilot.common.convention.result.PageInfo;
@@ -33,7 +34,7 @@ public class QuestionBankController {
      * 创建题目
      */
     @PostMapping
-    @SaCheckRole("teacher")
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<Long> createQuestion(@RequestBody @Valid QuestionSaveReqDTO req,
                                        @CurrentUser UserContext currentUser) {
         return Results.success(questionBankService.create(req, currentUser.getUserId()));
@@ -43,7 +44,7 @@ public class QuestionBankController {
      * 更新题目
      */
     @PutMapping("/{id}")
-    @SaCheckRole("teacher")
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<Void> updateQuestion(@PathVariable Long id,
                                        @RequestBody @Valid QuestionSaveReqDTO req) {
         questionBankService.update(id, req);
@@ -54,7 +55,7 @@ public class QuestionBankController {
      * 删除题目（逻辑删除）
      */
     @DeleteMapping("/{id}")
-    @SaCheckRole("teacher")
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<Void> deleteQuestion(@PathVariable Long id) {
         questionBankService.removeById(id);
         return Results.success();
@@ -80,7 +81,7 @@ public class QuestionBankController {
      * AI 生成题目
      */
     @PostMapping("/ai-generate")
-    @SaCheckRole("teacher")
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<List<QuestionRespDTO>> aiGenerate(@RequestBody @Valid QuestionGenerateReqDTO req) {
         List<QuestionRespDTO> result = aiGenerateService.generateQuestions(req).stream()
                 .map(questionDO -> {
@@ -96,7 +97,7 @@ public class QuestionBankController {
      * 更新题目状态
      */
     @PutMapping("/{id}/status")
-    @SaCheckRole("teacher")
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<Void> updateStatus(@PathVariable Long id, @RequestParam String status) {
         questionBankService.updateStatus(id, status);
         return Results.success();

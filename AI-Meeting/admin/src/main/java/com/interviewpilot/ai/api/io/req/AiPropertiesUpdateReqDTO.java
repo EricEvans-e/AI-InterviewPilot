@@ -75,4 +75,9 @@ public class AiPropertiesUpdateReqDTO {
      * 是否启用 0：禁用 1：启用
      */
     private Integer isEnabled;
+
+    /**
+     * 是否默认模型 0：否 1：是
+     */
+    private Integer isDefault;
 }
