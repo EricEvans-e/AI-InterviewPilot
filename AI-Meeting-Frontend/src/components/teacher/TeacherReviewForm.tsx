@@ -10,13 +10,13 @@ import { cn } from "@/lib/utils";
 import type { ReviewSubmitDTO } from "@/services/teacherService";
 
 interface TeacherReviewFormProps {
-  reportId: number;
+  sessionId: string;
   isSubmitting: boolean;
   onSubmit: (data: ReviewSubmitDTO) => void;
 }
 
 export default function TeacherReviewForm({
-  reportId,
+  sessionId,
   isSubmitting,
   onSubmit,
 }: TeacherReviewFormProps) {
@@ -34,16 +34,11 @@ export default function TeacherReviewForm({
         return;
       }
 
-      // Build comment with metadata tags
-      const tags: string[] = [];
-      if (markExcellent) tags.push("[优秀样本]");
-      if (markMisjudge) tags.push("[模型误判]");
-      const fullComment =
-        tags.length > 0 ? `${tags.join(" ")} ${comment.trim()}` : comment.trim();
-
       const data: ReviewSubmitDTO = {
-        reportId,
-        comment: fullComment,
+        sessionId,
+        content: comment.trim(),
+        isExcellentSample: markExcellent || undefined,
+        isModelMisjudge: markMisjudge || undefined,
       };
 
       if (score.trim() !== "") {
@@ -52,12 +47,12 @@ export default function TeacherReviewForm({
           window.alert("调整分数须为 0-100 之间的数字");
           return;
         }
-        data.score = numScore;
+        data.adjustedScore = numScore;
       }
 
       onSubmit(data);
     },
-    [reportId, comment, score, markExcellent, markMisjudge, onSubmit],
+    [sessionId, comment, score, markExcellent, markMisjudge, onSubmit],
   );
 
   const handleReset = useCallback(() => {

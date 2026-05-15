@@ -1027,4 +1027,36 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
                 .orderByDesc(InterviewRecordDO::getCreateTime);
         return baseMapper.selectPage(page, queryWrapper);
     }
+
+    @Override
+    public IPage<InterviewRecordDO> pageAllRecords(Integer pageNum, Integer pageSize) {
+        Page<InterviewRecordDO> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<InterviewRecordDO> queryWrapper = Wrappers.lambdaQuery(InterviewRecordDO.class)
+                .eq(InterviewRecordDO::getDelFlag, 0)
+                .orderByDesc(InterviewRecordDO::getCreateTime);
+        return baseMapper.selectPage(page, queryWrapper);
+    }
+
+    @Override
+    public InterviewRecordRespDTO getReportBySessionId(String sessionId) {
+        if (StrUtil.isBlank(sessionId)) {
+            throw new ClientException(InterviewErrorCodeEnum.SESSION_ID_EMPTY);
+        }
+
+        LambdaQueryWrapper<InterviewRecordDO> queryWrapper = Wrappers.lambdaQuery(InterviewRecordDO.class)
+                .eq(InterviewRecordDO::getSessionId, sessionId)
+                .eq(InterviewRecordDO::getDelFlag, 0);
+        InterviewRecordDO record = baseMapper.selectOne(queryWrapper);
+        if (record == null) {
+            return null;
+        }
+
+        InterviewRecordRespDTO respDTO = new InterviewRecordRespDTO();
+        BeanUtils.copyProperties(record, respDTO);
+        if (StrUtil.isNotBlank(record.getInterviewSuggestions())) {
+            respDTO.setInterviewSuggestionsMap(parseInterviewSuggestions(record.getInterviewSuggestions()));
+        }
+        enrichReportFields(sessionId, record, respDTO);
+        return respDTO;
+    }
 }

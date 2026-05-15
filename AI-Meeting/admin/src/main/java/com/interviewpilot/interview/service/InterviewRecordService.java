@@ -59,4 +59,19 @@ public interface InterviewRecordService extends IService<InterviewRecordDO> {
      * @return 分页结果
      */
     IPage<InterviewRecordDO> pageByStudent(Long studentId, Integer pageNum, Integer pageSize);
+
+    /**
+     * 分页查询所有面试记录（教师使用）
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @return 分页结果
+     */
+    IPage<InterviewRecordDO> pageAllRecords(Integer pageNum, Integer pageSize);
+
+    /**
+     * 根据会话ID获取完整报告（教师使用，不校验用户所有权）
+     * @param sessionId 会话ID
+     * @return 完整面试报告
+     */
+    InterviewRecordRespDTO getReportBySessionId(String sessionId);
 }

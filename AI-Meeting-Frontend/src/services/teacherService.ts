@@ -6,6 +6,7 @@ import type {
   CollegeRespDTO,
   MajorRespDTO,
 } from "@/services/questionBankService";
+import type { InterviewRecordResult } from "@/services/interviewService";
 
 // ── Question DTOs ──
 
@@ -40,32 +41,25 @@ export interface AiGenerateResult {
   questions: QuestionCreateDTO[];
 }
 
-// ── Student report DTOs ──
-
-export interface StudentReportDTO {
-  id: number;
-  studentName?: string;
-  studentId?: number;
-  sessionTitle?: string;
-  collegeName?: string;
-  majorName?: string;
-  overallScore?: number;
-  status?: string;
-  createTime?: string;
-}
-
-export interface StudentReportPageParams {
-  collegeId?: number;
-  majorId?: string;
-  status?: string;
-  pageNum?: number;
-  pageSize?: number;
-}
-
 export interface ReviewSubmitDTO {
-  reportId: number;
-  score?: number;
-  comment?: string;
+  sessionId: string;
+  content: string;
+  adjustedScore?: number;
+  isExcellentSample?: boolean;
+  isModelMisjudge?: boolean;
+}
+
+export interface InterviewRecordDTO {
+  id: number;
+  userId?: number;
+  sessionId?: string;
+  interviewScore?: number;
+  interviewStatus?: string;
+  questionCount?: number;
+  startTime?: string;
+  endTime?: string;
+  durationSeconds?: number;
+  createTime?: string;
 }
 
 export interface TeacherReviewRespDTO {
@@ -73,10 +67,10 @@ export interface TeacherReviewRespDTO {
   teacherId?: number;
   sessionId?: string;
   studentId?: number;
-  comment?: string;
-  scoreAdjustment?: number;
+  content?: string;
+  adjustedScore?: number;
   isExcellentSample?: boolean;
-  isModelMisjudgment?: boolean;
+  isModelMisjudge?: boolean;
   createTime?: string;
 }
 
@@ -134,24 +128,34 @@ export const teacherService = {
     });
   },
 
-  // Student reports
-  pageStudentReports(
-    params: StudentReportPageParams,
-  ): Promise<PageInfo<StudentReportDTO>> {
-    return service.get<PageInfo<StudentReportDTO>>(
-      "/ip/v1/teacher/reports/page",
+  pageInterviewRecords(
+    params: { pageNum?: number; pageSize?: number },
+  ): Promise<PageInfo<InterviewRecordDTO>> {
+    return service.get<PageInfo<InterviewRecordDTO>>(
+      "/ip/v1/teacher/interview-records",
       { params },
     );
   },
 
   submitReview(data: ReviewSubmitDTO): Promise<void> {
-    return service.post<void>("/ip/v1/teacher/reviews", data);
+    const { sessionId, ...body } = data;
+    return service.post<void>(
+      `/ip/v1/teacher/sessions/${encodeURIComponent(sessionId)}/review`,
+      body,
+    );
   },
 
   // Session reviews (teacher feedback on student interviews)
   getSessionReviews(sessionId: string): Promise<TeacherReviewRespDTO[]> {
     return service.get<TeacherReviewRespDTO[]>(
       `/ip/v1/teacher/sessions/${encodeURIComponent(sessionId)}/reviews`,
+    );
+  },
+
+  // Full report for a single session (teacher view)
+  getSessionReport(sessionId: string): Promise<InterviewRecordResult> {
+    return service.get<InterviewRecordResult>(
+      `/ip/v1/teacher/sessions/${encodeURIComponent(sessionId)}/report`,
     );
   },
 };

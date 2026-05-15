@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Users, Building2 } from "lucide-react";
+import { LayoutDashboard, BookOpen, Building2, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,14 +17,14 @@ const NAV_ITEMS = [
     icon: BookOpen,
   },
   {
-    label: "学生报告",
-    path: ROUTES.teacherStudents,
-    icon: Users,
-  },
-  {
     label: "院校管理",
     path: ROUTES.teacherColleges,
     icon: Building2,
+  },
+  {
+    label: "面试记录",
+    path: ROUTES.teacherRecords,
+    icon: ClipboardList,
   },
 ] as const;
 

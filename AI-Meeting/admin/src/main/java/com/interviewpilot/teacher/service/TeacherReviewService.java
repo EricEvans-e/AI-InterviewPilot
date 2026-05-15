@@ -3,6 +3,7 @@ package com.interviewpilot.teacher.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.interviewpilot.teacher.api.io.req.TeacherReviewSaveReqDTO;
+import com.interviewpilot.teacher.api.io.resp.StudentReportRespDTO;
 import com.interviewpilot.teacher.dao.entity.TeacherReviewDO;
 
 import java.util.List;
@@ -44,5 +45,5 @@ public interface TeacherReviewService extends IService<TeacherReviewDO> {
      * @param pageSize 每页大小
      * @return 分页结果
      */
-    IPage<TeacherReviewDO> getStudentReportList(Long teacherId, Integer pageNum, Integer pageSize);
+    IPage<StudentReportRespDTO> getStudentReportList(Long teacherId, Integer pageNum, Integer pageSize);
 }

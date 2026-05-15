@@ -1,14 +1,17 @@
 package com.interviewpilot.teacher.api;
 
 import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.interviewpilot.common.convention.annotation.CurrentUser;
 import com.interviewpilot.common.convention.context.UserContext;
 import com.interviewpilot.common.convention.result.Result;
 import com.interviewpilot.common.convention.result.Results;
 import com.interviewpilot.interview.dao.entity.InterviewRecordDO;
+import com.interviewpilot.interview.api.io.resp.InterviewRecordRespDTO;
 import com.interviewpilot.interview.service.InterviewRecordService;
 import com.interviewpilot.teacher.api.io.req.TeacherReviewSaveReqDTO;
+import com.interviewpilot.teacher.api.io.resp.StudentReportRespDTO;
 import com.interviewpilot.teacher.dao.entity.TeacherReviewDO;
 import com.interviewpilot.teacher.service.TeacherReviewService;
 import jakarta.validation.Valid;
@@ -23,7 +26,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/ip/v1/teacher")
 @RequiredArgsConstructor
-@SaCheckRole("teacher")
+@SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
 public class TeacherReportController {
 
     private final TeacherReviewService teacherReviewService;
@@ -71,10 +74,28 @@ public class TeacherReportController {
     }
 
     /**
+     * 分页查询所有面试记录（教师浏览）
+     */
+    @GetMapping("/interview-records")
+    public Result<IPage<InterviewRecordDO>> getAllInterviewRecords(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "15") Integer pageSize) {
+        return Results.success(interviewRecordService.pageAllRecords(pageNum, pageSize));
+    }
+
+    /**
+     * 教师查看指定会话的完整面试报告
+     */
+    @GetMapping("/sessions/{sessionId}/report")
+    public Result<InterviewRecordRespDTO> getSessionReport(@PathVariable String sessionId) {
+        return Results.success(interviewRecordService.getReportBySessionId(sessionId));
+    }
+
+    /**
      * 教师查看自己点评过的学生报告列表
      */
     @GetMapping("/reports")
-    public Result<IPage<TeacherReviewDO>> getStudentReportList(
+    public Result<IPage<StudentReportRespDTO>> getStudentReportList(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @CurrentUser UserContext currentUser) {

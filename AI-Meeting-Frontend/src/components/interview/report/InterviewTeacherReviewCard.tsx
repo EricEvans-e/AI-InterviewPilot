@@ -76,7 +76,7 @@ export default function InterviewTeacherReviewCard({
                       优秀样本
                     </span>
                   )}
-                  {review.isModelMisjudgment && (
+                  {review.isModelMisjudge && (
                     <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700">
                       模型误判
                     </span>
@@ -90,26 +90,26 @@ export default function InterviewTeacherReviewCard({
               </div>
 
               {/* Score adjustment */}
-              {review.scoreAdjustment != null && review.scoreAdjustment !== 0 && (
+              {review.adjustedScore != null && review.adjustedScore !== 0 && (
                 <div className="mt-2">
                   <span
                     className={cn(
                       "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                      review.scoreAdjustment > 0
+                      review.adjustedScore > 0
                         ? "bg-emerald-50 text-emerald-700"
                         : "bg-rose-50 text-rose-700",
                     )}
                   >
-                    分数调整: {review.scoreAdjustment > 0 ? "+" : ""}
-                    {review.scoreAdjustment}
+                    分数调整: {review.adjustedScore > 0 ? "+" : ""}
+                    {review.adjustedScore}
                   </span>
                 </div>
               )}
 
               {/* Comment */}
-              {review.comment && (
+              {review.content && (
                 <p className="mt-3 text-sm leading-6 text-slate-600">
-                  {review.comment}
+                  {review.content}
                 </p>
               )}
             </motion.div>

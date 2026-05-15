@@ -45,11 +45,11 @@ const TeacherDashboardPage = lazy(
 const TeacherQuestionsPage = lazy(
   () => import("@/pages/teacher/TeacherQuestionsPage"),
 );
-const TeacherStudentsPage = lazy(
-  () => import("@/pages/teacher/TeacherStudentsPage"),
-);
 const TeacherCollegesPage = lazy(
   () => import("@/pages/teacher/TeacherCollegesPage"),
+);
+const TeacherInterviewRecordsPage = lazy(
+  () => import("@/pages/teacher/TeacherInterviewRecordsPage"),
 );
 
 // Admin pages
@@ -155,12 +155,12 @@ export const appRoutes: RouteObject[] = [
                     element: withRouteSuspense(<TeacherQuestionsPage />),
                   },
                   {
-                    path: ROUTES.teacherStudents,
-                    element: withRouteSuspense(<TeacherStudentsPage />),
-                  },
-                  {
                     path: ROUTES.teacherColleges,
                     element: withRouteSuspense(<TeacherCollegesPage />),
+                  },
+                  {
+                    path: ROUTES.teacherRecords,
+                    element: withRouteSuspense(<TeacherInterviewRecordsPage />),
                   },
                 ],
               },

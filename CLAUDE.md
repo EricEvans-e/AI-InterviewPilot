@@ -138,7 +138,7 @@ Defined in `src/lib/constants.ts` as `ROUTES`. All routes are children of `/` (A
 | `/profile` | StudentProfilePage | any authenticated |
 | `/teacher` | TeacherDashboard | teacher, admin |
 | `/teacher/questions` | QuestionBank management | teacher, admin |
-| `/teacher/students` | Student management | teacher, admin |
+| `/teacher/records` | Interview records & reports | teacher, admin |
 | `/teacher/colleges` | College management | teacher, admin |
 | `/admin` | AdminDashboard (stats) | admin |
 | `/admin/users` | User management | admin |

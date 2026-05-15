@@ -6,12 +6,21 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.interviewpilot.common.convention.exception.ClientException;
+import com.interviewpilot.interview.dao.entity.InterviewRecordDO;
 import com.interviewpilot.interview.dao.entity.InterviewSession;
+import com.interviewpilot.interview.service.InterviewRecordService;
 import com.interviewpilot.interview.service.InterviewSessionService;
+import com.interviewpilot.questionbank.dao.entity.CollegeDO;
+import com.interviewpilot.questionbank.dao.entity.MajorDO;
+import com.interviewpilot.questionbank.service.CollegeService;
+import com.interviewpilot.questionbank.service.MajorService;
 import com.interviewpilot.teacher.api.io.req.TeacherReviewSaveReqDTO;
+import com.interviewpilot.teacher.api.io.resp.StudentReportRespDTO;
 import com.interviewpilot.teacher.dao.entity.TeacherReviewDO;
 import com.interviewpilot.teacher.dao.mapper.TeacherReviewMapper;
 import com.interviewpilot.teacher.service.TeacherReviewService;
+import com.interviewpilot.user.dao.entity.UserDO;
+import com.interviewpilot.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 教师点评服务实现
@@ -30,6 +40,10 @@ public class TeacherReviewServiceImpl extends ServiceImpl<TeacherReviewMapper, T
         implements TeacherReviewService {
 
     private final InterviewSessionService interviewSessionService;
+    private final UserService userService;
+    private final CollegeService collegeService;
+    private final MajorService majorService;
+    private final InterviewRecordService interviewRecordService;
 
     @Override
     @Transactional
@@ -92,7 +106,7 @@ public class TeacherReviewServiceImpl extends ServiceImpl<TeacherReviewMapper, T
     }
 
     @Override
-    public IPage<TeacherReviewDO> getStudentReportList(Long teacherId, Integer pageNum, Integer pageSize) {
+    public IPage<StudentReportRespDTO> getStudentReportList(Long teacherId, Integer pageNum, Integer pageSize) {
         if (teacherId == null || teacherId <= 0) {
             throw new ClientException("教师ID无效");
         }
@@ -101,6 +115,80 @@ public class TeacherReviewServiceImpl extends ServiceImpl<TeacherReviewMapper, T
                 .eq(TeacherReviewDO::getTeacherId, teacherId)
                 .eq(TeacherReviewDO::getDelFlag, 0)
                 .orderByDesc(TeacherReviewDO::getCreateTime);
-        return page(page, queryWrapper);
+        IPage<TeacherReviewDO> reviewPage = page(page, queryWrapper);
+
+        List<StudentReportRespDTO> records = reviewPage.getRecords().stream()
+                .map(this::toStudentReportDTO)
+                .collect(Collectors.toList());
+
+        Page<StudentReportRespDTO> result = new Page<>(pageNum, pageSize, reviewPage.getTotal());
+        result.setRecords(records);
+        return result;
+    }
+
+    private StudentReportRespDTO toStudentReportDTO(TeacherReviewDO review) {
+        StudentReportRespDTO dto = new StudentReportRespDTO();
+        dto.setId(review.getId());
+        dto.setSessionId(review.getSessionId());
+        dto.setStudentId(review.getStudentId());
+        dto.setContent(review.getContent());
+        dto.setAdjustedScore(review.getAdjustedScore());
+        dto.setIsExcellentSample(review.getIsExcellentSample());
+        dto.setIsModelMisjudge(review.getIsModelMisjudge());
+        dto.setCreateTime(review.getCreateTime());
+
+        // Student name
+        if (review.getStudentId() != null) {
+            try {
+                UserDO user = userService.getById(review.getStudentId());
+                if (user != null) {
+                    dto.setStudentName(user.getRealName() != null ? user.getRealName() : user.getUsername());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to load user for studentId={}", review.getStudentId(), e);
+            }
+        }
+
+        // Session title, collegeId, majorId from MongoDB
+        if (review.getSessionId() != null) {
+            try {
+                InterviewSession session = interviewSessionService.getBySessionId(review.getSessionId());
+                if (session != null) {
+                    dto.setSessionTitle(session.getConversationTitle());
+                    if (session.getCollegeId() != null) {
+                        CollegeDO college = collegeService.getById(session.getCollegeId());
+                        if (college != null) {
+                            dto.setCollegeName(college.getName());
+                        }
+                    }
+                    if (session.getMajorId() != null) {
+                        MajorDO major = majorService.getById(session.getMajorId());
+                        if (major != null) {
+                            dto.setMajorName(major.getName());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to load session for sessionId={}", review.getSessionId(), e);
+            }
+        }
+
+        // Interview score and status from interview_record
+        if (review.getSessionId() != null) {
+            try {
+                LambdaQueryWrapper<InterviewRecordDO> recordWrapper = Wrappers.lambdaQuery(InterviewRecordDO.class)
+                        .eq(InterviewRecordDO::getSessionId, review.getSessionId())
+                        .eq(InterviewRecordDO::getDelFlag, 0);
+                InterviewRecordDO record = interviewRecordService.getOne(recordWrapper);
+                if (record != null) {
+                    dto.setOverallScore(record.getInterviewScore());
+                    dto.setStatus(record.getInterviewStatus());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to load interview record for sessionId={}", review.getSessionId(), e);
+            }
+        }
+
+        return dto;
     }
 }
