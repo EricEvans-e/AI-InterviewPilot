@@ -60,9 +60,4 @@ public class UserPageRespDTO {
      * 角色: student, teacher, admin
      */
     private String role;
-
-    /**
-     * 是否为管理员（由 role 字段计算）
-     */
-    private Boolean isAdmin;
 }

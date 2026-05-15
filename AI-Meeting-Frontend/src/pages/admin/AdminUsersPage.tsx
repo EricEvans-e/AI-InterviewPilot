@@ -51,7 +51,7 @@ export default function AdminUsersPage() {
 
   const handleAddAdmin = useCallback(
     (user: UserPageRespDTO) => {
-      if (user.isAdmin) {
+      if (user.role === "admin") {
         window.alert("该用户已是管理员");
         return;
       }
@@ -201,19 +201,19 @@ export default function AdminUsersPage() {
                           <span
                             className={cn(
                               "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                              user.isAdmin
+                              user.role === "admin"
                                 ? "bg-indigo-50 text-indigo-600"
                                 : "bg-slate-100 text-slate-500",
                             )}
                           >
-                            {user.isAdmin ? "是" : "否"}
+                            {user.role === "admin" ? "是" : "否"}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-slate-500">
                           {formatTime(user.createTime)}
                         </td>
                         <td className="px-4 py-3">
-                          {!user.isAdmin && (
+                          {user.role !== "admin" && (
                             <Button
                               variant="ghost"
                               size="sm"

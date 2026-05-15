@@ -154,5 +154,3 @@ export const selectUserRole = (state: { user: UserState }): UserRole =>
 export const selectIsTeacher = (state: { user: UserState }): boolean =>
   state.user.currentUser?.role === "teacher";
 
-export const selectIsAdmin = (state: { user: UserState }): boolean =>
-  state.user.currentUser?.role === "admin";

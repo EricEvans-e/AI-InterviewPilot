@@ -12,7 +12,6 @@ export interface UserPageRespDTO {
   createTime?: string;
   updateTime?: string;
   role?: string;
-  isAdmin?: boolean;
 }
 
 export interface UserPageParams {
