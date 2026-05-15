@@ -1,25 +1,6 @@
 SET NAMES utf8mb4;
 
-create table admin_permission
-(
-    id          bigint auto_increment comment 'ID'
-        primary key,
-    user_id     bigint               not null comment '用户ID',
-    username    varchar(256)         not null comment '用户名',
-    is_admin    tinyint(1) default 0 null comment '是否管理员 0：普通用户 1：管理员',
-    create_time datetime             null comment '创建时间',
-    update_time datetime             null comment '修改时间',
-    del_flag    tinyint(1) default 0 null comment '删除标识 0：未删除 1：已删除',
-    constraint idx_unique_user_id
-        unique (user_id)
-)
-    comment '管理员权限表';
-
-create index idx_is_admin
-    on admin_permission (is_admin);
-
-create index idx_username
-    on admin_permission (username);
+-- admin_permission 表已废弃（2026-05-14），权限统一由 t_user.role 字段管理
 
 create table agent_file_asset
 (
@@ -180,6 +161,8 @@ create table t_user
     real_name     varchar(256) null comment '真实姓名',
     phone         varchar(128) null comment '手机号',
     mail          varchar(512) null comment '邮箱',
+    role          varchar(32)  default 'student' null comment '角色: student, teacher, admin',
+    open_id       varchar(128) null comment '微信 OpenID',
     deletion_time bigint       null comment '注销时间戳',
     create_time   datetime     null comment '创建时间',
     update_time   datetime     null comment '修改时间',

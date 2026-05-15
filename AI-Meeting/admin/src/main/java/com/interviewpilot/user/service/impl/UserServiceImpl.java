@@ -230,6 +230,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                     .map(userDO -> {
                         UserPageRespDTO respDTO = new UserPageRespDTO();
                         BeanUtils.copyProperties(userDO, respDTO);
+                        respDTO.setIsAdmin("admin".equals(userDO.getRole()));
                         return respDTO;
                     })
                     .toList());

@@ -124,6 +124,27 @@ All APIs prefixed: `/api/ip/v1/`
 | `xunfeiTtsService` | `XunfeiTtsController` | REST |
 | `AudioToTextWebSocket` | `AudioTranscriptionWebSocketHandler` | WebSocket |
 
+### Frontend Route Structure
+
+Defined in `src/lib/constants.ts` as `ROUTES`. All routes are children of `/` (AppLayout).
+
+| Path | Page | Required Role |
+|------|------|---------------|
+| `/` | MarketingHomePage | public |
+| `/auth` | AuthPage (login/register) | public |
+| `/lobby` | LobbyPage | any authenticated |
+| `/interview/*` | Interview flow pages | any authenticated |
+| `/chat/:sessionId?` | AI Chat | any authenticated |
+| `/profile` | StudentProfilePage | any authenticated |
+| `/teacher` | TeacherDashboard | teacher, admin |
+| `/teacher/questions` | QuestionBank management | teacher, admin |
+| `/teacher/students` | Student management | teacher, admin |
+| `/teacher/colleges` | College management | teacher, admin |
+| `/admin` | AdminDashboard (stats) | admin |
+| `/admin/users` | User management | admin |
+
+> **Note**: Admin dashboard path is `/admin`, NOT `/admin/dashboard`.
+
 ## Auth & Role System
 
 Single source of truth for user roles: `t_user.role` column (`student` / `teacher` / `admin`).
@@ -132,8 +153,9 @@ Single source of truth for user roles: `t_user.role` column (`student` / `teache
 - Login/checkLogin/phoneLogin endpoints return `role` field in response. Frontend `RoleGuard` uses this for route protection.
 - Legacy `admin_permission` table is deprecated — do not add new logic depending on it.
 - Admin panel (`/admin`) requires `role=admin`. Backend `pageUsers` and `addAdmin` endpoints are guarded by `@SaCheckRole("admin")`.
+- `addAdmin` API body: `POST /api/ip/v1/users/admin` with JSON object `{"username":"xxx"}` (not a raw string — Axios JSON serialization wraps strings in quotes, breaking `@RequestBody` deserialization).
 - Default admin account: username `admin`, password `admin` (defined in `admin/src/main/resources/sql/t_user.sql`). Passwords are stored in plain text.
-- Initial SQL: `t_user.sql` contains the single admin user; `admin_permission.sql` is cleared (deprecated).
+- Initial SQL: `t_user.sql` contains the single admin user; `admin_permission.sql` is cleared (deprecated). **Note**: `t_user.sql` only executes on first database creation. For existing databases, manually insert the admin user.
 
 ## Key Domain Constraints (Interview)
 

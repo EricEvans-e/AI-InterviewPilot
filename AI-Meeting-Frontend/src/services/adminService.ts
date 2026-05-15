@@ -11,6 +11,7 @@ export interface UserPageRespDTO {
   delFlag?: number;
   createTime?: string;
   updateTime?: string;
+  role?: string;
   isAdmin?: boolean;
 }
 
@@ -38,6 +39,6 @@ export const adminService = {
   },
 
   addAdmin(username: string): Promise<void> {
-    return service.post<void>("/ip/v1/users/admin", username);
+    return service.post<void>("/ip/v1/users/admin", { username });
   },
 };

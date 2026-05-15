@@ -36,7 +36,6 @@ import com.interviewpilot.user.service.SmsCodeService;
 import com.interviewpilot.user.api.io.resp.UserActualRespDTO;
 import com.interviewpilot.user.api.io.resp.UserPageRespDTO;
 import com.interviewpilot.user.api.io.resp.UserRespDTO;
-import com.interviewpilot.user.service.AdminPermissionService;
 import com.interviewpilot.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -62,7 +61,6 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
-    private final AdminPermissionService adminPermissionService;
     private final LoginSessionService loginSessionService;
     private final SmsCodeService smsCodeService;
 
@@ -200,8 +198,14 @@ public class UserController {
      */
     @PostMapping("/admin")
     @SaCheckRole("admin")
-    public Result<Void> addAdmin(@RequestBody String username) {
-        adminPermissionService.setAdminByUserId(username);
+    public Result<Void> addAdmin(@RequestBody Map<String, String> body) {
+        String username = body.get("username");
+        UserDO user = userService.getByUsername(username);
+        if (user == null) {
+            throw new ClientException("用户不存在");
+        }
+        user.setRole("admin");
+        userService.updateById(user);
         return Results.success();
     }
 
