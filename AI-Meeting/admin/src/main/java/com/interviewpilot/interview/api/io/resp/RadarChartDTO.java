@@ -48,7 +48,7 @@ public class RadarChartDTO {
     /**
      * 专业匹配得分 (0-100)
      */
-    private Integer professionalMatchScore;
+    private Integer professionalScore;
 
     /**
      * 语言表达得分 (0-100)

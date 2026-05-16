@@ -11,6 +11,7 @@ import com.interviewpilot.questionbank.api.io.resp.MajorRespDTO;
 import com.interviewpilot.questionbank.dao.entity.MajorDO;
 import com.interviewpilot.questionbank.dao.mapper.MajorMapper;
 import com.interviewpilot.questionbank.service.MajorService;
+import cn.hutool.core.util.StrUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -86,6 +87,8 @@ public class MajorServiceImpl extends ServiceImpl<MajorMapper, MajorDO>
         Page<MajorDO> page = new Page<>(requestParam.getPageNum(), requestParam.getPageSize());
         LambdaQueryWrapper<MajorDO> queryWrapper = Wrappers.lambdaQuery(MajorDO.class)
                 .eq(MajorDO::getDelFlag, 0)
+                .eq(requestParam.getCollegeId() != null, MajorDO::getCollegeId, requestParam.getCollegeId())
+                .like(StrUtil.isNotBlank(requestParam.getName()), MajorDO::getName, requestParam.getName())
                 .orderByDesc(MajorDO::getCreateTime);
         Page<MajorDO> majorDOPage = baseMapper.selectPage(page, queryWrapper);
         List<MajorRespDTO> resultList = majorDOPage.getRecords().stream()
@@ -108,6 +111,22 @@ public class MajorServiceImpl extends ServiceImpl<MajorMapper, MajorDO>
     public List<MajorRespDTO> listAll() {
         LambdaQueryWrapper<MajorDO> queryWrapper = Wrappers.lambdaQuery(MajorDO.class)
                 .eq(MajorDO::getDelFlag, 0)
+                .orderByDesc(MajorDO::getCreateTime);
+        List<MajorDO> list = baseMapper.selectList(queryWrapper);
+        return list.stream()
+                .map(item -> {
+                    MajorRespDTO respDTO = new MajorRespDTO();
+                    BeanUtils.copyProperties(item, respDTO);
+                    return respDTO;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MajorRespDTO> listByCollegeId(Long collegeId) {
+        LambdaQueryWrapper<MajorDO> queryWrapper = Wrappers.lambdaQuery(MajorDO.class)
+                .eq(MajorDO::getDelFlag, 0)
+                .eq(MajorDO::getCollegeId, collegeId)
                 .orderByDesc(MajorDO::getCreateTime);
         List<MajorDO> list = baseMapper.selectList(queryWrapper);
         return list.stream()

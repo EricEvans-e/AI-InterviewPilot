@@ -49,7 +49,7 @@ public class WeightedRadarComputationStrategy implements RadarComputationStrateg
         }
         radarChart.setContentScore(dimensionResult.getContentScore());
         radarChart.setLogicScore(dimensionResult.getLogicScore());
-        radarChart.setProfessionalMatchScore(dimensionResult.getProfessionalScore());
+        radarChart.setProfessionalScore(dimensionResult.getProfessionalScore());
         radarChart.setExpressionScore(dimensionResult.getExpressionScore());
         radarChart.setAdaptabilityScore(dimensionResult.getAdaptabilityScore());
         radarChart.setTimeControlScore(dimensionResult.getTimeControlScore());

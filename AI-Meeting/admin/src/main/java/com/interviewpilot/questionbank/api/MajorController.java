@@ -71,10 +71,13 @@ public class MajorController {
     }
 
     /**
-     * 查询所有专业列表
+     * 查询所有专业列表（可按院校ID筛选）
      */
     @GetMapping("/list")
-    public Result<List<MajorRespDTO>> list() {
+    public Result<List<MajorRespDTO>> list(@RequestParam(value = "collegeId", required = false) Long collegeId) {
+        if (collegeId != null) {
+            return Results.success(majorService.listByCollegeId(collegeId));
+        }
         return Results.success(majorService.listAll());
     }
 }

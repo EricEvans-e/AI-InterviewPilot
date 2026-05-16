@@ -26,6 +26,7 @@ import com.interviewpilot.user.api.io.req.UserRegisterReqDTO;
 import com.interviewpilot.user.api.io.req.UserUpdateReqDTO;
 import com.interviewpilot.user.api.io.resp.UserLoginRespDTO;
 import com.interviewpilot.user.api.io.resp.UserPageRespDTO;
+import com.interviewpilot.user.api.io.resp.AdminStatsRespDTO;
 import com.interviewpilot.user.api.io.resp.UserRespDTO;
 
 /**
@@ -105,5 +106,7 @@ public interface UserService extends IService<UserDO> {
     void logout(String username, String token);
 
     IPage<UserPageRespDTO> pageUsers(UserPageReqDTO requestParam);
+
+    AdminStatsRespDTO getStats();
 }
 

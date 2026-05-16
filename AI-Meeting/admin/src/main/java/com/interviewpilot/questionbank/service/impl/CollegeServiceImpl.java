@@ -11,6 +11,7 @@ import com.interviewpilot.questionbank.api.io.resp.CollegeRespDTO;
 import com.interviewpilot.questionbank.dao.entity.CollegeDO;
 import com.interviewpilot.questionbank.dao.mapper.CollegeMapper;
 import com.interviewpilot.questionbank.service.CollegeService;
+import cn.hutool.core.util.StrUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -84,6 +85,11 @@ public class CollegeServiceImpl extends ServiceImpl<CollegeMapper, CollegeDO>
         Page<CollegeDO> page = new Page<>(requestParam.getPageNum(), requestParam.getPageSize());
         LambdaQueryWrapper<CollegeDO> queryWrapper = Wrappers.lambdaQuery(CollegeDO.class)
                 .eq(CollegeDO::getDelFlag, 0)
+                .like(StrUtil.isNotBlank(requestParam.getName()), CollegeDO::getName, requestParam.getName())
+                .eq(StrUtil.isNotBlank(requestParam.getProvince()), CollegeDO::getProvince, requestParam.getProvince())
+                .eq(StrUtil.isNotBlank(requestParam.getCity()), CollegeDO::getCity, requestParam.getCity())
+                .eq(StrUtil.isNotBlank(requestParam.getType()), CollegeDO::getType, requestParam.getType())
+                .eq(StrUtil.isNotBlank(requestParam.getLevel()), CollegeDO::getLevel, requestParam.getLevel())
                 .orderByDesc(CollegeDO::getCreateTime);
         Page<CollegeDO> collegeDOPage = baseMapper.selectPage(page, queryWrapper);
         List<CollegeRespDTO> resultList = collegeDOPage.getRecords().stream()

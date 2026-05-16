@@ -67,11 +67,11 @@ public class InterviewDemeanorService {
                 throw new ClientException(InterviewErrorCodeEnum.AGENT_CONFIG_NOT_FOUND);
             }
 
-            boolean isMimo = "mimo".equalsIgnoreCase(agentProperties.getAiProvider());
+            boolean isAnthropic = "anthropic".equalsIgnoreCase(agentProperties.getAiProvider());
 
-            if (isMimo) {
-                // Mimo 没有文件上传 API，跳过图片上传，使用纯文本 prompt
-                log.info("Mimo provider detected, skipping image upload for demeanor");
+            if (isAnthropic) {
+                // Anthropic 没有文件上传 API，跳过图片上传，使用纯文本 prompt
+                log.info("Anthropic provider detected, skipping image upload for demeanor");
             } else {
                 // Upload image first and get a workflow-readable URL.
                 if (reqDTO.getUserPhoto() != null && !reqDTO.getUserPhoto().isEmpty()) {

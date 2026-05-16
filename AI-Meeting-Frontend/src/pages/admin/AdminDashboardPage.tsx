@@ -4,39 +4,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminService } from "@/services/adminService";
 
 export default function AdminDashboardPage() {
-  // Fetch total user count for the stat card
-  const { data: userData } = useQuery({
-    queryKey: ["admin-users", { current: 1, size: 1 }],
-    queryFn: () => adminService.pageUsers({ current: 1, size: 1 }),
+  const { data: statsData } = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: () => adminService.getStats(),
   });
-
-  const totalUsers = userData?.total ?? 0;
 
   const stats = [
     {
       label: "注册用户数",
-      value: totalUsers,
+      value: statsData?.totalUsers ?? "--",
       icon: Users,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
       label: "今日活跃",
-      value: "--",
+      value: statsData?.todayActive ?? "--",
       icon: Activity,
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
       label: "本周训练次数",
-      value: "--",
+      value: statsData?.weekTrainingCount ?? "--",
       icon: TrendingUp,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
     },
     {
       label: "平均得分",
-      value: "--",
+      value: statsData?.avgScore != null ? statsData.avgScore.toFixed(1) : "--",
       icon: BarChart3,
       color: "text-purple-600",
       bgColor: "bg-purple-50",

@@ -81,10 +81,10 @@ Each domain follows internal layering: `api/` (controllers) → `service/` → `
 ### AI Integration — Three Engines
 
 1. **Spring AI** (`UniversalAiChatHandler`) — general chat for OpenAI-compatible providers. Dynamically creates `ChatClient` per `aiType` (DeepSeek uses `DeepSeekChatModel`, others use `OpenAiChatModel`). Supports streaming with `reasoning_content` extraction.
-2. **Mimo / Anthropic** (`MimoChatHandler`) — Anthropic Messages API protocol. Separate handler because request/response format differs from OpenAI (SSE event chain: `message_start` → `content_block_delta` → `message_stop`). Supports `thinking` (extended reasoning) for `mimo-v2.5-pro`/`v2-pro` models. Auth via `x-api-key` header.
-3. **讯飞星辰 Workflow Agents** — interview-specific. 5 agent scenarios defined in `BusinessAgentScene`: question extraction, answer evaluation, demeanor analysis, question asking, general agent chat. Config stored in `agent_properties` table. Also supports **Mimo** as alternative provider via `ai_provider` field — `InterviewAiInvoker.doChat()` routes to `MimoChatHandler.callSync()` when `ai_provider=mimo`, using `MimoPromptBuilder` to convert structured parameters to text prompts.
+2. **Anthropic** (`AnthropicChatHandler`) — Anthropic Messages API protocol. Separate handler because request/response format differs from OpenAI (SSE event chain: `message_start` → `content_block_delta` → `message_stop`). Supports `thinking` (extended reasoning) for `mimo-v2.5-pro`/`v2-pro` models. Auth via `x-api-key` header.
+3. **讯飞星辰 Workflow Agents** — interview-specific. 5 agent scenarios defined in `BusinessAgentScene`: question extraction, answer evaluation, demeanor analysis, question asking, general agent chat. Config stored in `agent_properties` table. Also supports **Anthropic** as alternative provider via `ai_provider` field — `InterviewAiInvoker.doChat()` routes to `AnthropicChatHandler.callSync()` when `ai_provider=anthropic`, using `AnthropicPromptBuilder` to convert structured parameters to text prompts.
 
-**AI Handler routing**: `AiChatHandlerFactory` dispatches by `aiType` string. `mimo` → `MimoChatHandler`; all other supported types → `UniversalAiChatHandler`. Both implement `AiChatHandler` interface (`streamToSink` + `callSync`). Model config stored in `ai_properties` table.
+**AI Handler routing**: `AiChatHandlerFactory` dispatches by `aiType` string. `anthropic` → `AnthropicChatHandler`; all other supported types → `UniversalAiChatHandler`. Both implement `AiChatHandler` interface (`streamToSink` + `callSync`). Model config stored in `ai_properties` table.
 
 > 详细的模型配置与使用说明见 [`docs/ai-model-configuration.md`](docs/ai-model-configuration.md)。
 

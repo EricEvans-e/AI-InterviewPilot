@@ -86,6 +86,9 @@ public class ExamOutlineServiceImpl extends ServiceImpl<ExamOutlineMapper, ExamO
         Page<ExamOutlineDO> page = new Page<>(requestParam.getPageNum(), requestParam.getPageSize());
         LambdaQueryWrapper<ExamOutlineDO> queryWrapper = Wrappers.lambdaQuery(ExamOutlineDO.class)
                 .eq(ExamOutlineDO::getDelFlag, 0)
+                .eq(requestParam.getCollegeId() != null, ExamOutlineDO::getCollegeId, requestParam.getCollegeId())
+                .eq(requestParam.getMajorId() != null, ExamOutlineDO::getMajorId, requestParam.getMajorId())
+                .eq(requestParam.getYear() != null, ExamOutlineDO::getYear, requestParam.getYear())
                 .orderByDesc(ExamOutlineDO::getCreateTime);
         Page<ExamOutlineDO> examOutlineDOPage = baseMapper.selectPage(page, queryWrapper);
         List<ExamOutlineRespDTO> resultList = examOutlineDOPage.getRecords().stream()

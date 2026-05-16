@@ -42,4 +42,9 @@ public interface MajorService extends IService<MajorDO> {
      * 查询所有专业列表
      */
     List<MajorRespDTO> listAll();
+
+    /**
+     * 根据院校ID查询专业列表
+     */
+    List<MajorRespDTO> listByCollegeId(Long collegeId);
 }

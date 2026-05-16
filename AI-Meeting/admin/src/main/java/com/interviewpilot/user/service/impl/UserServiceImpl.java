@@ -39,8 +39,10 @@ import com.interviewpilot.user.api.io.req.UserRegisterReqDTO;
 import com.interviewpilot.user.api.io.req.UserUpdateReqDTO;
 import com.interviewpilot.user.api.io.resp.UserLoginRespDTO;
 import com.interviewpilot.user.api.io.resp.UserPageRespDTO;
+import com.interviewpilot.user.api.io.resp.AdminStatsRespDTO;
 import com.interviewpilot.user.api.io.resp.UserRespDTO;
 import com.interviewpilot.user.service.UserService;
+import com.interviewpilot.interview.dao.mapper.InterviewRecordMapper;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
@@ -51,6 +53,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -70,6 +75,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     private final RBloomFilter<String> userRegisterCachePenetrationBloomFilter;
     private final RedissonClient redissonClient;
     private final StringRedisTemplate stringRedisTemplate;
+    private final InterviewRecordMapper interviewRecordMapper;
 
     @Override
     public UserRespDTO getUserByUsername(String username) {
@@ -236,5 +242,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         }
 
         return resultPage;
+    }
+
+    @Override
+    public AdminStatsRespDTO getStats() {
+        AdminStatsRespDTO stats = new AdminStatsRespDTO();
+
+        // 总用户数
+        stats.setTotalUsers(Math.toIntExact(baseMapper.selectCount(
+                Wrappers.lambdaQuery(UserDO.class).eq(UserDO::getDelFlag, 0))));
+
+        // 今日活跃用户数
+        LocalDate today = LocalDate.now();
+        Date todayStart = Date.from(today.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        stats.setTodayActive(interviewRecordMapper.countTodayActiveUsers(todayStart));
+
+        // 本周训练次数
+        LocalDate weekStart = today.minusDays(today.getDayOfWeek().getValue() - 1);
+        Date weekStartDate = Date.from(weekStart.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        stats.setWeekTrainingCount(interviewRecordMapper.countWeekTraining(weekStartDate));
+
+        // 平均得分
+        Double avgScore = interviewRecordMapper.avgInterviewScore();
+        stats.setAvgScore(avgScore != null ? Math.round(avgScore * 10.0) / 10.0 : null);
+
+        return stats;
     }
 }

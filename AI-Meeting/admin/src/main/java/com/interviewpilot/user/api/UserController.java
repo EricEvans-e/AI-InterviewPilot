@@ -34,6 +34,7 @@ import com.interviewpilot.user.api.io.req.UserUpdateReqDTO;
 import com.interviewpilot.user.dao.entity.UserDO;
 import com.interviewpilot.user.service.SmsCodeService;
 import com.interviewpilot.user.api.io.resp.UserActualRespDTO;
+import com.interviewpilot.user.api.io.resp.AdminStatsRespDTO;
 import com.interviewpilot.user.api.io.resp.UserPageRespDTO;
 import com.interviewpilot.user.api.io.resp.UserRespDTO;
 import com.interviewpilot.user.service.UserService;
@@ -216,6 +217,15 @@ public class UserController {
     @SaCheckRole("admin")
     public Result<IPage<UserPageRespDTO>> pageUsers(UserPageReqDTO requestParam) {
         return Results.success(userService.pageUsers(requestParam));
+    }
+
+    /**
+     * 管理后台统计数据（仅管理员）
+     */
+    @GetMapping("/stats")
+    @SaCheckRole("admin")
+    public Result<AdminStatsRespDTO> getStats() {
+        return Results.success(userService.getStats());
     }
 
     private String resolveRole(UserDO user) {

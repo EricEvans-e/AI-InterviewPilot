@@ -21,7 +21,7 @@ import type {
 const AI_TYPE_OPTIONS = [
   { value: "deepseek", label: "DeepSeek" },
   { value: "openai", label: "OpenAI" },
-  { value: "mimo", label: "Mimo" },
+  { value: "anthropic", label: "Anthropic" },
   { value: "doubao", label: "豆包" },
   { value: "spark", label: "讯飞星火" },
   { value: "qwen", label: "通义千问" },
