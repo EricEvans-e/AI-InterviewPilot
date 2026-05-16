@@ -14,6 +14,7 @@ import com.interviewpilot.interview.shared.InterviewAiInvoker;
 import com.interviewpilot.interview.shared.InterviewResponseParser;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
+import com.interviewpilot.toolkit.PdfTextExtractor;
 import com.interviewpilot.toolkit.xunfei.XingChenAIClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import org.redisson.api.RLock;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class InterviewQuestionExtractionService {
+
+    private static final int MAX_EMPTY_QUESTIONS_RETRIES = 2;
 
     private static final String EXTRACTION_PROMPT =
             "Extract technical interview questions from the uploaded resume. "
@@ -68,25 +72,58 @@ public class InterviewQuestionExtractionService {
                 return response;
             }
 
-            String fullContent = interviewAiInvoker.callAiSyncWithFile(
-                    EXTRACTION_PROMPT,
-                    reqDTO.getSessionId(),
-                    agentProperties,
-                    fileUrl,
-                    InterviewAiGuardStage.INTERVIEW_EXTRACTION,
-                    interviewAiInvoker.buildSingleFlightKey(InterviewAiGuardStage.INTERVIEW_EXTRACTION, reqDTO.getSessionId(), fileUrl)
-            );
+            // Anthropic 不支持文件上传，需要将 PDF 转为文本后通过 prompt 传递
+            Map<String, Object> extractionParams = null;
+            if ("anthropic".equalsIgnoreCase(agentProperties.getAiProvider())) {
+                String resumeText = PdfTextExtractor.extractText(reqDTO.getResumePdf());
+                if (StrUtil.isNotBlank(resumeText)) {
+                    extractionParams = new HashMap<>();
+                    extractionParams.put("resume_text", resumeText);
+                }
+            }
 
-            long responseTime = System.currentTimeMillis() - startTime;
-            reqDTO.setResumeFileUrl(fileUrl);
+            String fullContent = null;
+            long responseTime = 0;
+            boolean populated = false;
 
-            // 先持久化原始响应，再做结构化解析；解析失败时仍可通过原始响应排障与回补。
-            persistRawResponse(reqDTO, fullContent, responseTime);
+            for (int attempt = 0; attempt <= MAX_EMPTY_QUESTIONS_RETRIES; attempt++) {
+                if (attempt > 0) {
+                    log.warn("Retrying extraction due to empty questions, sessionId={}, attempt={}",
+                            reqDTO.getSessionId(), attempt);
+                }
 
-            response.setResumeFileUrl(fileUrl);
-            response.setResponseTime((int) responseTime);
+                fullContent = interviewAiInvoker.callAiSyncWithFile(
+                        EXTRACTION_PROMPT,
+                        reqDTO.getSessionId(),
+                        agentProperties,
+                        fileUrl,
+                        InterviewAiGuardStage.INTERVIEW_EXTRACTION,
+                        interviewAiInvoker.buildSingleFlightKey(InterviewAiGuardStage.INTERVIEW_EXTRACTION, reqDTO.getSessionId(), fileUrl),
+                        extractionParams
+                );
 
-            if (!populateStructuredResponse(reqDTO, response, fullContent)) {
+                responseTime = System.currentTimeMillis() - startTime;
+                reqDTO.setResumeFileUrl(fileUrl);
+
+                // 先持久化原始响应，再做结构化解析；解析失败时仍可通过原始响应排障与回补。
+                persistRawResponse(reqDTO, fullContent, responseTime);
+
+                response.setResumeFileUrl(fileUrl);
+                response.setResponseTime((int) responseTime);
+
+                if (populateStructuredResponse(reqDTO, response, fullContent)) {
+                    populated = true;
+                    break;
+                }
+
+                // 仅当"空题目"时重试，其他解析错误直接返回
+                String errMsg = response.getErrorMessage();
+                if (errMsg == null || !errMsg.contains("empty interview questions")) {
+                    return response;
+                }
+            }
+
+            if (!populated) {
                 return response;
             }
 
@@ -141,9 +178,9 @@ public class InterviewQuestionExtractionService {
             response.setErrorMessage("resume file does not exist");
             return null;
         }
-        // Mimo 没有文件上传 API，跳过上传，直接返回空字符串（后续走纯文本 prompt）
-        if ("mimo".equalsIgnoreCase(agentProperties.getAiProvider())) {
-            log.info("Mimo provider detected, skipping file upload for extraction");
+        // Anthropic 没有文件上传 API，跳过上传，直接返回空字符串（后续走纯文本 prompt）
+        if ("anthropic".equalsIgnoreCase(agentProperties.getAiProvider())) {
+            log.info("Anthropic provider detected, skipping file upload for extraction");
             return "";
         }
         try {
