@@ -3,7 +3,7 @@ package com.interviewpilot.interview.shared;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
-import com.interviewpilot.ai.service.chat.MimoChatHandler;
+import com.interviewpilot.ai.service.chat.AnthropicChatHandler;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
 import com.interviewpilot.interview.application.guard.core.AiCallGuardService;
 import com.interviewpilot.interview.application.guard.core.InterviewAiGuardStage;
@@ -29,7 +29,7 @@ import java.util.concurrent.Callable;
 public class InterviewAiInvoker {
 
     private final XingChenAIClient xingChenAIClient;
-    private final MimoChatHandler mimoChatHandler;
+    private final AnthropicChatHandler anthropicChatHandler;
     private final AiCallGuardService aiCallGuardService;
     private final DistributedInterviewAiSingleFlightService distributedInterviewAiSingleFlightService;
 
@@ -64,6 +64,17 @@ public class InterviewAiInvoker {
             String stage,
             String singleFlightKey) throws Exception {
         return guardedCall(stage, singleFlightKey, () -> doChat(prompt, sessionId, agentProperties, fileUrl, null));
+    }
+
+    public String callAiSyncWithFile(
+            String prompt,
+            String sessionId,
+            AgentPropertiesDO agentProperties,
+            String fileUrl,
+            String stage,
+            String singleFlightKey,
+            Map<String, Object> parameters) throws Exception {
+        return guardedCall(stage, singleFlightKey, () -> doChat(prompt, sessionId, agentProperties, fileUrl, parameters));
     }
 
     public String callAiSyncWithParameters(
@@ -135,8 +146,8 @@ public class InterviewAiInvoker {
             String fileUrl,
             Map<String, Object> parameters) throws Exception {
         String aiProvider = agentProperties.getAiProvider();
-        if ("mimo".equalsIgnoreCase(aiProvider)) {
-            return doChatMimo(input, sessionId, agentProperties, parameters);
+        if ("anthropic".equalsIgnoreCase(aiProvider)) {
+            return doChatAnthropic(input, sessionId, agentProperties, parameters);
         }
         return doChatXingChen(input, sessionId, agentProperties, fileUrl, parameters);
     }
@@ -175,16 +186,16 @@ public class InterviewAiInvoker {
     }
 
     /**
-     * Mimo 调用：将 XingChen 结构化参数转换为纯文本 prompt，通过 MimoChatHandler.callSync 调用。
-     * field reuse: apiKey=Mimo API Key, apiSecret=模型名, apiFlowId=API URL
+     * Anthropic 调用：将 XingChen 结构化参数转换为纯文本 prompt，通过 AnthropicChatHandler.callSync 调用。
+     * field reuse: apiKey=Anthropic API Key, apiSecret=模型名, apiFlowId=API URL
      */
-    private String doChatMimo(
+    private String doChatAnthropic(
             String input,
             String sessionId,
             AgentPropertiesDO agentProperties,
             Map<String, Object> parameters) {
-        String prompt = MimoPromptBuilder.build(input, parameters);
-        log.info("[InterviewAiInvoker] Mimo 调用 sessionId={}, prompt前100字={}", sessionId,
+        String prompt = AnthropicPromptBuilder.build(input, parameters);
+        log.info("[InterviewAiInvoker] Anthropic 调用 sessionId={}, prompt前100字={}", sessionId,
                 prompt.length() > 100 ? prompt.substring(0, 100) : prompt);
 
         AiPropertiesDO aiProps = new AiPropertiesDO();
@@ -193,6 +204,6 @@ public class InterviewAiInvoker {
         aiProps.setApiUrl(agentProperties.getApiFlowId());
         aiProps.setMaxTokens(8192);
 
-        return mimoChatHandler.callSync(aiProps, prompt);
+        return anthropicChatHandler.callSync(aiProps, prompt);
     }
 }

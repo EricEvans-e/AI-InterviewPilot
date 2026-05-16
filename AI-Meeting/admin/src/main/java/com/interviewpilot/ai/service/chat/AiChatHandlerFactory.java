@@ -12,20 +12,20 @@ import org.springframework.stereotype.Component;
 public class AiChatHandlerFactory {
 
     private final UniversalAiChatHandler universalAiChatHandler;
-    private final MimoChatHandler mimoChatHandler;
+    private final AnthropicChatHandler anthropicChatHandler;
 
-    public AiChatHandlerFactory(UniversalAiChatHandler universalAiChatHandler, MimoChatHandler mimoChatHandler) {
+    public AiChatHandlerFactory(UniversalAiChatHandler universalAiChatHandler, AnthropicChatHandler anthropicChatHandler) {
         this.universalAiChatHandler = universalAiChatHandler;
-        this.mimoChatHandler = mimoChatHandler;
+        this.anthropicChatHandler = anthropicChatHandler;
     }
 
     public AiChatHandler getHandler(String aiType) {
         if (StrUtil.isBlank(aiType)) {
             return null;
         }
-        // Mimo 使用 Anthropic 协议，走专用 handler
-        if (AiPropritiesType.MIMO.getType().equalsIgnoreCase(aiType)) {
-            return mimoChatHandler;
+        // Anthropic 协议，走专用 handler
+        if (AiPropritiesType.ANTHROPIC.getType().equalsIgnoreCase(aiType)) {
+            return anthropicChatHandler;
         }
         // 通用处理器支持所有兼容OpenAI协议的模型
         if (universalAiChatHandler.supports(aiType)) {

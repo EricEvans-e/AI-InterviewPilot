@@ -27,16 +27,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Mimo (Anthropic 兼容) AI 聊天处理器
+ * Anthropic 兼容 AI 聊天处理器
  * 使用 Anthropic Messages API 格式，支持流式输出和 thinking 模式
  */
 @Slf4j
 @Component
-public class MimoChatHandler implements AiChatHandler {
+public class AnthropicChatHandler implements AiChatHandler {
 
     @Override
     public String getType() {
-        return AiPropritiesType.MIMO.getType();
+        return AiPropritiesType.ANTHROPIC.getType();
     }
 
     @Override
@@ -48,14 +48,14 @@ public class MimoChatHandler implements AiChatHandler {
         String apiKey = aiProperties.getApiKey();
 
         if (StrUtil.isBlank(baseUrl)) {
-            baseUrl = AiPropritiesType.MIMO.getDefaultBaseUrl();
+            baseUrl = AiPropritiesType.ANTHROPIC.getDefaultBaseUrl();
         }
         if (StrUtil.isBlank(apiKey)) {
-            throw new ClientException("Mimo API Key 未配置");
+            throw new ClientException("Anthropic API Key 未配置");
         }
 
         JSONObject requestBody = buildRequestBody(aiProperties, userMessage, historyMessages, true);
-        log.info("Mimo streamToSink: baseUrl={}, model={}", baseUrl, aiProperties.getModelName());
+        log.info("Anthropic streamToSink: baseUrl={}, model={}", baseUrl, aiProperties.getModelName());
 
         CountDownLatch latch = new CountDownLatch(1);
         final Throwable[] streamError = new Throwable[1];
@@ -72,7 +72,7 @@ public class MimoChatHandler implements AiChatHandler {
                 .header("Content-Type", "application/json; charset=UTF-8")
                 .bodyValue(requestBody.toJSONString())
                 .exchangeToFlux(response -> {
-                    log.debug("Mimo response status: {}, contentType: {}", response.statusCode(), response.headers().contentType());
+                    log.debug("Anthropic response status: {}, contentType: {}", response.statusCode(), response.headers().contentType());
                     return response.bodyToFlux(org.springframework.core.io.buffer.DataBuffer.class)
                             .map(dataBuffer -> {
                                 byte[] bytes = new byte[dataBuffer.readableByteCount()];
@@ -84,29 +84,29 @@ public class MimoChatHandler implements AiChatHandler {
                 .subscribe(
                         chunk -> {
                             try {
-                                log.debug("Mimo raw chunk: {}", chunk.length() > 200 ? chunk.substring(0, 200) : chunk);
+                                log.debug("Anthropic raw chunk: {}", chunk.length() > 200 ? chunk.substring(0, 200) : chunk);
                                 processStreamChunk(chunk, sink, accumulator);
                             } catch (Exception e) {
-                                log.error("Mimo 流式响应处理错误", e);
+                                log.error("Anthropic 流式响应处理错误", e);
                                 streamError[0] = e;
                                 sink.error(e);
                                 latch.countDown();
                             }
                         },
                         error -> {
-                            log.error("Mimo 流式响应发生错误: {}", error.getMessage(), error);
+                            log.error("Anthropic 流式响应发生错误: {}", error.getMessage(), error);
                             streamError[0] = error;
                             sink.error(error);
                             latch.countDown();
                         },
                         () -> {
-                            log.info("Mimo stream completed");
+                            log.info("Anthropic stream completed");
                             latch.countDown();
                         }
                 );
 
         if (!latch.await(5, TimeUnit.MINUTES)) {
-            throw new RuntimeException("Mimo AI 响应超时");
+            throw new RuntimeException("Anthropic AI 响应超时");
         }
 
         if (streamError[0] != null) {
@@ -115,17 +115,17 @@ public class MimoChatHandler implements AiChatHandler {
     }
 
     /**
-     * 同步调用 Mimo（非流式）
+     * 同步调用 Anthropic（非流式）
      */
     public String callSync(AiPropertiesDO aiProperties, String userMessage) {
         String baseUrl = aiProperties.getApiUrl();
         String apiKey = aiProperties.getApiKey();
 
         if (StrUtil.isBlank(baseUrl)) {
-            baseUrl = AiPropritiesType.MIMO.getDefaultBaseUrl();
+            baseUrl = AiPropritiesType.ANTHROPIC.getDefaultBaseUrl();
         }
         if (StrUtil.isBlank(apiKey)) {
-            throw new ClientException("Mimo API Key 未配置");
+            throw new ClientException("Anthropic API Key 未配置");
         }
 
         JSONObject requestBody = buildRequestBody(aiProperties, userMessage, null, false);
@@ -206,12 +206,11 @@ public class MimoChatHandler implements AiChatHandler {
 
         body.put("messages", messages);
 
-        // Enable thinking for mimo-v2.5-pro
+        // Enable thinking for models that support it (e.g. mimo-v2.5-pro, claude-3.5-sonnet)
         String modelName = aiProperties.getModelName();
         if (modelName != null && (modelName.contains("v2.5-pro") || modelName.contains("v2-pro"))) {
             JSONObject thinking = new JSONObject();
             thinking.put("type", "enabled");
-            // thinking.budget_tokens is optional, let model decide
             body.put("thinking", thinking);
         }
 
@@ -293,7 +292,7 @@ public class MimoChatHandler implements AiChatHandler {
                     }
                 }
             } catch (Exception e) {
-                log.warn("Mimo SSE chunk 解析失败: {}", jsonStr, e);
+                log.warn("Anthropic SSE chunk 解析失败: {}", jsonStr, e);
             }
         }
     }

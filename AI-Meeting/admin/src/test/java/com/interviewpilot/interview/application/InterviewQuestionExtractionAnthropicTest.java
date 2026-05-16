@@ -28,13 +28,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 验证 Mimo 模式下简历上传被跳过，直接走纯文本 prompt。
+ * 验证 Anthropic 模式下简历上传被跳过，直接走纯文本 prompt。
  */
-class InterviewQuestionExtractionMimoTest {
+class InterviewQuestionExtractionAnthropicTest {
 
     @Test
-    void shouldSkipFileUploadWhenAiProviderIsMimo() throws Exception {
-        // 使用 SUBCLASS mock maker 以兼容 JDK 25
+    void shouldSkipFileUploadWhenAiProviderIsAnthropic() throws Exception {
         BusinessAgentResolver businessAgentResolver = Mockito.mock(BusinessAgentResolver.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
         XingChenAIClient xingChenAIClient = Mockito.mock(XingChenAIClient.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
         InterviewAiInvoker interviewAiInvoker = Mockito.mock(InterviewAiInvoker.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
@@ -53,37 +52,37 @@ class InterviewQuestionExtractionMimoTest {
                 interviewResponseParser
         );
 
-        // Mimo Agent
+        // Anthropic Agent
         AgentPropertiesDO agent = new AgentPropertiesDO();
         agent.setId(100L);
         agent.setAgentName("Mimo面试出题官");
         agent.setApiKey("tp-test-key");
         agent.setApiSecret("mimo-v2.5-pro");
         agent.setApiFlowId("https://token-plan-sgp.xiaomimimo.com/anthropic");
-        agent.setAiProvider("mimo");
+        agent.setAiProvider("anthropic");
 
         when(businessAgentResolver.resolveRequired(BusinessAgentScene.INTERVIEW_QUESTION_EXTRACTION))
                 .thenReturn(agent);
 
         RLock heavyLock = Mockito.mock(RLock.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
-        when(interviewAiSessionLockService.acquire("session-mimo", InterviewAiGuardStage.INTERVIEW_EXTRACTION))
+        when(interviewAiSessionLockService.acquire("session-anthropic", InterviewAiGuardStage.INTERVIEW_EXTRACTION))
                 .thenReturn(heavyLock);
 
-        // Mimo 模式下 callAiSyncWithFile 传入的 fileUrl 应为空字符串
-        String mimoResponse = """
+        // Anthropic 模式下 callAiSyncWithFile 传入的 fileUrl 应为空字符串
+        String anthropicResponse = """
                 {"choices":[{"delta":{"role":"assistant","content":"{\\"questions\\":[\\"问题1\\",\\"问题2\\"],\\"sugest\\":[\\"建议1\\"],\\"type\\":\\"技术面试\\",\\"resumeScore\\":80}"}}]}
                 """;
         when(interviewAiInvoker.callAiSyncWithFile(
                 any(),
-                eq("session-mimo"),
+                eq("session-anthropic"),
                 eq(agent),
-                eq(""),  // fileUrl 为空（Mimo 跳过上传）
+                eq(""),  // fileUrl 为空（Anthropic 跳过上传）
                 eq(InterviewAiGuardStage.INTERVIEW_EXTRACTION),
                 any()
-        )).thenReturn(mimoResponse);
+        )).thenReturn(anthropicResponse);
 
         InterviewQuestionReqDTO request = new InterviewQuestionReqDTO();
-        request.setSessionId("session-mimo");
+        request.setSessionId("session-anthropic");
         request.setUserName("tester");
         request.setResumePdf(new MockMultipartFile(
                 "resumePdf",
@@ -94,13 +93,13 @@ class InterviewQuestionExtractionMimoTest {
 
         InterviewQuestionRespDTO response = service.extractInterviewQuestions(request);
 
-        // 关键验证：Mimo 模式下不应调用 XingChenAIClient.uploadFile()
+        // 关键验证：Anthropic 模式下不应调用 XingChenAIClient.uploadFile()
         verify(xingChenAIClient, never()).uploadFile(any(), any(), any());
 
         // 验证调用了 invoker（fileUrl=""）
         verify(interviewAiInvoker).callAiSyncWithFile(
                 any(),
-                eq("session-mimo"),
+                eq("session-anthropic"),
                 eq(agent),
                 eq(""),
                 eq(InterviewAiGuardStage.INTERVIEW_EXTRACTION),
