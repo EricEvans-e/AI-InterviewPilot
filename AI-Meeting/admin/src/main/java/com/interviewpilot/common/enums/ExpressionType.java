@@ -4,7 +4,7 @@ import lombok.Getter;
 
 /**
  * 表情类型枚举
- * 根据讯飞表情识别接口返回的label值映射对应的表情类型
+ * 根据iFlytek expression recognition接口返回的label值映射对应的表情类型
  */
 @Getter
 public enum ExpressionType {

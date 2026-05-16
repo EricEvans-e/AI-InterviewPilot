@@ -16,7 +16,7 @@ import com.interviewpilot.agent.api.io.resp.AgentPropertiesRespDTO;
 import com.interviewpilot.agent.api.io.resp.SceneBindingRespDTO;
 import com.interviewpilot.agent.application.BusinessAgentScene;
 import com.interviewpilot.common.enums.AgentTagType;
-import com.interviewpilot.toolkit.xunfei.AgentPropertiesLoader;
+import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Lazy;

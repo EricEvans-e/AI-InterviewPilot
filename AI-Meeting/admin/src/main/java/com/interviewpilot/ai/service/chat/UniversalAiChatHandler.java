@@ -12,7 +12,7 @@ import com.interviewpilot.ai.api.io.resp.AiMessageHistoryRespDTO;
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
 import com.interviewpilot.ai.enums.AiPropritiesType;
 import com.interviewpilot.common.convention.exception.ClientException;
-import com.interviewpilot.toolkit.xunfei.AIContentAccumulator;
+import com.interviewpilot.toolkit.ai.AIContentAccumulator;
 import io.micrometer.observation.ObservationRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -267,22 +267,34 @@ public class UniversalAiChatHandler implements AiChatHandler {
      * @return AI 响应文本
      */
     public String callSync(AiPropertiesDO aiProperties, String userMessage) {
-        ChatClient chatClient = createChatClient(aiProperties);
-        List<Message> messages = new ArrayList<>();
+        log.info("[UniversalAiChatHandler] callSync start, url={}, model={}, inputPreview={}",
+                aiProperties.getApiUrl(), aiProperties.getModelName(),
+                userMessage.length() > 100 ? userMessage.substring(0, 100) : userMessage);
+        try {
+            ChatClient chatClient = createChatClient(aiProperties);
+            List<Message> messages = new ArrayList<>();
 
-        if (StrUtil.isNotBlank(aiProperties.getSystemPrompt())) {
-            messages.add(new SystemMessage(aiProperties.getSystemPrompt()));
+            if (StrUtil.isNotBlank(aiProperties.getSystemPrompt())) {
+                messages.add(new SystemMessage(aiProperties.getSystemPrompt()));
+            }
+            messages.add(new UserMessage(userMessage));
+
+            var chatResponse = chatClient.prompt()
+                    .messages(messages)
+                    .call()
+                    .chatResponse();
+
+            if (chatResponse != null && chatResponse.getResult() != null) {
+                String result = chatResponse.getResult().getOutput().getText();
+                log.info("[UniversalAiChatHandler] callSync success, resultPreview={}",
+                        result != null && result.length() > 100 ? result.substring(0, 100) : result);
+                return result;
+            }
+            return null;
+        } catch (Exception e) {
+            log.error("[UniversalAiChatHandler] callSync failed, url={}, model={}, error={}",
+                    aiProperties.getApiUrl(), aiProperties.getModelName(), e.getMessage(), e);
+            throw e;
         }
-        messages.add(new UserMessage(userMessage));
-
-        var chatResponse = chatClient.prompt()
-                .messages(messages)
-                .call()
-                .chatResponse();
-
-        if (chatResponse != null && chatResponse.getResult() != null) {
-            return chatResponse.getResult().getOutput().getText();
-        }
-        return null;
     }
 }

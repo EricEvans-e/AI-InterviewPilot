@@ -3,7 +3,7 @@ package com.interviewpilot.media.infrastructure.integration;
 import cn.xfyun.config.SparkIatModelEnum;
 import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
 import com.interviewpilot.common.convention.exception.ClientException;
-import com.interviewpilot.toolkit.xunfei.SparkIatUtil;
+import com.interviewpilot.toolkit.iflytek.SparkIatUtil;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

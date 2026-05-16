@@ -15,6 +15,8 @@ public class InterviewConversationRespDTO {
 
     private String interviewType;
 
+    private String sessionMode;
+
     private String resumeFileUrl;
 
     private Date createTime;

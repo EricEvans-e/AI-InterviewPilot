@@ -1,6 +1,6 @@
 package com.interviewpilot.conversation.application;
 
-import com.interviewpilot.toolkit.xunfei.AIContentAccumulator;
+import com.interviewpilot.toolkit.ai.AIContentAccumulator;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

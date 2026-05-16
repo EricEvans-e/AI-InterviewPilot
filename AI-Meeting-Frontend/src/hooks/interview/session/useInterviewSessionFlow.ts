@@ -62,6 +62,7 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
     stopThinkingIndicator,
     cancelActiveQuestionStream,
     resetMessageStream,
+    clearWelcomeMessage,
   } = useInterviewMessageStream();
 
   const isReady = Boolean(interviewerSessionId) && !isInterviewFinished;
@@ -169,6 +170,10 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
         return;
       }
 
+      // Clear welcome message when loading the first question
+      // This prevents showing "请先上传简历" for question-bank sessions
+      clearWelcomeMessage();
+
       await appendNextQuestionMessage(
         progressPatch.currentQuestionContent,
         progressPatch.currentQuestionNumber,
@@ -179,7 +184,7 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
 
       playQuestionTTS(progressPatch.currentQuestionContent);
     },
-    [appendNextQuestionMessage, applyProgressPatch, playQuestionTTS],
+    [appendNextQuestionMessage, applyProgressPatch, clearWelcomeMessage, playQuestionTTS],
   );
 
   useInterviewRouteRecovery({

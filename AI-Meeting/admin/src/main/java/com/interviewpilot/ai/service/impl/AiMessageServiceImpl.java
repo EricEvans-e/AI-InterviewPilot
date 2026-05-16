@@ -17,7 +17,7 @@ import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.conversation.application.ConversationMessageHistoryService;
 import com.interviewpilot.conversation.application.ConversationMessagePersistenceService;
 import com.interviewpilot.conversation.application.ConversationStreamingSupport;
-import com.interviewpilot.toolkit.xunfei.AIContentAccumulator;
+import com.interviewpilot.toolkit.ai.AIContentAccumulator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;

@@ -12,7 +12,7 @@ import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.shared.InterviewAiInvoker;
 import com.interviewpilot.interview.shared.InterviewResponseParser;
-import com.interviewpilot.toolkit.xunfei.XingChenAIClient;
+import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockMakers;
 import org.mockito.Mockito;
@@ -35,7 +35,7 @@ class InterviewQuestionExtractionAnthropicTest {
     @Test
     void shouldSkipFileUploadWhenAiProviderIsAnthropic() throws Exception {
         BusinessAgentResolver businessAgentResolver = Mockito.mock(BusinessAgentResolver.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
-        XingChenAIClient xingChenAIClient = Mockito.mock(XingChenAIClient.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
+        XunfeiWorkflowClient xunfeiWorkflowClient = Mockito.mock(XunfeiWorkflowClient.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
         InterviewAiInvoker interviewAiInvoker = Mockito.mock(InterviewAiInvoker.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
         InterviewAiSessionLockService interviewAiSessionLockService = Mockito.mock(InterviewAiSessionLockService.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
         InterviewQuestionService interviewQuestionService = Mockito.mock(InterviewQuestionService.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
@@ -44,7 +44,7 @@ class InterviewQuestionExtractionAnthropicTest {
 
         InterviewQuestionExtractionService service = new InterviewQuestionExtractionService(
                 businessAgentResolver,
-                xingChenAIClient,
+                xunfeiWorkflowClient,
                 interviewAiInvoker,
                 interviewAiSessionLockService,
                 interviewQuestionService,
@@ -93,8 +93,8 @@ class InterviewQuestionExtractionAnthropicTest {
 
         InterviewQuestionRespDTO response = service.extractInterviewQuestions(request);
 
-        // 关键验证：Anthropic 模式下不应调用 XingChenAIClient.uploadFile()
-        verify(xingChenAIClient, never()).uploadFile(any(), any(), any());
+        // 关键验证：Anthropic 模式下不应调用 XunfeiWorkflowClient.uploadFile()
+        verify(xunfeiWorkflowClient, never()).uploadFile(any(), any(), any());
 
         // 验证调用了 invoker（fileUrl=""）
         verify(interviewAiInvoker).callAiSyncWithFile(

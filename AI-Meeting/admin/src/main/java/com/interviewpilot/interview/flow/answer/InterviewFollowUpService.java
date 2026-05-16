@@ -45,7 +45,8 @@ public class InterviewFollowUpService {
             String answerContent,
             String fallbackFollowUpQuestion,
             Integer currentFollowUpCount,
-            Integer maxFollowUp) {
+            Integer maxFollowUp,
+            String interviewMode) {
 
         // 1) 先做追问次数与输入兜底，超过上限直接停止追问。
         int safeCurrentFollowUpCount = Math.max(0, currentFollowUpCount == null ? 0 : currentFollowUpCount);
@@ -72,7 +73,8 @@ public class InterviewFollowUpService {
                     answerContent,
                     safeCurrentFollowUpCount,
                     safeMaxFollowUp,
-                    agentProperties
+                    agentProperties,
+                    interviewMode
             );
         } catch (Exception ex) {
             log.warn("Follow-up agent unavailable, fallback to scorer suggestion, sessionId={}", sessionId, ex);
@@ -94,27 +96,31 @@ public class InterviewFollowUpService {
             String answerContent,
             int currentFollowUpCount,
             int maxFollowUp,
-            AgentPropertiesDO agentProperties) {
+            AgentPropertiesDO agentProperties,
+            String interviewMode) {
 
         if (agentProperties == null || StrUtil.isBlank(currentQuestion) || StrUtil.isBlank(answerContent)) {
             return null;
         }
 
         try {
+            // 为 AI 提供面试场景上下文，避免生成技术面试风格的追问
+            String contextualAnswer = buildContextualInput(answerContent, interviewMode);
             Map<String, Object> parameters = buildWorkflowParameters(
-                    answerContent,
+                    contextualAnswer,
                     currentQuestion,
                     currentFollowUpCount,
                     maxFollowUp,
                     buildResumeContextText(interviewQuestionCacheService.getSessionResumeContext(sessionId))
             );
             log.info(
-                    "Follow-up workflow request, sessionId={}, requestId={}, question={}, followUpCount={}, maxFollowUp={}",
+                    "Follow-up workflow request, sessionId={}, requestId={}, question={}, followUpCount={}, maxFollowUp={}, inputPreview={}",
                     sessionId,
                     requestId,
                     clip(currentQuestion, 120),
                     currentFollowUpCount,
-                    maxFollowUp
+                    maxFollowUp,
+                    clip(contextualAnswer, 150)
             );
             String workflowResponse;
             String singleFlightKey = interviewAiInvoker.buildSingleFlightKey(
@@ -217,6 +223,22 @@ public class InterviewFollowUpService {
             return null;
         }
         return mainQuestionNumber + "-F" + followUpCount;
+    }
+
+    /**
+     * 在考生答案前附加面试场景上下文，引导 AI 生成符合场景的追问。
+     */
+    private String buildContextualInput(String answerContent, String interviewMode) {
+        StringBuilder context = new StringBuilder();
+        context.append("【面试场景】高校招生面试（");
+        if (StrUtil.isNotBlank(interviewMode)) {
+            context.append(interviewMode);
+        } else {
+            context.append("综合评价");
+        }
+        context.append("）\n");
+        context.append("【考生回答】").append(answerContent);
+        return context.toString();
     }
 
     private String clip(String value, int maxLength) {

@@ -15,7 +15,8 @@ import com.interviewpilot.interview.shared.InterviewResponseParser;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.toolkit.PdfTextExtractor;
-import com.interviewpilot.toolkit.xunfei.XingChenAIClient;
+import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
+import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -40,7 +41,8 @@ public class InterviewQuestionExtractionService {
                     + "Do not output smallTalk, greetings, or fallback chat content.";
 
     private final BusinessAgentResolver businessAgentResolver;
-    private final XingChenAIClient xingChenAIClient;
+    private final AgentPropertiesLoader agentPropertiesLoader;
+    private final XunfeiWorkflowClient xunfeiWorkflowClient;
     private final InterviewAiInvoker interviewAiInvoker;
     private final InterviewAiSessionLockService interviewAiSessionLockService;
     private final InterviewQuestionService interviewQuestionService;
@@ -67,14 +69,29 @@ public class InterviewQuestionExtractionService {
                 return response;
             }
 
-            String fileUrl = uploadResumeIfPresent(reqDTO, agentProperties, response);
+            // Mimo/Anthropic 不支持文件上传，用默认出题 agent 上传（仅用于简历预览）
+            AgentPropertiesDO uploadAgent = agentProperties;
+            String provider = agentProperties.getAiProvider();
+            if ("openai".equalsIgnoreCase(provider) || "anthropic".equalsIgnoreCase(provider)) {
+                try {
+                    uploadAgent = businessAgentResolver.resolveRequired(BusinessAgentScene.INTERVIEW_QUESTION_EXTRACTION);
+                    if ("openai".equalsIgnoreCase(uploadAgent.getAiProvider()) || "anthropic".equalsIgnoreCase(uploadAgent.getAiProvider())) {
+                        // 当前 active 的也是 Mimo/Anthropic，用 fallback 名称找iFlytek agent
+                        uploadAgent = agentPropertiesLoader.getByAgentName("面试出题官");
+                    }
+                } catch (Exception e) {
+                    log.warn("No agent available for file upload, resume preview will be unavailable");
+                }
+            }
+
+            String fileUrl = uploadResumeIfPresent(reqDTO, uploadAgent, response);
             if (fileUrl == null) {
                 return response;
             }
 
-            // Anthropic 不支持文件上传，需要将 PDF 转为文本后通过 prompt 传递
+            // Anthropic/Mimo 不支持文件上传，需要将 PDF 转为文本后通过 prompt 传递
             Map<String, Object> extractionParams = null;
-            if ("anthropic".equalsIgnoreCase(agentProperties.getAiProvider())) {
+            if ("anthropic".equalsIgnoreCase(provider) || "openai".equalsIgnoreCase(provider)) {
                 String resumeText = PdfTextExtractor.extractText(reqDTO.getResumePdf());
                 if (StrUtil.isNotBlank(resumeText)) {
                     extractionParams = new HashMap<>();
@@ -178,13 +195,14 @@ public class InterviewQuestionExtractionService {
             response.setErrorMessage("resume file does not exist");
             return null;
         }
-        // Anthropic 没有文件上传 API，跳过上传，直接返回空字符串（后续走纯文本 prompt）
-        if ("anthropic".equalsIgnoreCase(agentProperties.getAiProvider())) {
+        // Anthropic/Mimo 没有文件上传 API，跳过上传，直接返回空字符串（后续走纯文本 prompt）
+        String provider = agentProperties.getAiProvider();
+        if ("anthropic".equalsIgnoreCase(provider) || "openai".equalsIgnoreCase(provider)) {
             log.info("Anthropic provider detected, skipping file upload for extraction");
             return "";
         }
         try {
-            String fileUrl = xingChenAIClient.uploadFile(
+            String fileUrl = xunfeiWorkflowClient.uploadFile(
                     reqDTO.getResumePdf(),
                     agentProperties.getApiKey(),
                     agentProperties.getApiSecret()

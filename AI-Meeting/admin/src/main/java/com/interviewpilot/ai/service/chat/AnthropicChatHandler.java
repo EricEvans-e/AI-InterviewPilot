@@ -10,7 +10,7 @@ import com.interviewpilot.ai.api.io.resp.AiMessageHistoryRespDTO;
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
 import com.interviewpilot.ai.enums.AiPropritiesType;
 import com.interviewpilot.common.convention.exception.ClientException;
-import com.interviewpilot.toolkit.xunfei.AIContentAccumulator;
+import com.interviewpilot.toolkit.ai.AIContentAccumulator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.MediaType;

@@ -22,7 +22,7 @@
 - 接口：`POST /api/ip/v1/agents/sessions/{sessionId}/chat`
 - 控制器会把 `sessionId`、当前用户名写回 `UserMessageReqDTO`。
 - `AgentMessageServiceImpl.agentChatSse(requestParam, userId)` 先做会话归属校验，再进入 SSE 流。
-- 真正流式输出通过 `XingChenAIClient.chat(...)` 把 chunk 逐段发送给 `SseEmitter`。
+- 真正流式输出通过 `XunfeiWorkflowClient.chat(...)` 把 chunk 逐段发送给 `SseEmitter`。
 
 ### 这个阶段要守什么
 

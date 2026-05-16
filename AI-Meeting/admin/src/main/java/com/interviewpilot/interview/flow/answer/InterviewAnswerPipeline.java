@@ -377,26 +377,19 @@ public class InterviewAnswerPipeline {
 
         // 2) 按规则优先走追问分支；追问生成失败则自动回落到主问题推进分支。
         if (needFollowUp && ctx.currentFollowUpCount < resolvedMaxFollowUp) {
-            InterviewFollowUpService.FollowUpQuestionResult followUpQuestionResult = null;
-
-            // 题库模式：优先使用预设追问，避免 AI 生成追问。
-            if (ctx.questionBankMode && StrUtil.isNotBlank(ctx.questionBankFollowUpQuestions)) {
-                followUpQuestionResult = resolvePresetFollowUpQuestion(ctx);
-            }
-
-            // 无预设追问或预设追问用尽时，回退到 AI 生成追问。
-            if (followUpQuestionResult == null || !followUpQuestionResult.hasQuestion()) {
-                followUpQuestionResult = interviewFollowUpService.generateFollowUpQuestion(
-                        ctx.sessionId,
-                        ctx.requestId,
-                        ctx.currentQuestionNumber,
-                        ctx.currentQuestion,
-                        ctx.requestParam.getAnswerContent(),
-                        ctx.followUpQuestion,
-                        ctx.currentFollowUpCount,
-                        resolvedMaxFollowUp
-                );
-            }
+            // 始终使用 AI 生成追问，确保追问贴合用户答案
+            InterviewFollowUpService.FollowUpQuestionResult followUpQuestionResult =
+                    interviewFollowUpService.generateFollowUpQuestion(
+                            ctx.sessionId,
+                            ctx.requestId,
+                            ctx.currentQuestionNumber,
+                            ctx.currentQuestion,
+                            ctx.requestParam.getAnswerContent(),
+                            ctx.followUpQuestion,
+                            ctx.currentFollowUpCount,
+                            resolvedMaxFollowUp,
+                            ctx.interviewMode
+                    );
             if (followUpQuestionResult != null && followUpQuestionResult.hasQuestion()) {
                 interviewQuestionCacheService.cacheFollowUpQuestion(
                         ctx.sessionId,
@@ -558,6 +551,7 @@ public class InterviewAnswerPipeline {
                 return;
             }
             ctx.questionBankMode = true;
+            ctx.interviewMode = session.getInterviewMode();
 
             // 主问题才需要加载题库元数据，追问不需要。
             if (isFollowUpQuestion(ctx.currentQuestionNumber)) {
@@ -584,7 +578,7 @@ public class InterviewAnswerPipeline {
             }
 
             ctx.questionBankScoringRule = questionDO.getScoringRule();
-            ctx.questionBankFollowUpQuestions = questionDO.getFollowUpQuestions();
+            // Note: followUpQuestions is no longer used - we always use AI-generated follow-ups
         } catch (Exception ex) {
             log.warn("Failed to load question bank context, sessionId={}, questionNumber={}",
                     ctx.sessionId, ctx.currentQuestionNumber, ex);
@@ -675,48 +669,6 @@ public class InterviewAnswerPipeline {
         }
     }
 
-    /**
-     * 从题库预设追问列表中取出下一个追问。
-     * followUpQuestions 格式为 JSON 数组字符串，如 ["追问1?", "追问2?"]
-     */
-    private InterviewFollowUpService.FollowUpQuestionResult resolvePresetFollowUpQuestion(InterviewAnswerPipelineContext ctx) {
-        try {
-            if (StrUtil.isBlank(ctx.questionBankFollowUpQuestions)) {
-                return InterviewFollowUpService.FollowUpQuestionResult.empty();
-            }
-            com.alibaba.fastjson2.JSONArray arr = com.alibaba.fastjson2.JSON.parseArray(ctx.questionBankFollowUpQuestions);
-            if (arr == null || arr.isEmpty()) {
-                return InterviewFollowUpService.FollowUpQuestionResult.empty();
-            }
-            int nextIndex = ctx.currentFollowUpCount == null ? 0 : ctx.currentFollowUpCount;
-            if (nextIndex >= arr.size()) {
-                return InterviewFollowUpService.FollowUpQuestionResult.empty();
-            }
-            String presetQuestion = arr.getString(nextIndex);
-            if (StrUtil.isBlank(presetQuestion)) {
-                return InterviewFollowUpService.FollowUpQuestionResult.empty();
-            }
-            String mainQuestionNumber = resolveMainQuestionNumber(ctx.currentQuestionNumber);
-            String followUpNumber = mainQuestionNumber + "-F" + (nextIndex + 1);
-            return InterviewFollowUpService.FollowUpQuestionResult.of(followUpNumber, presetQuestion, nextIndex + 1);
-        } catch (Exception ex) {
-            log.warn("Failed to parse preset follow-up questions, sessionId={}", ctx.sessionId, ex);
-            return InterviewFollowUpService.FollowUpQuestionResult.empty();
-        }
-    }
-
-    private String resolveMainQuestionNumber(String questionNumber) {
-        if (StrUtil.isBlank(questionNumber)) {
-            return null;
-        }
-        String normalized = questionNumber.trim();
-        int separatorIndex = normalized.indexOf("-F");
-        if (separatorIndex > 0) {
-            return normalized.substring(0, separatorIndex);
-        }
-        return normalized;
-    }
-
     private String sanitizeFollowUpQuestion(String question) {
         if (StrUtil.isBlank(question)) {
             return null;
@@ -797,6 +749,6 @@ public class InterviewAnswerPipeline {
         // 题库模式上下文
         private boolean questionBankMode;
         private String questionBankScoringRule;
-        private String questionBankFollowUpQuestions;
+        private String interviewMode;
     }
 }

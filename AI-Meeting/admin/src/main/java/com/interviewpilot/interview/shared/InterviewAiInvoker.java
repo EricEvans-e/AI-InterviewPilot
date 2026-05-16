@@ -4,11 +4,12 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
 import com.interviewpilot.ai.service.chat.AnthropicChatHandler;
+import com.interviewpilot.ai.service.chat.UniversalAiChatHandler;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
 import com.interviewpilot.interview.application.guard.core.AiCallGuardService;
 import com.interviewpilot.interview.application.guard.core.InterviewAiGuardStage;
 import com.interviewpilot.interview.application.guard.singleflight.service.DistributedInterviewAiSingleFlightService;
-import com.interviewpilot.toolkit.xunfei.XingChenAIClient;
+import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -28,8 +29,9 @@ import java.util.concurrent.Callable;
 @RequiredArgsConstructor
 public class InterviewAiInvoker {
 
-    private final XingChenAIClient xingChenAIClient;
+    private final XunfeiWorkflowClient xunfeiWorkflowClient;
     private final AnthropicChatHandler anthropicChatHandler;
+    private final UniversalAiChatHandler universalAiChatHandler;
     private final AiCallGuardService aiCallGuardService;
     private final DistributedInterviewAiSingleFlightService distributedInterviewAiSingleFlightService;
 
@@ -149,17 +151,20 @@ public class InterviewAiInvoker {
         if ("anthropic".equalsIgnoreCase(aiProvider)) {
             return doChatAnthropic(input, sessionId, agentProperties, parameters);
         }
-        return doChatXingChen(input, sessionId, agentProperties, fileUrl, parameters);
+        if ("openai".equalsIgnoreCase(aiProvider)) {
+            return doChatOpenAI(input, sessionId, agentProperties, parameters);
+        }
+        return doChatXunfei(input, sessionId, agentProperties, fileUrl, parameters);
     }
 
-    private String doChatXingChen(
+    private String doChatXunfei(
             String input,
             String sessionId,
             AgentPropertiesDO agentProperties,
             String fileUrl,
             Map<String, Object> parameters) throws Exception {
         StringBuilder aiResponse = new StringBuilder();
-        xingChenAIClient.chat(
+        xunfeiWorkflowClient.chat(
                 input,
                 StrUtil.isNotBlank(sessionId) ? sessionId : "evaluation_" + System.currentTimeMillis(),
                 "{}",
@@ -186,7 +191,7 @@ public class InterviewAiInvoker {
     }
 
     /**
-     * Anthropic 调用：将 XingChen 结构化参数转换为纯文本 prompt，通过 AnthropicChatHandler.callSync 调用。
+     * Anthropic 调用：将 Xunfei 结构化参数转换为纯文本 prompt，通过 AnthropicChatHandler.callSync 调用。
      * field reuse: apiKey=Anthropic API Key, apiSecret=模型名, apiFlowId=API URL
      */
     private String doChatAnthropic(
@@ -205,5 +210,27 @@ public class InterviewAiInvoker {
         aiProps.setMaxTokens(8192);
 
         return anthropicChatHandler.callSync(aiProps, prompt);
+    }
+
+    /**
+     * Mimo 调用：通过 OpenAI 兼容接口（/v1/chat/completions）。
+     * field reuse: apiKey=API Key, apiSecret=模型名, apiFlowId=API URL
+     */
+    private String doChatOpenAI(
+            String input,
+            String sessionId,
+            AgentPropertiesDO agentProperties,
+            Map<String, Object> parameters) {
+        String prompt = AnthropicPromptBuilder.build(input, parameters);
+        log.info("[InterviewAiInvoker] Mimo 调用 sessionId={}, prompt前100字={}", sessionId,
+                prompt.length() > 100 ? prompt.substring(0, 100) : prompt);
+
+        AiPropertiesDO aiProps = new AiPropertiesDO();
+        aiProps.setApiKey(agentProperties.getApiKey());
+        aiProps.setModelName(agentProperties.getApiSecret());
+        aiProps.setApiUrl(agentProperties.getApiFlowId());
+        aiProps.setMaxTokens(8192);
+
+        return universalAiChatHandler.callSync(aiProps, prompt);
     }
 }

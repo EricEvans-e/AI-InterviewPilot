@@ -16,9 +16,9 @@ import com.interviewpilot.conversation.application.ConversationMessageHistorySer
 import com.interviewpilot.conversation.application.ConversationMessagePersistenceService;
 import com.interviewpilot.conversation.application.ConversationOwnershipService;
 import com.interviewpilot.conversation.application.ConversationStreamingSupport;
-import com.interviewpilot.toolkit.xunfei.AIContentAccumulator;
-import com.interviewpilot.toolkit.xunfei.AgentPropertiesLoader;
-import com.interviewpilot.toolkit.xunfei.XingChenAIClient;
+import com.interviewpilot.toolkit.ai.AIContentAccumulator;
+import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
+import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import com.interviewpilot.user.api.io.req.UserMessageReqDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +42,7 @@ public class AgentMessageServiceImpl implements AgentMessageService {
     private static final String DEFAULT_ERROR_CONTENT = "Sorry, an error occurred while processing your request.";
 
     private final AgentResolver agentResolver;
-    private final XingChenAIClient xingChenAIClient;
+    private final XunfeiWorkflowClient xunfeiWorkflowClient;
     private final AgentPropertiesLoader agentPropertiesLoader;
     private final AgentConversationService agentConversationService;
     private final ConversationOwnershipService conversationOwnershipService;
@@ -136,7 +136,7 @@ public class AgentMessageServiceImpl implements AgentMessageService {
                     if (agentProperties == null) {
                         throw new ClientException(AgentErrorCodeEnum.Agent_NULL);
                     }
-                    xingChenAIClient.chat(
+                    xunfeiWorkflowClient.chat(
                             userMessage,
                             sessionId,
                             buildHistoryJson(historyMessages),

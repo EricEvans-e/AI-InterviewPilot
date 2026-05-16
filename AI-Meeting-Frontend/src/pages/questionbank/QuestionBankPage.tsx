@@ -60,7 +60,7 @@ export default function QuestionBankPage() {
             </Button>
             <Button asChild className="rounded-full">
               <Link to={ROUTES.interviewIntro}>
-                进入 AI 面试 <ArrowRight className="ml-2 h-4 w-4" />
+                进入 简历面试 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>

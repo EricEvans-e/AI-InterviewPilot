@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.interviewpilot.agent.dao.entity.AgentConversation;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
 import com.interviewpilot.agent.dao.repository.AgentConversationRepository;
-import com.interviewpilot.toolkit.xunfei.AgentPropertiesLoader;
+import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

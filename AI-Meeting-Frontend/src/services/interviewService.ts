@@ -31,6 +31,7 @@ export interface ExtractInterviewQuestionsParams {
 export interface CreateInterviewSessionResult {
   sessionId: string;
   status?: string | null;
+  sessionMode?: string | null;
 }
 
 export interface CreateSessionFromBankParams {
@@ -168,6 +169,7 @@ export interface InterviewConversationItem {
   conversationTitle?: string | null;
   status?: string | null;
   interviewType?: string | null;
+  sessionMode?: string | null;
   resumeFileUrl?: string | null;
   createTime?: string | null;
   updateTime?: string | null;

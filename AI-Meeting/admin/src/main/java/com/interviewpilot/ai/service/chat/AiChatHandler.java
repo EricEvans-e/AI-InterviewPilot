@@ -2,7 +2,7 @@ package com.interviewpilot.ai.service.chat;
 
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
 import com.interviewpilot.ai.api.io.resp.AiMessageHistoryRespDTO;
-import com.interviewpilot.toolkit.xunfei.AIContentAccumulator;
+import com.interviewpilot.toolkit.ai.AIContentAccumulator;
 import reactor.core.publisher.FluxSink;
 
 import java.util.List;

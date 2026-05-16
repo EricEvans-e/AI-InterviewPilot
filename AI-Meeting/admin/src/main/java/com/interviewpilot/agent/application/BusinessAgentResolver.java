@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.common.enums.InterviewErrorCodeEnum;
-import com.interviewpilot.toolkit.xunfei.AgentPropertiesLoader;
+import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

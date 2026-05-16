@@ -64,7 +64,7 @@ Root package: `com.interviewpilot`. Single Maven module `admin/` containing all 
 |--------|---------|----------------|
 | **interview** | `interviewpilot.interview` | Core interview flow: state machine, resume parsing, question generation, answer evaluation, follow-up decisions, demeanor analysis, scoring |
 | **ai** | `interviewpilot.ai` | General multi-model AI chat (OpenAI/DeepSeek/Doubao/Spark via Spring AI) |
-| **agent** | `interviewpilot.agent` | 讯飞星辰 Workflow Agent integration |
+| **agent** | `interviewpilot.agent` | iFlytek Xunfei Workflow Agent integration |
 | **media** | `interviewpilot.media` | Real-time ASR (WebSocket), long-text TTS |
 | **user** | `interviewpilot.user` | User accounts, admin permissions |
 | **auth** | `interviewpilot.auth` | Sa-Token auth, WebSocket auth, permission checks |
@@ -82,9 +82,21 @@ Each domain follows internal layering: `api/` (controllers) → `service/` → `
 
 1. **Spring AI** (`UniversalAiChatHandler`) — general chat for OpenAI-compatible providers. Dynamically creates `ChatClient` per `aiType` (DeepSeek uses `DeepSeekChatModel`, others use `OpenAiChatModel`). Supports streaming with `reasoning_content` extraction.
 2. **Anthropic** (`AnthropicChatHandler`) — Anthropic Messages API protocol. Separate handler because request/response format differs from OpenAI (SSE event chain: `message_start` → `content_block_delta` → `message_stop`). Supports `thinking` (extended reasoning) for `mimo-v2.5-pro`/`v2-pro` models. Auth via `x-api-key` header.
-3. **讯飞星辰 Workflow Agents** — interview-specific. 5 agent scenarios defined in `BusinessAgentScene`: question extraction, answer evaluation, demeanor analysis, question asking, general agent chat. Config stored in `agent_properties` table. Also supports **Anthropic** as alternative provider via `ai_provider` field — `InterviewAiInvoker.doChat()` routes to `AnthropicChatHandler.callSync()` when `ai_provider=anthropic`, using `AnthropicPromptBuilder` to convert structured parameters to text prompts.
+3. **Interview Agents** (`InterviewAiInvoker.doChat()`) — interview-specific. 5 scenarios in `BusinessAgentScene`. Three providers via `ai_provider` field in `agent_properties`:
+   - `xingchen` → `XunfeiWorkflowClient` (iFlytek Workflow, supports file upload)
+   - `openai` → `AnthropicPromptBuilder` + `UniversalAiChatHandler.callSync()` (OpenAI-compatible `/v1/chat/completions`, e.g. Mimo)
+   - `anthropic` → `AnthropicPromptBuilder` + `AnthropicChatHandler.callSync()` (Anthropic Messages API)
+   - Extraction with openai/anthropic uses `PdfTextExtractor` for PDF→text; file upload to iFlytek for preview only
 
 **AI Handler routing**: `AiChatHandlerFactory` dispatches by `aiType` string. `anthropic` → `AnthropicChatHandler`; all other supported types → `UniversalAiChatHandler`. Both implement `AiChatHandler` interface (`streamToSink` + `callSync`). Model config stored in `ai_properties` table.
+
+### Interview Recording
+
+Browser-side `MediaRecorder` captures camera+mic during interview. On interview end, the WebM blob is uploaded via `POST /api/ip/v1/interview/interview/record/{sessionId}/recording`, saved to `~/.interview-pilot/recordings/`, and served as static resources at `/recordings/{filename}`. The `recording_url` column in `interview_record` stores the path. Report page renders `<video controls>` for playback.
+
+### Agent Scene Binding
+
+Admins can switch which AI provider (Xunfei/OpenAI-compatible/Anthropic) handles each interview scenario via `/admin/agent-config`. The `agent_properties` table has `scene_code` + `is_active` fields. `BusinessAgentResolver` checks DB for active scene binding first, falls back to YAML `agent-binding` config. Default OpenAI-compatible model: `mimo-v2.5`, API URL: `https://token-plan-sgp.xiaomimimo.com/v1`.
 
 > 详细的模型配置与使用说明见 [`docs/ai-model-configuration.md`](docs/ai-model-configuration.md)。
 
@@ -120,7 +132,7 @@ All APIs prefixed: `/api/ip/v1/`
 | `authService` | `UserController` | REST (login returns `{ token, username, role }`) |
 | `aiService` | `AiMessageController` | SSE (POST) |
 | `agentService` | `AgentController` | SSE (POST) |
-| `interviewService` | `InterviewSessionController` | REST |
+| `interviewService` | `InterviewSessionController` + `InterviewRecordController` | REST (includes recording upload) |
 | `xunfeiTtsService` | `XunfeiTtsController` | REST |
 | `teacherService` | `AiPropertiesController` + `QuestionController` | REST (AI config CRUD, question CRUD, AI generate) |
 | `AudioToTextWebSocket` | `AudioTranscriptionWebSocketHandler` | WebSocket |
@@ -144,6 +156,7 @@ Defined in `src/lib/constants.ts` as `ROUTES`. All routes are children of `/` (A
 | `/teacher/ai-config` | AI model configuration (CRUD, enable/disable, set default) | teacher, admin |
 | `/admin` | AdminDashboard (stats) | admin |
 | `/admin/users` | User management | admin |
+| `/admin/agent-config` | Interview agent scene binding (XingChen/Mimo switching) | admin |
 
 > **Note**: Admin dashboard path is `/admin`, NOT `/admin/dashboard`.
 
@@ -164,7 +177,7 @@ Single source of truth for user roles: `t_user.role` column (`student` / `teache
 - Session state and question state are **two separate state machines** — do not merge them.
 - `questionNumber` can be either a main question or a follow-up — it is not a database primary key.
 - `requestId` is the idempotency boundary for answer submission — must remain stable across retries.
-- Workflow output fields (讯飞 YAML) must match Java-side parsing exactly.
+- Workflow output fields (iFlytek YAML) must match Java-side parsing exactly.
 - Answer pipeline cannot skip: idempotency check, question number validation, per-question locking, score submission compensation.
 - Follow-up decisions depend on both AI output AND the LiteFlow rule engine + max follow-up count.
 - Session restore and finalization are first-class business contracts, not auxiliary features.
@@ -175,7 +188,7 @@ The `AI-Meeting/skills/` directory contains Claude Code domain knowledge skills.
 
 - `interview-pilot-repo-map` — route requirements to the correct domain
 - `interview-pilot-interview-domain` — interview flow, state machine, answer pipeline, scoring
-- `interview-pilot-agent-domain` — 讯飞 Agent integration
+- `interview-pilot-agent-domain` — iFlytek Agent integration
 - `interview-pilot-ai-runtime` — rate limiting, circuit breaking, SingleFlight, thread pools
 - `interview-pilot-media-domain` — ASR, TTS, WebSocket
 - `interview-pilot-auth-user` — authentication, permissions

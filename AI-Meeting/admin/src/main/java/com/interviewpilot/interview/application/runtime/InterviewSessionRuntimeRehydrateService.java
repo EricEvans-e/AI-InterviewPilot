@@ -10,7 +10,9 @@ import com.interviewpilot.interview.dao.entity.InterviewQuestion;
 import com.interviewpilot.interview.dao.entity.InterviewRecordDO;
 import com.interviewpilot.interview.dao.entity.InterviewSession;
 import com.interviewpilot.interview.dao.entity.InterviewSessionRuntimeSnapshot;
+import com.interviewpilot.interview.dao.entity.InterviewSessionQuestionDO;
 import com.interviewpilot.interview.dao.mapper.InterviewRecordMapper;
+import com.interviewpilot.interview.dao.mapper.InterviewSessionQuestionMapper;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.service.InterviewSessionService;
@@ -21,6 +23,8 @@ import com.interviewpilot.interview.service.model.InterviewRuntimeLoadMode;
 import com.interviewpilot.interview.service.model.InterviewRuntimeScoreAggregate;
 import com.interviewpilot.interview.service.model.InterviewSessionStatus;
 import com.interviewpilot.interview.service.model.InterviewTurnLog;
+import com.interviewpilot.questionbank.dao.entity.QuestionDO;
+import com.interviewpilot.questionbank.dao.mapper.QuestionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -33,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 提供面试会话运行态的懒恢复与缓存重建能力，
@@ -54,6 +59,8 @@ public class InterviewSessionRuntimeRehydrateService {
     private final InterviewQuestionService interviewQuestionService;
     private final InterviewQuestionCacheService interviewQuestionCacheService;
     private final InterviewRecordMapper interviewRecordMapper;
+    private final InterviewSessionQuestionMapper sessionQuestionMapper;
+    private final QuestionMapper questionMapper;
     private final StringRedisTemplate stringRedisTemplate;
 
     public InterviewSessionRuntimeView ensureRuntime(String sessionId, InterviewRuntimeLoadMode loadMode) {
@@ -183,6 +190,12 @@ public class InterviewSessionRuntimeRehydrateService {
         }
         RuntimeMaterial material = new RuntimeMaterial();
         material.questions = parseStringMap(question == null ? null : question.getQuestionsJson(), question == null ? null : question.getQuestions());
+
+        // MongoDB 无题目时，回退到 MySQL interview_session_question + question 表（题库模式）。
+        if (material.questions == null || material.questions.isEmpty()) {
+            material.questions = loadQuestionsFromSessionQuestionTable(sessionId);
+        }
+
         material.suggestions = parseSuggestions(question, record);
         material.resumeContext = parseResumeContext(question);
         material.resumeScore = resolveResumeScore(question, snapshot, record);
@@ -195,6 +208,60 @@ public class InterviewSessionRuntimeRehydrateService {
         material.flow = resolveFlow(session, material.questions, material.turns, snapshot);
         material.confidence = resolveConfidence(session, material.questions, material.flow);
         return material;
+    }
+
+    /**
+     * 从 MySQL interview_session_question + question 表加载题目（题库模式回退路径）。
+     */
+    private Map<String, String> loadQuestionsFromSessionQuestionTable(String sessionId) {
+        try {
+            LambdaQueryWrapper<InterviewSessionQuestionDO> wrapper = Wrappers.lambdaQuery(InterviewSessionQuestionDO.class)
+                    .eq(InterviewSessionQuestionDO::getSessionId, sessionId)
+                    .orderByAsc(InterviewSessionQuestionDO::getSeqIndex);
+            List<InterviewSessionQuestionDO> links = sessionQuestionMapper.selectList(wrapper);
+            if (links == null || links.isEmpty()) {
+                return Collections.emptyMap();
+            }
+
+            List<Long> questionIds = links.stream()
+                    .map(InterviewSessionQuestionDO::getQuestionId)
+                    .collect(Collectors.toList());
+            List<QuestionDO> questions = questionMapper.selectBatchIds(questionIds);
+            Map<Long, QuestionDO> questionById = questions.stream()
+                    .collect(Collectors.toMap(QuestionDO::getId, q -> q));
+
+            Map<String, String> questionMap = new LinkedHashMap<>();
+            for (InterviewSessionQuestionDO link : links) {
+                QuestionDO q = questionById.get(link.getQuestionId());
+                if (q == null) {
+                    continue;
+                }
+                String questionNumber = String.valueOf(link.getSeqIndex() + 1);
+                String content = buildQuestionContent(q);
+                questionMap.put(questionNumber, content);
+            }
+            log.info("Loaded questions from MySQL for runtime rebuild, sessionId={}, count={}", sessionId, questionMap.size());
+            return questionMap;
+        } catch (Exception e) {
+            log.warn("Failed to load questions from MySQL, sessionId={}, error={}", sessionId, e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private String buildQuestionContent(QuestionDO q) {
+        if (StrUtil.isNotBlank(q.getTitle())) {
+            return q.getTitle();
+        }
+        // Fallback: 如果 title 为空，尝试从 content 提取题目（兼容旧数据）
+        if (StrUtil.isNotBlank(q.getContent())) {
+            String content = q.getContent();
+            int refIdx = content.indexOf("参考答案");
+            if (refIdx > 0) {
+                return content.substring(0, refIdx).trim();
+            }
+            return content;
+        }
+        return "";
     }
 
     private InterviewSessionRuntimeView waitForRecoveredRuntime(

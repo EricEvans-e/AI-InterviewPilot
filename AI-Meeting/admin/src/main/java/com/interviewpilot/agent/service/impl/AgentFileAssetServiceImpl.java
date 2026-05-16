@@ -12,7 +12,7 @@ import com.interviewpilot.agent.dao.mapper.AgentFileAssetMapper;
 import com.interviewpilot.agent.service.AgentFileAssetService;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.common.enums.AgentErrorCodeEnum;
-import com.interviewpilot.toolkit.xunfei.XingChenAIClient;
+import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,9 +28,9 @@ public class AgentFileAssetServiceImpl extends ServiceImpl<AgentFileAssetMapper,
         implements AgentFileAssetService {
 
     private static final String DEFAULT_BIZ_TYPE = "general";
-    private static final String SOURCE_PLATFORM_XINGCHEN = "xingchen";
+    private static final String SOURCE_PLATFORM_XUNFEI = "xingchen";
 
-    private final XingChenAIClient xingChenAIClient;
+    private final XunfeiWorkflowClient xunfeiWorkflowClient;
     private final AgentResolver agentResolver;
     private final BusinessAgentResolver businessAgentResolver;
 
@@ -52,12 +52,12 @@ public class AgentFileAssetServiceImpl extends ServiceImpl<AgentFileAssetMapper,
 
         String fileUrl;
         try {
-            fileUrl = xingChenAIClient.uploadFile(file, agentProperties.getApiKey(), agentProperties.getApiSecret());
+            fileUrl = xunfeiWorkflowClient.uploadFile(file, agentProperties.getApiKey(), agentProperties.getApiSecret());
         } catch (Exception ex) {
-            log.error("File upload to xingchen failed, agentId={}, fileName={}",
+            log.error("File upload to xunfei workflow failed, agentId={}, fileName={}",
                     agentProperties.getId(), file.getOriginalFilename(), ex);
             throw new ClientException(
-                    "upload file to xingchen failed: " + ex.getMessage(),
+                    "upload to xunfei workflow failed: " + ex.getMessage(),
                     ex,
                     AgentErrorCodeEnum.AGENT_SAVE_ERROR
             );
@@ -70,7 +70,7 @@ public class AgentFileAssetServiceImpl extends ServiceImpl<AgentFileAssetMapper,
         fileAssetDO.setSessionId(StrUtil.isBlank(sessionId) ? null : sessionId.trim());
         fileAssetDO.setUserName(StrUtil.blankToDefault(username, "unknown"));
         fileAssetDO.setBizType(StrUtil.blankToDefault(bizType, DEFAULT_BIZ_TYPE));
-        fileAssetDO.setSourcePlatform(SOURCE_PLATFORM_XINGCHEN);
+        fileAssetDO.setSourcePlatform(SOURCE_PLATFORM_XUNFEI);
         fileAssetDO.setFileName(originalFileName);
         fileAssetDO.setFileExt(extractFileExt(originalFileName));
         fileAssetDO.setContentType(file.getContentType());

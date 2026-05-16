@@ -9,7 +9,7 @@ import cn.xfyun.service.iat.AbstractIatWebSocketListener;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
-import com.interviewpilot.common.config.xunfei.XunfeiLatProperties;
+import com.interviewpilot.common.config.iflytek.XunfeiLatProperties;
 import com.interviewpilot.common.convention.exception.ClientException;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;

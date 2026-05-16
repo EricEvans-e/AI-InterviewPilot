@@ -3,7 +3,7 @@ package com.interviewpilot.interview.shared;
 import java.util.Map;
 
 /**
- * 将 XingChen workflow 结构化参数转换为 Anthropic 纯文本 prompt。
+ * 将 Xunfei workflow 结构化参数转换为 Anthropic 纯文本 prompt。
  * 供 InterviewAiInvoker 在 aiProvider=anthropic 时使用。
  */
 public final class AnthropicPromptBuilder {
@@ -61,25 +61,32 @@ public final class AnthropicPromptBuilder {
     private static String buildFollowUpPrompt(Map<String, Object> parameters, String answer) {
         String question = getStr(parameters, "question");
         String resumeContext = getStr(parameters, "resume_context");
+        String interviewMode = getStr(parameters, "interview_mode");
         int followUpCount = getInt(parameters, "follow_up_count");
         int maxFollowUp = getInt(parameters, "max_follow_up");
 
         StringBuilder sb = new StringBuilder();
-        sb.append("你是面试官，正在进行追问。");
+        sb.append("你是一位高校招生面试官，正在进行高考单招/综评面试的追问环节。");
+        sb.append("你的任务是根据考生的回答，生成自然、有针对性的追问，深入了解考生对所报专业的认知、学习动机、个人规划等。");
+        sb.append("请勿生成技术类、编程类或职场面试风格的追问。\n");
         if (maxFollowUp > 0) {
             sb.append("这是第 ").append(followUpCount).append("/").append(maxFollowUp).append(" 次追问。\n\n");
         } else {
             sb.append("\n\n");
         }
+        if (!interviewMode.isEmpty()) {
+            sb.append("【面试类型】\n").append(interviewMode).append("\n\n");
+        }
         if (!question.isEmpty()) {
             sb.append("【原题】\n").append(question).append("\n\n");
         }
-        sb.append("【候选人回答】\n").append(answer).append("\n\n");
+        sb.append("【考生回答】\n").append(answer).append("\n\n");
         if (!resumeContext.isEmpty()) {
-            sb.append("【简历背景】\n").append(resumeContext).append("\n\n");
+            sb.append("【考生背景】\n").append(resumeContext).append("\n\n");
         }
-        sb.append("请生成一个有针对性的追问问题，帮助深入了解候选人的能力和经验。\n");
-        sb.append("如果回答已经非常完整，不需要追问，请返回 __FINISH__。\n");
+        sb.append("请生成一个与原题和考生回答紧密相关的追问，帮助更深入地了解考生。\n");
+        sb.append("追问应围绕：专业认知、学习规划、个人经历、兴趣动机等方面展开。\n");
+        sb.append("如果考生的回答已经非常充分，不需要追问，请返回 __FINISH__。\n");
         sb.append("只返回追问问题或 __FINISH__，不要其他内容。");
         return sb.toString();
     }

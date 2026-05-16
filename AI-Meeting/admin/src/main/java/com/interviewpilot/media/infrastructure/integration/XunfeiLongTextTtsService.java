@@ -2,7 +2,7 @@ package com.interviewpilot.media.infrastructure.integration;
 
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONObject;
-import com.interviewpilot.common.config.xunfei.XunfeiLatProperties;
+import com.interviewpilot.common.config.iflytek.XunfeiLatProperties;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.common.convention.exception.ServiceException;
 import com.interviewpilot.media.api.io.req.LongTextTtsReqDTO;

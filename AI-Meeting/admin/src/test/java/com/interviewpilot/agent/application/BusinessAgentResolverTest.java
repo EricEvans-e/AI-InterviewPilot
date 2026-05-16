@@ -2,7 +2,7 @@ package com.interviewpilot.agent.application;
 
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
 import com.interviewpilot.common.convention.exception.ClientException;
-import com.interviewpilot.toolkit.xunfei.AgentPropertiesLoader;
+import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

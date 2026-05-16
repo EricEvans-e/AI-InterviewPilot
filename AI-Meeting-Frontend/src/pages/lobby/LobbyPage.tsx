@@ -21,7 +21,7 @@ const QUICK_MODES = [
     label: "随机模拟",
     description: "随机抽取题目，快速进入面试",
     icon: Shuffle,
-    interviewMode: "structured",
+    interviewMode: "综合素质",
     questionCount: 5,
   },
   {
@@ -29,7 +29,7 @@ const QUICK_MODES = [
     label: "全真模拟",
     description: "固定题量 + 严格计时，还原真实考场",
     icon: Timer,
-    interviewMode: "structured",
+    interviewMode: "综合素质",
     questionCount: 10,
   },
   {
@@ -37,7 +37,7 @@ const QUICK_MODES = [
     label: "按院校备考",
     description: "选择目标院校，针对性练习",
     icon: GraduationCap,
-    interviewMode: "structured",
+    interviewMode: "综合素质",
     questionCount: 5,
   },
   {
@@ -45,7 +45,7 @@ const QUICK_MODES = [
     label: "按专业备考",
     description: "选择目标专业，专项突破",
     icon: Briefcase,
-    interviewMode: "professional_cognition",
+    interviewMode: "专业认知",
     questionCount: 5,
   },
   {
@@ -53,7 +53,7 @@ const QUICK_MODES = [
     label: "按题型练习",
     description: "选择题型，逐个击破",
     icon: Layers,
-    interviewMode: "semi_structured",
+    interviewMode: "半结构化",
     questionCount: 5,
   },
 ] as const;
@@ -73,11 +73,16 @@ export default function LobbyPage() {
     }) => {
       try {
         const result = await interviewService.createSessionFromBank(params);
+        // Navigate to question-bank specific interview page
         navigate(
-          `${ROUTES.interviewRoom}/${encodeURIComponent(result.sessionId)}`,
+          `${ROUTES.interviewBank}/${encodeURIComponent(result.sessionId)}`,
         );
       } catch (error) {
-        console.error("Failed to create interview session from bank:", error);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "创建面试失败，请重试";
+        alert(message);
       }
     },
     [navigate],
@@ -112,8 +117,8 @@ export default function LobbyPage() {
           interviewMode:
             lobbyData.filters.questionTypes.length === 1
               ? lobbyData.filters.questionTypes[0]
-              : "structured",
-          questionCount: 1,
+              : "综合素质",
+          questionCount: 4,
           collegeId: lobbyData.filters.collegeId,
           majorId: lobbyData.filters.majorId,
           difficulty:
@@ -133,7 +138,7 @@ export default function LobbyPage() {
       <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-slate-900">面试大厅</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">题库面试大厅</h1>
           <p className="text-sm text-slate-500">
             选择模拟方式，开始你的面试练习。
           </p>

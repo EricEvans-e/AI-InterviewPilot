@@ -1,17 +1,23 @@
 package com.interviewpilot.interview.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.interviewpilot.interview.api.io.req.DemeanorScoreDTO;
 import com.interviewpilot.interview.api.io.resp.RadarChartDTO;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.TypeReference;
 import com.interviewpilot.interview.dao.entity.InterviewQuestion;
+import com.interviewpilot.interview.dao.entity.InterviewSessionQuestionDO;
+import com.interviewpilot.interview.dao.mapper.InterviewSessionQuestionMapper;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewRadarService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.service.InterviewScoreService;
 import com.interviewpilot.interview.service.model.InterviewFlowState;
 import com.interviewpilot.interview.service.model.InterviewTurnLog;
+import com.interviewpilot.questionbank.dao.entity.QuestionDO;
+import com.interviewpilot.questionbank.dao.mapper.QuestionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -26,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * 面试题缓存服务实现，负责面试题、建议、评分与流程状态的缓存读写。
@@ -39,6 +46,8 @@ public class InterviewQuestionCacheServiceImpl implements InterviewQuestionCache
     private final InterviewQuestionService interviewQuestionService;
     private final InterviewScoreService interviewScoreService;
     private final InterviewRadarService interviewRadarService;
+    private final InterviewSessionQuestionMapper sessionQuestionMapper;
+    private final QuestionMapper questionMapper;
     
     /**
      * 面试题缓存键前缀。
@@ -434,43 +443,102 @@ public class InterviewQuestionCacheServiceImpl implements InterviewQuestionCache
     public void loadInterviewQuestionsFromDatabase(String sessionId) {
         try {
             InterviewQuestion question = interviewQuestionService.getBySessionId(sessionId);
-            if (question == null) {
-                log.warn("Interview question data not found, sessionId: {}", sessionId);
-                return;
-            }
-            
-            // 优先使用 JSON 字段恢复题目（保留题号）。
-            if (StrUtil.isNotBlank(question.getQuestionsJson())) {
-                try {
-                    Map<String, String> questionsMap = JSON.parseObject(
-                        question.getQuestionsJson(), 
-                        new TypeReference<LinkedHashMap<String, String>>() {}
-                    );
-                    
-                    String cacheKey = INTERVIEW_QUESTIONS_KEY + sessionId;
-                    stringRedisTemplate.delete(cacheKey);
-                    
-                    if (!questionsMap.isEmpty()) {
-                        stringRedisTemplate.opsForHash().putAll(cacheKey, questionsMap);
-                        stringRedisTemplate.expire(cacheKey, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+            if (question != null) {
+                // 优先使用 JSON 字段恢复题目（保留题号）。
+                if (StrUtil.isNotBlank(question.getQuestionsJson())) {
+                    try {
+                        Map<String, String> questionsMap = JSON.parseObject(
+                            question.getQuestionsJson(),
+                            new TypeReference<LinkedHashMap<String, String>>() {}
+                        );
+
+                        String cacheKey = INTERVIEW_QUESTIONS_KEY + sessionId;
+                        stringRedisTemplate.delete(cacheKey);
+
+                        if (!questionsMap.isEmpty()) {
+                            stringRedisTemplate.opsForHash().putAll(cacheKey, questionsMap);
+                            stringRedisTemplate.expire(cacheKey, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+                        }
+
+                        log.info("Loaded questions from MongoDB (JSON), sessionId={}, count={}", sessionId, questionsMap.size());
+                        return;
+                    } catch (Exception e) {
+                        log.warn("Failed to parse questionsJson, sessionId={}, error={}", sessionId, e.getMessage());
                     }
-                    
-                    log.info("Interview cache service message", sessionId, questionsMap.size());
+                }
+
+                // JSON 不可用时回退到列表字段写入缓存。
+                if (question.getQuestions() != null && !question.getQuestions().isEmpty()) {
+                    cacheInterviewQuestions(sessionId, question.getQuestions());
+                    log.info("Loaded questions from MongoDB (list), sessionId={}, count={}", sessionId, question.getQuestions().size());
                     return;
-                } catch (Exception e) {
-                    log.warn("Interview cache service message", e.getMessage());
                 }
             }
-            
-            // JSON 不可用时回退到列表字段写入缓存。
-            if (question.getQuestions() != null && !question.getQuestions().isEmpty()) {
-                cacheInterviewQuestions(sessionId, question.getQuestions());
-                log.info("Interview cache service message", sessionId, question.getQuestions().size());
-            }
-            
+
+            // MongoDB 无数据时，回退到 MySQL interview_session_question + question 表（题库模式）。
+            log.info("MongoDB has no questions, falling back to MySQL for sessionId={}", sessionId);
+            loadQuestionsFromSessionQuestionTable(sessionId);
+
         } catch (Exception e) {
-            log.error("Interview cache service message", sessionId, e.getMessage(), e);
+            log.error("Failed to load interview questions, sessionId={}, error={}", sessionId, e.getMessage(), e);
         }
+    }
+
+    /**
+     * 从 MySQL interview_session_question + question 表加载题目（题库模式回退路径）。
+     */
+    private void loadQuestionsFromSessionQuestionTable(String sessionId) {
+        LambdaQueryWrapper<InterviewSessionQuestionDO> wrapper = Wrappers.lambdaQuery(InterviewSessionQuestionDO.class)
+                .eq(InterviewSessionQuestionDO::getSessionId, sessionId)
+                .orderByAsc(InterviewSessionQuestionDO::getSeqIndex);
+        List<InterviewSessionQuestionDO> links = sessionQuestionMapper.selectList(wrapper);
+
+        if (links == null || links.isEmpty()) {
+            log.warn("No session-question links found in MySQL, sessionId={}", sessionId);
+            return;
+        }
+
+        List<Long> questionIds = links.stream()
+                .map(InterviewSessionQuestionDO::getQuestionId)
+                .collect(Collectors.toList());
+        List<QuestionDO> questions = questionMapper.selectBatchIds(questionIds);
+        Map<Long, QuestionDO> questionById = questions.stream()
+                .collect(Collectors.toMap(QuestionDO::getId, q -> q));
+
+        Map<String, String> questionMap = new LinkedHashMap<>();
+        for (InterviewSessionQuestionDO link : links) {
+            QuestionDO q = questionById.get(link.getQuestionId());
+            if (q == null) {
+                continue;
+            }
+            String questionNumber = String.valueOf(link.getSeqIndex() + 1);
+            String content = buildQuestionContent(q);
+            questionMap.put(questionNumber, content);
+        }
+
+        if (!questionMap.isEmpty()) {
+            String cacheKey = INTERVIEW_QUESTIONS_KEY + sessionId;
+            stringRedisTemplate.delete(cacheKey);
+            stringRedisTemplate.opsForHash().putAll(cacheKey, questionMap);
+            stringRedisTemplate.expire(cacheKey, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+            log.info("Loaded questions from MySQL fallback, sessionId={}, count={}", sessionId, questionMap.size());
+        }
+    }
+
+    private String buildQuestionContent(QuestionDO q) {
+        if (StrUtil.isNotBlank(q.getTitle())) {
+            return q.getTitle();
+        }
+        // Fallback: 如果 title 为空，尝试从 content 提取题目（兼容旧数据）
+        if (StrUtil.isNotBlank(q.getContent())) {
+            String content = q.getContent();
+            int refIdx = content.indexOf("参考答案");
+            if (refIdx > 0) {
+                return content.substring(0, refIdx).trim();
+            }
+            return content;
+        }
+        return "";
     }
     
     /**

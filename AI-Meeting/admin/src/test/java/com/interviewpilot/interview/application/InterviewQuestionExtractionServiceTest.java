@@ -12,7 +12,7 @@ import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.shared.InterviewAiInvoker;
 import com.interviewpilot.interview.shared.InterviewResponseParser;
-import com.interviewpilot.toolkit.xunfei.XingChenAIClient;
+import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RLock;
 import org.springframework.mock.web.MockMultipartFile;
@@ -33,7 +33,7 @@ class InterviewQuestionExtractionServiceTest {
     @Test
     void shouldFailWhenWorkflowFallsBackToSmallTalkInsteadOfQuestions() throws Exception {
         BusinessAgentResolver businessAgentResolver = mock(BusinessAgentResolver.class);
-        XingChenAIClient xingChenAIClient = mock(XingChenAIClient.class);
+        XunfeiWorkflowClient xunfeiWorkflowClient = mock(XunfeiWorkflowClient.class);
         InterviewAiInvoker interviewAiInvoker = mock(InterviewAiInvoker.class);
         InterviewAiSessionLockService interviewAiSessionLockService = mock(InterviewAiSessionLockService.class);
         InterviewQuestionService interviewQuestionService = mock(InterviewQuestionService.class);
@@ -41,7 +41,7 @@ class InterviewQuestionExtractionServiceTest {
         InterviewResponseParser interviewResponseParser = new InterviewResponseParser();
         InterviewQuestionExtractionService service = new InterviewQuestionExtractionService(
                 businessAgentResolver,
-                xingChenAIClient,
+                xunfeiWorkflowClient,
                 interviewAiInvoker,
                 interviewAiSessionLockService,
                 interviewQuestionService,
@@ -56,7 +56,7 @@ class InterviewQuestionExtractionServiceTest {
         agent.setApiFlowId("flow-id");
         when(businessAgentResolver.resolveRequired(BusinessAgentScene.INTERVIEW_QUESTION_EXTRACTION))
                 .thenReturn(agent);
-        when(xingChenAIClient.uploadFile(any(), eq("key"), eq("secret")))
+        when(xunfeiWorkflowClient.uploadFile(any(), eq("key"), eq("secret")))
                 .thenReturn("https://example.com/resume.pdf");
 
         RLock heavyLock = mock(RLock.class);

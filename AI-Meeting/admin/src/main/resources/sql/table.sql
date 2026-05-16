@@ -44,7 +44,7 @@ create table agent_properties
     api_secret  varchar(256) null comment '鉴权密钥',
     api_key     varchar(512) null comment '鉴权key',
     api_flow_id varchar(256) null comment '工作流id',
-    ai_provider varchar(50)  default 'xingchen' null comment 'AI 提供商: xingchen, anthropic',
+    ai_provider varchar(50)  default 'xingchen' null comment 'AI 提供商: xingchen, openai, anthropic',
     create_time datetime     null comment '创建时间',
     update_time datetime     null comment '修改时间',
     del_flag    tinyint(1)   null comment '删除标识 0：未删除 1：已删除'

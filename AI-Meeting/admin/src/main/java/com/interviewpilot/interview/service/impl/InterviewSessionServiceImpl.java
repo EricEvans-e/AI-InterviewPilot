@@ -69,7 +69,7 @@ public class InterviewSessionServiceImpl implements InterviewSessionService {
         if (runtimeSnapshotService != null) {
             runtimeSnapshotService.initializeDraftSnapshot(session);
         }
-        return new InterviewSessionCreateRespDTO(session.getSessionId(), session.getStatus());
+        return new InterviewSessionCreateRespDTO(session.getSessionId(), session.getStatus(), "resume");
     }
 
     @Override
@@ -133,7 +133,7 @@ public class InterviewSessionServiceImpl implements InterviewSessionService {
         }
 
         log.info("Created question-bank session, sessionId={}, userId={}, questionCount={}", sessionId, userId, questions.size());
-        return new InterviewSessionCreateRespDTO(sessionId, session.getStatus());
+        return new InterviewSessionCreateRespDTO(sessionId, session.getStatus(), "questionBank");
     }
 
     /**
@@ -155,20 +155,23 @@ public class InterviewSessionServiceImpl implements InterviewSessionService {
     }
 
     /**
-     * 组装题目内容：标题 + 正文。
+     * 组装题目内容：仅使用标题。
+     * content 字段存储参考答案，不展示给用户。
      */
     private String buildQuestionContent(QuestionDO q) {
-        StringBuilder sb = new StringBuilder();
         if (StrUtil.isNotBlank(q.getTitle())) {
-            sb.append(q.getTitle());
+            return q.getTitle();
         }
+        // Fallback: 如果 title 为空，尝试从 content 提取题目（兼容旧数据）
         if (StrUtil.isNotBlank(q.getContent())) {
-            if (sb.length() > 0) {
-                sb.append("\n");
+            String content = q.getContent();
+            int refIdx = content.indexOf("参考答案");
+            if (refIdx > 0) {
+                return content.substring(0, refIdx).trim();
             }
-            sb.append(q.getContent());
+            return content;
         }
-        return sb.toString();
+        return "";
     }
 
     /**

@@ -21,6 +21,8 @@ const ACTIVE_INTERVIEW_STATUSES = new Set([
   "IN_PROGRESS",
 ]);
 
+const RESUME_MODE_SESSIONS = new Set(["resume", null, undefined]);
+
 export default function InterviewIntroPage() {
   const [latestActiveSession, setLatestActiveSession] =
     useState<InterviewConversationItem | null>(null);
@@ -44,6 +46,12 @@ export default function InterviewIntroPage() {
         const activeSession =
           response.records.find((item) =>
             item.status ? ACTIVE_INTERVIEW_STATUSES.has(item.status) : false,
+          ) ?? null;
+
+        // Only show resume-mode sessions (not question-bank sessions)
+        const resumeSession =
+          response.records.find((item) =>
+            item.status ? ACTIVE_INTERVIEW_STATUSES.has(item.status) && RESUME_MODE_SESSIONS.has(item.sessionMode) : false,
           ) ?? null;
         setLatestActiveSession(activeSession);
       } catch (error) {
@@ -79,7 +87,7 @@ export default function InterviewIntroPage() {
             <InterviewIntroHighlights highlights={introCopy.highlights} />
 
             <div className="flex flex-wrap gap-3">
-              {latestActiveSession ? (
+              {latestActiveSession && RESUME_MODE_SESSIONS.has(latestActiveSession.sessionMode) ? (
                 <Button asChild className="rounded-full">
                   <Link
                     to={`${ROUTES.interviewRoom}/${encodeURIComponent(latestActiveSession.sessionId)}`}
@@ -92,7 +100,7 @@ export default function InterviewIntroPage() {
               <Button
                 asChild
                 className="rounded-full"
-                variant={latestActiveSession ? "outline" : "default"}
+                variant={latestActiveSession && RESUME_MODE_SESSIONS.has(latestActiveSession.sessionMode) ? "outline" : "default"}
               >
                 <Link to={ROUTES.interviewRoom}>
                   {introCopy.startButton}

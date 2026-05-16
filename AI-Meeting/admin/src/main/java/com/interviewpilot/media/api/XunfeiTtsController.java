@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 讯飞长文本语音合成（TTS）控制器
+ * iFlytek long-text语音合成（TTS）控制器
  * 将面试报告、AI 回复等长文本转换为语音，支持异步任务模式
  */
 @RestController

@@ -44,7 +44,7 @@ export default function SidebarNav({ isCollapsed }: SidebarNavProps) {
             )}
           >
             <Video className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
-            {!isCollapsed && "AI 面试"}
+            {!isCollapsed && "简历面试"}
           </Button>
         </Link>
 
@@ -57,7 +57,7 @@ export default function SidebarNav({ isCollapsed }: SidebarNavProps) {
             )}
           >
             <Layout className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
-            {!isCollapsed && "面试大厅"}
+            {!isCollapsed && "题库面试大厅"}
           </Button>
         </Link>
 

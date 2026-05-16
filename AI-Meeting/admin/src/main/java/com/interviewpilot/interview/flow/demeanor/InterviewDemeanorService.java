@@ -17,7 +17,7 @@ import com.interviewpilot.interview.application.strategy.DemeanorNormalizationSt
 import com.interviewpilot.interview.shared.InterviewAiInvoker;
 import com.interviewpilot.interview.shared.InterviewResponseParser;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
-import com.interviewpilot.toolkit.xunfei.XingChenAIClient;
+import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -39,7 +39,7 @@ public class InterviewDemeanorService {
     private static final String KEY_EMOTICON_HANDLING = "emoticonHandling";
     private static final String KEY_COMPOSITE_SCORE = "compositeScore";
 
-    private final XingChenAIClient xingChenAIClient;
+    private final XunfeiWorkflowClient xunfeiWorkflowClient;
     private final BusinessAgentResolver businessAgentResolver;
     private final InterviewQuestionCacheService interviewQuestionCacheService;
     private final InterviewAiInvoker interviewAiInvoker;
@@ -76,7 +76,7 @@ public class InterviewDemeanorService {
                 // Upload image first and get a workflow-readable URL.
                 if (reqDTO.getUserPhoto() != null && !reqDTO.getUserPhoto().isEmpty()) {
                     try {
-                        imageUrl = xingChenAIClient.uploadFile(
+                        imageUrl = xunfeiWorkflowClient.uploadFile(
                                 reqDTO.getUserPhoto(),
                                 agentProperties.getApiKey(),
                                 agentProperties.getApiSecret()

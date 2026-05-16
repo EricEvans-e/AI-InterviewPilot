@@ -3,6 +3,7 @@ export const ROUTES = {
   interviewIntro: "/interview",
   interviewPrecheck: "/interview/precheck",
   interviewRoom: "/interview/room",
+  interviewBank: "/interview/bank",
   interviewReport: "/interview/report",
   interviewReportDetail: "/interview/report/detail",
   lobby: "/lobby",

@@ -1,7 +1,7 @@
 package com.interviewpilot.streamingMedia.service;
 
 import com.alibaba.fastjson2.JSONObject;
-import com.interviewpilot.common.config.xunfei.XunfeiLatProperties;
+import com.interviewpilot.common.config.iflytek.XunfeiLatProperties;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.media.api.io.req.LongTextTtsReqDTO;
 import com.interviewpilot.media.api.io.resp.LongTextTtsTaskRespDTO;

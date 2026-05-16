@@ -34,12 +34,12 @@ public class AgentPropertiesDO {
     private String apiKey;
 
     /**
-     * 工作流id（xingchen 模式）或 API URL（anthropic 模式）
+     * 工作流id（xunfei workflow 模式）或 API URL（anthropic 模式）
      */
     private String apiFlowId;
 
     /**
-     * AI 提供商标识: xingchen（默认）, anthropic
+     * AI 提供商标识: xingchen（默认）, openai, anthropic
      */
     private String aiProvider;
 

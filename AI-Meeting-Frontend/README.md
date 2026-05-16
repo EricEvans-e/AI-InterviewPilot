@@ -60,8 +60,8 @@
 
 ### 语音媒体模块
 
-- **实时语音转写（ASR）**：基于 WebSocket + 讯飞大模型 AST 实现端到端实时语音识别，支持分段增量去重（TreeMap + seg_id/pgs 重叠比对）、`committedText / liveText / displayText` 三级文本渲染，解决重复文本与前缀误删问题。
-- **长文本语音合成（TTS）**：集成讯飞长文本 TTS 异步接口，支持创建合成任务、轮询状态、同步等待三种模式，可配置音色、语速、音量与音频编码格式。
+- **实时语音转写（ASR）**：基于 WebSocket + iFlytek 大模型 AST 实现端到端实时语音识别，支持分段增量去重（TreeMap + seg_id/pgs 重叠比对）、`committedText / liveText / displayText` 三级文本渲染，解决重复文本与前缀误删问题。
+- **长文本语音合成（TTS）**：集成 iFlytek 长文本 TTS 异步接口，支持创建合成任务、轮询状态、同步等待三种模式，可配置音色、语速、音量与音频编码格式。
 - **WebSocket 通信管理**：基于 JSR 356 `@ServerEndpoint` 实现会话级 WebSocket 连接，支持心跳保活、鉴权校验、二进制音频帧接收与服务端主动推送。
 
 ### 用户与权限模块
@@ -108,7 +108,7 @@
 | Sa-Token         | 1.39.0   | 权限认证框架，集成 Redis 共享登录态            |
 | Resilience4j     | 2.2.0    | 熔断、限流、重试、舱壁隔离                     |
 | LiteFlow         | 2.15.3.2 | 规则引擎，驱动追问裁决等业务规则链             |
-| 讯飞 WebSDK      | 3.0.2    | 语音转写（IAT）、OCR、表情识别、大模型 AST     |
+| iFlytek WebSDK   | 3.0.2    | 语音转写（IAT）、OCR、表情识别、大模型 AST     |
 | OkHttp           | 4.9.3    | HTTP / WebSocket 客户端                        |
 | WebSocket / SSE  | -        | 实时 ASR 双向通信、AI 流式响应                 |
 | Maven            | 3.6.3+   | 构建工具                                       |

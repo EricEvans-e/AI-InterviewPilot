@@ -73,12 +73,12 @@ export interface PageInfo<T> {
 }
 
 export const QUESTION_TYPE_OPTIONS = [
-  { value: "structured", label: "结构化" },
-  { value: "semi_structured", label: "半结构化" },
-  { value: "professional_cognition", label: "专业认知" },
-  { value: "comprehensive_quality", label: "综合素质" },
-  { value: "situational_response", label: "情景应变" },
-  { value: "self_introduction", label: "自我介绍" },
+  { value: "结构化", label: "结构化" },
+  { value: "半结构化", label: "半结构化" },
+  { value: "专业题", label: "专业认知" },
+  { value: "开放题", label: "综合素质" },
+  { value: "情景应变", label: "情景应变" },
+  { value: "自我介绍", label: "自我介绍" },
 ] as const;
 
 export const DIFFICULTY_OPTIONS = [

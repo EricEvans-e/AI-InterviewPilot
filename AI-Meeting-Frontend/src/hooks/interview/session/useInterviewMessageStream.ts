@@ -4,6 +4,7 @@ import {
   CHAT_MESSAGE_VARIANT,
   type ChatMessage,
 } from "@/lib/chat";
+import { INTERVIEW_DEFAULTS } from "@/lib/constants";
 import {
   FEEDBACK_STREAM_DELAY_MS,
   FEEDBACK_STREAM_STEP,
@@ -266,6 +267,20 @@ export function useInterviewMessageStream() {
     setMessages([createWelcomeMessage()]);
   }, [cancelActiveQuestionStream, stopThinkingIndicator]);
 
+  const clearWelcomeMessage = useCallback(() => {
+    setMessages((prev) => {
+      // If the only message is the welcome message, remove it
+      if (
+        prev.length === 1 &&
+        prev[0]?.role === "assistant" &&
+        prev[0]?.content === INTERVIEW_DEFAULTS.assistantWelcomeMessage
+      ) {
+        return [];
+      }
+      return prev;
+    });
+  }, []);
+
   useEffect(
     () => () => {
       cancelActiveQuestionStream();
@@ -285,5 +300,6 @@ export function useInterviewMessageStream() {
     stopThinkingIndicator,
     cancelActiveQuestionStream,
     resetMessageStream,
+    clearWelcomeMessage,
   };
 }

@@ -11,9 +11,9 @@ public enum AiPropritiesType {
 
     OPENAI(1, "openai", "OpenAI", "https://api.openai.com/v1"),
     DOUBAO(2, "doubao", "豆包", "https://ark.cn-beijing.volces.com/api/v3"),
-    SPARK(3, "spark", "讯飞星火", "https://spark-api-open.xf-yun.com/v1"),
+    SPARK(3, "spark", "iFlytek Spark", "https://spark-api-open.xf-yun.com/v1"),
     DEEPSEEK(4, "deepseek", "DeepSeek", "https://api.deepseek.com"),
-    ANTHROPIC(5, "anthropic", "Anthropic", "https://api.xiaomimimo.com/anthropic/v1"),
+    ANTHROPIC(5, "anthropic", "Anthropic", "https://token-plan-sgp.xiaomimimo.com/anthropic"),
     OTHER(99, "other", "其他", "");
 
     private final Integer code;

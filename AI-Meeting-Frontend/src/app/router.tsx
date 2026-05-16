@@ -25,6 +25,9 @@ const InterviewIntroPage = lazy(
   () => import("@/pages/interview/InterviewIntroPage"),
 );
 const InterviewPage = lazy(() => import("@/pages/interview/InterviewPage"));
+const QuestionBankInterviewPage = lazy(
+  () => import("@/pages/interview/QuestionBankInterviewPage"),
+);
 const InterviewPrecheckPage = lazy(
   () => import("@/pages/interview/InterviewPrecheckPage"),
 );
@@ -114,6 +117,10 @@ export const appRoutes: RouteObject[] = [
           {
             path: `${ROUTES.interviewRoom}/:sessionId`,
             element: withRouteSuspense(<InterviewPage />),
+          },
+          {
+            path: `${ROUTES.interviewBank}/:sessionId`,
+            element: withRouteSuspense(<QuestionBankInterviewPage />),
           },
           {
             path: ROUTES.interviewReport,
