@@ -6,10 +6,14 @@ import com.interviewpilot.common.convention.result.Result;
 import com.interviewpilot.common.convention.result.Results;
 import com.interviewpilot.agent.api.io.req.AgentPropertiesReqDTO;
 import com.interviewpilot.agent.api.io.resp.AgentPropertiesRespDTO;
+import com.interviewpilot.agent.api.io.resp.SceneBindingRespDTO;
 import com.interviewpilot.agent.service.AgentPropertiesService;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * agent配置管理层
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/ip/v1/agent-properties")
+@SaCheckRole("admin")
 public class AgentPropertiesController {
 
     private final AgentPropertiesService agentPropertiesService;
@@ -72,5 +77,22 @@ public class AgentPropertiesController {
     @GetMapping
     public Result<PageInfo<AgentPropertiesRespDTO>> getByPage(AgentPropertiesReqDTO requestParam) {
         return Results.success(agentPropertiesService.getByPage(requestParam));
+    }
+
+    /**
+     * 获取所有业务场景的agent绑定信息
+     */
+    @GetMapping("/scene-bindings")
+    public Result<List<SceneBindingRespDTO>> getSceneBindings() {
+        return Results.success(agentPropertiesService.getSceneBindings());
+    }
+
+    /**
+     * 激活指定场景的agent
+     */
+    @PutMapping("/scene-bindings/{sceneCode}/active/{agentId}")
+    public Result<Void> activateAgent(@PathVariable String sceneCode, @PathVariable Long agentId) {
+        agentPropertiesService.activateAgent(sceneCode, agentId);
+        return Results.success();
     }
 }

@@ -16,6 +16,12 @@ public class AgentPropertiesRespDTO {
 
     private String apiFlowId;
 
+    private String aiProvider;
+
+    private String sceneCode;
+
+    private Integer isActive;
+
     /**
      * 标签信息列表
      */

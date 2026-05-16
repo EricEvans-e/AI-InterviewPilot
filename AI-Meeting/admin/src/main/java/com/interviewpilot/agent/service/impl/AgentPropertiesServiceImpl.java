@@ -13,9 +13,13 @@ import com.interviewpilot.agent.dao.entity.AgentTag;
 import com.interviewpilot.agent.dao.mapper.AgentPropertiesMapper;
 import com.interviewpilot.agent.api.io.req.AgentPropertiesReqDTO;
 import com.interviewpilot.agent.api.io.resp.AgentPropertiesRespDTO;
+import com.interviewpilot.agent.api.io.resp.SceneBindingRespDTO;
+import com.interviewpilot.agent.application.BusinessAgentScene;
 import com.interviewpilot.common.enums.AgentTagType;
+import com.interviewpilot.toolkit.xunfei.AgentPropertiesLoader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
@@ -28,11 +32,17 @@ import java.util.stream.Collectors;
 * @createDate 2025-05-27 10:08:58
 */
 @Service
-@RequiredArgsConstructor
 public class AgentPropertiesServiceImpl extends ServiceImpl<AgentPropertiesMapper, AgentPropertiesDO>
     implements AgentPropertiesService {
 
     private final AgentTagService agentTagService;
+    private final AgentPropertiesLoader agentPropertiesLoader;
+
+    public AgentPropertiesServiceImpl(AgentTagService agentTagService,
+                                      @Lazy AgentPropertiesLoader agentPropertiesLoader) {
+        this.agentTagService = agentTagService;
+        this.agentPropertiesLoader = agentPropertiesLoader;
+    }
 
     @Override
     @Transactional
@@ -204,6 +214,72 @@ public class AgentPropertiesServiceImpl extends ServiceImpl<AgentPropertiesMappe
                 .eq(AgentPropertiesDO::getDelFlag, 0)
                 .orderByDesc(AgentPropertiesDO::getCreateTime);
         return baseMapper.selectList(queryWrapper);
+    }
+
+    @Override
+    public List<SceneBindingRespDTO> getSceneBindings() {
+        // Load all non-deleted agents
+        List<AgentPropertiesDO> allAgents = list(Wrappers.lambdaQuery(AgentPropertiesDO.class)
+                .eq(AgentPropertiesDO::getDelFlag, 0));
+
+        List<SceneBindingRespDTO> bindings = new ArrayList<>();
+        for (BusinessAgentScene scene : BusinessAgentScene.values()) {
+            SceneBindingRespDTO binding = new SceneBindingRespDTO();
+            binding.setSceneCode(scene.getCode());
+            binding.setSceneName(scene.getDefaultAgentName());
+
+            // Find active agent for this scene
+            allAgents.stream()
+                    .filter(a -> scene.getCode().equals(a.getSceneCode()) && Integer.valueOf(1).equals(a.getIsActive()))
+                    .findFirst()
+                    .ifPresent(active -> {
+                        binding.setActiveAgentId(active.getId());
+                        binding.setActiveAgentName(active.getAgentName());
+                        binding.setActiveProvider(active.getAiProvider());
+                    });
+
+            // Find candidate agents by scene code or matching agent names
+            List<String> candidateNames = scene.getCandidateAgentNames();
+            List<SceneBindingRespDTO.CandidateAgent> candidates = allAgents.stream()
+                    .filter(a -> scene.getCode().equals(a.getSceneCode()) || candidateNames.contains(a.getAgentName()))
+                    .map(a -> {
+                        SceneBindingRespDTO.CandidateAgent ca = new SceneBindingRespDTO.CandidateAgent();
+                        ca.setId(a.getId());
+                        ca.setAgentName(a.getAgentName());
+                        ca.setAiProvider(a.getAiProvider());
+                        return ca;
+                    })
+                    .collect(Collectors.toList());
+            binding.setCandidates(candidates);
+
+            bindings.add(binding);
+        }
+        return bindings;
+    }
+
+    @Override
+    @Transactional
+    public void activateAgent(String sceneCode, Long agentId) {
+        // Deactivate all agents currently active for this scene
+        LambdaUpdateWrapper<AgentPropertiesDO> deactivateWrapper = Wrappers.lambdaUpdate(AgentPropertiesDO.class)
+                .eq(AgentPropertiesDO::getSceneCode, sceneCode)
+                .eq(AgentPropertiesDO::getIsActive, 1)
+                .eq(AgentPropertiesDO::getDelFlag, 0)
+                .set(AgentPropertiesDO::getIsActive, 0)
+                .set(AgentPropertiesDO::getUpdateTime, new Date());
+        update(deactivateWrapper);
+
+        // Activate the target agent
+        LambdaUpdateWrapper<AgentPropertiesDO> activateWrapper = Wrappers.lambdaUpdate(AgentPropertiesDO.class)
+                .eq(AgentPropertiesDO::getId, agentId)
+                .eq(AgentPropertiesDO::getDelFlag, 0)
+                .set(AgentPropertiesDO::getIsActive, 1)
+                .set(AgentPropertiesDO::getSceneCode, sceneCode)
+                .set(AgentPropertiesDO::getUpdateTime, new Date());
+        update(activateWrapper);
+
+        // Refresh the startup cache
+        agentPropertiesLoader.refreshActiveAgents();
     }
 }
 

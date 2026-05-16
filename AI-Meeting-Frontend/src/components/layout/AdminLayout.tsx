@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Users } from "lucide-react";
+import { LayoutDashboard, Users, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,6 +15,11 @@ const NAV_ITEMS = [
     label: "用户管理",
     path: ROUTES.adminUsers,
     icon: Users,
+  },
+  {
+    label: "面试链路",
+    path: ROUTES.adminAgentConfig,
+    icon: Bot,
   },
 ] as const;
 

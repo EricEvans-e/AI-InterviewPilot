@@ -60,6 +60,9 @@ const AdminDashboardPage = lazy(
   () => import("@/pages/admin/AdminDashboardPage"),
 );
 const AdminUsersPage = lazy(() => import("@/pages/admin/AdminUsersPage"));
+const AdminAgentConfigPage = lazy(
+  () => import("@/pages/admin/AdminAgentConfigPage"),
+);
 
 function RouteLoadingScreen() {
   return (
@@ -193,6 +196,10 @@ export const appRoutes: RouteObject[] = [
                   {
                     path: ROUTES.adminUsers,
                     element: withRouteSuspense(<AdminUsersPage />),
+                  },
+                  {
+                    path: ROUTES.adminAgentConfig,
+                    element: withRouteSuspense(<AdminAgentConfigPage />),
                   },
                 ],
               },

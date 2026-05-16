@@ -30,6 +30,26 @@ export interface UserPageResult {
   pages: number;
 }
 
+// ── Admin Stats ──
+
+export interface AdminStatsResult {
+  totalUsers: number;
+  todayActive: number;
+  weekTrainingCount: number;
+  avgScore: number | null;
+}
+
+// ── Scene Bindings ──
+
+export interface SceneBinding {
+  sceneCode: string;
+  sceneName: string;
+  activeAgentId: number | null;
+  activeAgentName: string;
+  activeProvider: string;
+  candidates: { id: number; agentName: string; aiProvider: string }[];
+}
+
 // ── Service ──
 
 export const adminService = {
@@ -39,5 +59,17 @@ export const adminService = {
 
   addAdmin(username: string): Promise<void> {
     return service.post<void>("/ip/v1/users/admin", { username });
+  },
+
+  getStats(): Promise<AdminStatsResult> {
+    return service.get<AdminStatsResult>("/ip/v1/users/stats");
+  },
+
+  getSceneBindings(): Promise<SceneBinding[]> {
+    return service.get<SceneBinding[]>("/ip/v1/agent-properties/scene-bindings");
+  },
+
+  switchSceneAgent(sceneCode: string, agentId: number): Promise<void> {
+    return service.put<void>(`/ip/v1/agent-properties/scene-bindings/${sceneCode}/active/${agentId}`);
   },
 };

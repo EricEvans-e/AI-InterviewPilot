@@ -55,6 +55,24 @@ public class AgentPropertiesLoader implements CommandLineRunner {
         return null;
     }
 
+    /**
+     * 查找指定场景的当前激活 agent。
+     * 遍历内存缓存，返回第一个 sceneCode 匹配且 is_active=1 的 agent。
+     */
+    public AgentPropertiesDO getActiveBySceneCode(String sceneCode) {
+        if (sceneCode == null || sceneCode.isBlank()) {
+            return null;
+        }
+        for (AgentPropertiesDO agent : agentPropertiesMap.values()) {
+            if (sceneCode.equals(agent.getSceneCode())
+                    && agent.getIsActive() != null
+                    && agent.getIsActive() == 1) {
+                return agent;
+            }
+        }
+        return null;
+    }
+
     public AgentPropertiesDO getByAgentName(String agentName) {
         if (agentName == null || agentName.isBlank()) {
             return null;

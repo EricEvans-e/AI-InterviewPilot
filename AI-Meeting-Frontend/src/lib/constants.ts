@@ -20,6 +20,7 @@ export const ROUTES = {
   // admin routes
   adminDashboard: "/admin",
   adminUsers: "/admin/users",
+  adminAgentConfig: "/admin/agent-config",
 } as const;
 
 export const CHAT_ROLES = {

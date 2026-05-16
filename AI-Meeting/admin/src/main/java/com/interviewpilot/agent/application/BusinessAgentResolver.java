@@ -21,6 +21,15 @@ public class BusinessAgentResolver {
     private final AgentPropertiesLoader agentPropertiesLoader;
 
     public AgentPropertiesDO resolveRequired(BusinessAgentScene scene) {
+        // 1. 优先查 DB 中 is_active=1 + scene_code 匹配的 agent
+        AgentPropertiesDO activeAgent = agentPropertiesLoader.getActiveBySceneCode(scene.getCode());
+        if (activeAgent != null) {
+            log.info("Resolved business agent from scene binding, scene={}, agentName={}, agentId={}, provider={}",
+                    scene.getCode(), activeAgent.getAgentName(), activeAgent.getId(), activeAgent.getAiProvider());
+            return activeAgent;
+        }
+
+        // 2. Fallback: YAML 配置的 agent name → enum 候选名（保留原有逻辑）
         Set<String> candidateAgentNames = new LinkedHashSet<>();
         String configuredAgentName = bindingProperties.resolveAgentName(scene);
         if (StrUtil.isNotBlank(configuredAgentName)) {

@@ -2,6 +2,7 @@ package com.interviewpilot.agent.dao.entity;
 
 import java.util.Date;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -33,12 +34,12 @@ public class AgentPropertiesDO {
     private String apiKey;
 
     /**
-     * 工作流id（xingchen 模式）或 API URL（mimo 模式）
+     * 工作流id（xingchen 模式）或 API URL（anthropic 模式）
      */
     private String apiFlowId;
 
     /**
-     * AI 提供商标识: xingchen（默认）, mimo
+     * AI 提供商标识: xingchen（默认）, anthropic
      */
     private String aiProvider;
 
@@ -56,5 +57,17 @@ public class AgentPropertiesDO {
      * 删除标识 0：未删除 1：已删除
      */
     private Integer delFlag;
+
+    /**
+     * 绑定的业务场景编码
+     */
+    @TableField("scene_code")
+    private String sceneCode;
+
+    /**
+     * 是否为该场景的当前激活agent
+     */
+    @TableField("is_active")
+    private Integer isActive;
 
 }

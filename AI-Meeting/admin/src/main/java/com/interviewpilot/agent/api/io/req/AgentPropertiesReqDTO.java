@@ -16,6 +16,12 @@ public class AgentPropertiesReqDTO {
 
     private String apiFlowId;
 
+    private String aiProvider;
+
+    private String sceneCode;
+
+    private Integer isActive;
+
     /**
      * 标签代码列表，对应AgentTagType枚举的code值
      */

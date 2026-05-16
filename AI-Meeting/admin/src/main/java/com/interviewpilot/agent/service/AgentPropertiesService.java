@@ -5,6 +5,7 @@ import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.interviewpilot.agent.api.io.req.AgentPropertiesReqDTO;
 import com.interviewpilot.agent.api.io.resp.AgentPropertiesRespDTO;
+import com.interviewpilot.agent.api.io.resp.SceneBindingRespDTO;
 
 import java.util.List;
 
@@ -44,5 +45,9 @@ public interface AgentPropertiesService extends IService<AgentPropertiesDO> {
     List<AgentPropertiesDO> listTop10();
 
     List<AgentPropertiesDO> listActiveAgents();
+
+    List<SceneBindingRespDTO> getSceneBindings();
+
+    void activateAgent(String sceneCode, Long agentId);
 }
 
