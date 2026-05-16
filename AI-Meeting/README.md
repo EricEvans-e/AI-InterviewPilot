@@ -46,7 +46,7 @@
 
 ### AI 对话模块
 
-- **多模型统一接入**：基于 `AiChatHandlerFactory` 策略路由，`UniversalAiChatHandler`（Spring AI，OpenAI 兼容协议）接入 DeepSeek、星火、豆包等模型，`MimoChatHandler`（Anthropic Messages API）接入 Mimo 系列模型，运行时可切换。
+- **多模型统一接入**：基于 `AiChatHandlerFactory` 策略路由，`UniversalAiChatHandler`（Spring AI，OpenAI 兼容协议）接入 DeepSeek、星火、豆包等模型，`AnthropicChatHandler`（Anthropic Messages API）接入 Anthropic 兼容模型（如 Mimo），运行时可切换。
 - **SSE 流式响应**：基于 WebFlux Flux + SSE 实现打字机式流式输出，支持 DeepSeek `reasoning_content` 思维链展示。
 - **会话管理**：支持创建、分页查询、结束、删除对话，消息持久化至 MongoDB，支持历史消息回溯。
 
