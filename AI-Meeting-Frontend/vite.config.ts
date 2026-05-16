@@ -58,6 +58,10 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           ws: true,
         },
+        "/recordings": {
+          target: apiTarget,
+          changeOrigin: true,
+        },
       },
     },
   };

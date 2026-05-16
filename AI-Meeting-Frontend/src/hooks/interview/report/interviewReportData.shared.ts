@@ -37,6 +37,7 @@ export type InterviewReportViewModel = {
   interviewDirection: string | null;
   qaReviews: QaReview[];
   reviewFeedback: ReviewFeedback;
+  recordingUrl: string | null;
 };
 
 const toRecord = (value: unknown): UnknownRecord | null => {
@@ -569,5 +570,10 @@ export function buildInterviewReportViewModel(
     interviewDirection,
     qaReviews,
     reviewFeedback,
+    recordingUrl: pickFirstString(
+      record?.recordingUrl,
+      rawRecord?.recordingUrl,
+      snapshot?.recordingUrl,
+    ),
   };
 }

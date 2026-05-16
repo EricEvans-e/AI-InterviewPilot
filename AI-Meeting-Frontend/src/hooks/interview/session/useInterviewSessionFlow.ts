@@ -326,54 +326,75 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
     stopThinkingIndicator,
   ]);
 
-  const handleEndInterview = useCallback(async () => {
-    if (isEndingInterview) {
-      return;
-    }
-    setIsEndingInterview(true);
-
-    // Stop any TTS audio playing
-    if (activeAudioRef.current) {
-      activeAudioRef.current.pause();
-      activeAudioRef.current = null;
-    }
-    setIsTTSSpeaking(false);
-
-    const reportSessionId = interviewerSessionId;
-    try {
-      if (reportSessionId) {
-        await interviewService.finishInterviewSession(reportSessionId);
-        await invalidateInterviewRecords();
+  const handleEndInterview = useCallback(
+    async (options?: { recordingBlob?: Blob | null }) => {
+      if (isEndingInterview) {
+        return;
       }
-    } catch (error) {
-      console.error("Save interview record failed:", error);
-    } finally {
-      stopThinkingIndicator();
-      cancelActiveQuestionStream();
-      persistInterviewerSessionId(null);
-      clearStoredSession();
-      resetProgressState();
-      resetAutoSaveAttempt();
-      navigate(
-        `${ROUTES.interviewReport}${buildReportSearch(reportSessionId)}`,
-        {
-          state: reportSessionId ? { sessionId: reportSessionId } : undefined,
-        },
-      );
-      setIsEndingInterview(false);
-    }
-  }, [
-    cancelActiveQuestionStream,
-    clearStoredSession,
-    interviewerSessionId,
-    invalidateInterviewRecords,
-    isEndingInterview,
-    navigate,
-    persistInterviewerSessionId,
-    resetAutoSaveAttempt,
-    resetProgressState,
-    stopThinkingIndicator,
-  ]);
+      setIsEndingInterview(true);
+
+      // Stop any TTS audio playing
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current = null;
+      }
+      setIsTTSSpeaking(false);
+
+      const reportSessionId = interviewerSessionId;
+      try {
+        // Upload recording if provided — await so recordingUrl is saved before report page loads
+        if (options?.recordingBlob && reportSessionId) {
+          try {
+            const recordingUrl = await interviewService.uploadRecording({
+              sessionId: reportSessionId,
+              file: options.recordingBlob,
+            });
+            await interviewService.saveInterviewRecord({
+              sessionId: reportSessionId,
+              recordingUrl,
+            });
+          } catch (err) {
+            console.error("Recording upload failed:", err);
+          }
+        }
+
+        if (reportSessionId) {
+          await interviewService.finishInterviewSession(reportSessionId);
+          await invalidateInterviewRecords();
+        }
+      } catch (error) {
+        console.error("Save interview record failed:", error);
+      } finally {
+        stopThinkingIndicator();
+        cancelActiveQuestionStream();
+        persistInterviewerSessionId(null);
+        clearStoredSession();
+        resetProgressState();
+        resetAutoSaveAttempt();
+        navigate(
+          `${ROUTES.interviewReport}${buildReportSearch(reportSessionId)}`,
+          {
+            state: reportSessionId
+              ? { sessionId: reportSessionId }
+              : undefined,
+          },
+        );
+        setIsEndingInterview(false);
+      }
+    },
+    [
+      cancelActiveQuestionStream,
+      clearStoredSession,
+      interviewerSessionId,
+      invalidateInterviewRecords,
+      isEndingInterview,
+      navigate,
+      persistInterviewerSessionId,
+      resetAutoSaveAttempt,
+      resetProgressState,
+      stopThinkingIndicator,
+    ],
+  );
 
   return {
     messages,

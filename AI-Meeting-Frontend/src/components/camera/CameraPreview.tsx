@@ -7,6 +7,7 @@ export type CameraPreviewHandle = {
     type?: string;
     quality?: number;
   }) => Promise<Blob | null>;
+  getStream: () => MediaStream | null;
 };
 
 type CameraPreviewProps = {
@@ -65,6 +66,7 @@ const CameraPreview = forwardRef<CameraPreviewHandle, CameraPreviewProps>(
             );
           });
         },
+        getStream: () => streamRef.current,
       }),
       [],
     );

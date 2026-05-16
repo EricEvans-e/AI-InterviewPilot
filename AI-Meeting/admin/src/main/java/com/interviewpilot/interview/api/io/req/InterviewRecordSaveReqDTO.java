@@ -26,4 +26,7 @@ public class InterviewRecordSaveReqDTO {
 
     @Size(max = 64, message = "username长度不能超过64个字符")
     private String username;
+
+    @Size(max = 1024, message = "recordingUrl长度不能超过1024个字符")
+    private String recordingUrl;
 }

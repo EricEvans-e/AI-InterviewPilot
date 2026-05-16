@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import type { CameraPreviewHandle } from "@/components/camera/CameraPreview";
 import ChatRoom from "@/components/chat/ChatRoom";
 import SmartComposer from "@/components/chat/SmartComposer";
@@ -10,6 +10,7 @@ import InterviewResumeReferenceCard from "@/components/interview/InterviewResume
 import InterviewResumeUploadCard from "@/components/interview/InterviewResumeUploadCard";
 import InterviewSketchpadSheet from "@/components/interview/sketchpad/InterviewSketchpadSheet";
 import { useInterviewDemeanorPolling } from "@/hooks/interview/camera/useInterviewDemeanorPolling";
+import { useInterviewRecording } from "@/hooks/interview/camera/useInterviewRecording";
 import { useInterviewPageController } from "@/hooks/interview/useInterviewPageController";
 
 export default function InterviewPage() {
@@ -19,9 +20,46 @@ export default function InterviewPage() {
   const { setInput, isReady, isSubmitting, handleSend, input, messages, isTTSSpeaking } = chat;
   const { setIsPreviewOpen } = resume;
 
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const recording = useInterviewRecording(cameraStream, {
+    enabled: isReady && camera.isOpen,
+  });
+
   const captureFrame = useCallback(async () => {
     return cameraPreviewRef.current?.captureFrame() ?? null;
   }, []);
+
+  useEffect(() => {
+    if (camera.isOpen) {
+      const timer = setTimeout(() => {
+        const stream = cameraPreviewRef.current?.getStream() ?? null;
+        setCameraStream(stream);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    setCameraStream(null);
+  }, [camera.isOpen]);
+
+  // Auto-start recording when interview is ready and camera stream is available
+  const hasStartedRecordingRef = useRef(false);
+  useEffect(() => {
+    if (isReady && camera.isOpen && cameraStream && !recording.isRecording && !hasStartedRecordingRef.current) {
+      hasStartedRecordingRef.current = true;
+      recording.startRecording();
+    }
+    if (!isReady || !camera.isOpen) {
+      hasStartedRecordingRef.current = false;
+    }
+  }, [isReady, camera.isOpen, cameraStream, recording]);
+
+  // Wrap end interview to stop recording first
+  const handleEndInterviewWithRecording = useCallback(async () => {
+    let recordingBlob: Blob | null = null;
+    if (recording.isRecording) {
+      recordingBlob = await recording.stopRecording();
+    }
+    await interview.handleEndInterview({ recordingBlob });
+  }, [recording, interview.handleEndInterview]);
 
   const handleInsertNotes = useCallback(
     (notes: string) => {
@@ -70,7 +108,7 @@ export default function InterviewPage() {
             isEndingInterview={interview.isEnding}
             onToggleCamera={camera.handleToggleCamera}
             onOpenSketchpad={handleOpenSketchpad}
-            onEndInterview={interview.handleEndInterview}
+            onEndInterview={handleEndInterviewWithRecording}
           />
         }
         topContent={

@@ -85,6 +85,7 @@ export interface InterviewRecordResult {
   questionAnswers?: InterviewQaReview[] | null;
   interviewQaList?: InterviewQaReview[] | null;
   reviewFeedback?: InterviewReviewFeedbackResult | null;
+  recordingUrl?: string | null;
   startTime?: string | null;
   endTime?: string | null;
   durationSeconds?: number | null;
@@ -971,8 +972,8 @@ export const interviewService = {
       `/ip/v1/interview/record/save-from-redis/${encodeURIComponent(sessionId)}`,
     );
   },
-  saveInterviewRecord: async (params: { sessionId: string }) => {
-    return postWithPathFallback<void, { sessionId: string }>(
+  saveInterviewRecord: async (params: { sessionId: string; recordingUrl?: string }) => {
+    return postWithPathFallback<void, { sessionId: string; recordingUrl?: string }>(
       "/ip/v1/interview/interview/record",
       "/ip/v1/interview/record",
       params,
@@ -997,6 +998,26 @@ export const interviewService = {
     return getWithPathFallback<InterviewRecordResult>(
       `/ip/v1/interview/interview/record/${encodeURIComponent(sessionId)}`,
       `/ip/v1/interview/record/${encodeURIComponent(sessionId)}`,
+    );
+  },
+  uploadRecording: async (params: {
+    sessionId: string;
+    file: Blob;
+    fileName?: string;
+  }): Promise<string> => {
+    const formData = new FormData();
+    formData.append(
+      "file",
+      params.file,
+      params.fileName || `recording-${Date.now()}.webm`,
+    );
+    return service.post<string, FormData>(
+      `/ip/v1/interview/interview/record/${encodeURIComponent(params.sessionId)}/recording`,
+      formData,
+      {
+        timeout: INTERVIEW_LONG_TIMEOUT_MS,
+        headers: { "Content-Type": "multipart/form-data" },
+      },
     );
   },
 };

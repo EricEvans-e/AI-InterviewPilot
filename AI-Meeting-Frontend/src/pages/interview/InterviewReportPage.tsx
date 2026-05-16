@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import InterviewReportHeader from "@/components/interview/report/InterviewReportHeader";
+import InterviewRecordingPlaybackCard from "@/components/interview/report/InterviewRecordingPlaybackCard";
 import InterviewScoreAndRadarCard from "@/components/interview/report/InterviewScoreAndRadarCard";
 import InterviewConclusionCard from "@/components/interview/report/InterviewConclusionCard";
 import InterviewNextActionsCard from "@/components/interview/report/InterviewNextActionsCard";
@@ -30,6 +31,7 @@ export default function InterviewReportPage() {
     interviewDirection,
     qaReviews,
     reviewFeedback,
+    recordingUrl,
   } = useInterviewReportData(reportSessionId);
 
   return (
@@ -41,6 +43,17 @@ export default function InterviewReportPage() {
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
           <InterviewReportHeader />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.35, delay: 0.02, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <InterviewRecordingPlaybackCard
+            recordingUrl={recordingUrl}
+            isLoading={isRecordLoading}
+          />
         </motion.div>
 
         {!reportSessionId && (

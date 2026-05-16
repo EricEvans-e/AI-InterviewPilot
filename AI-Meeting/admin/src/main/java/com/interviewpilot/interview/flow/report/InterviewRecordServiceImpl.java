@@ -134,6 +134,9 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         if (StrUtil.isNotBlank(interviewDirection)) {
             record.setInterviewDirection(interviewDirection);
         }
+        if (StrUtil.isNotBlank(safeRequest.getRecordingUrl())) {
+            record.setRecordingUrl(safeRequest.getRecordingUrl());
+        }
 
         // 7 维评分：基于 AI 分数 + 神态评分 + 时间控制计算
         computeAndFillDimensionScores(sessionId, session, totalScore, durationSeconds, record);
@@ -987,7 +990,7 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         }
         radarChart.setContentScore(record.getContentScore());
         radarChart.setLogicScore(record.getLogicScore());
-        radarChart.setProfessionalMatchScore(record.getProfessionalScore());
+        radarChart.setProfessionalScore(record.getProfessionalScore());
         radarChart.setExpressionScore(record.getExpressionScore());
         radarChart.setAdaptabilityScore(record.getAdaptabilityScore());
         radarChart.setTimeControlScore(record.getTimeControlScore());

@@ -71,6 +71,8 @@ public class InterviewRecordRespDTO {
 
     private InterviewReviewFeedbackRespDTO reviewFeedback;
 
+    private String recordingUrl;
+
     private Date createTime;
 
     private Date updateTime;

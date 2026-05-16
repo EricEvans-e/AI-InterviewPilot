@@ -178,6 +178,12 @@ public class InterviewRecordDO {
     private Date updateTime;
 
     /**
+     * 面试录像文件URL
+     */
+    @TableField("recording_url")
+    private String recordingUrl;
+
+    /**
      * 删除标识 0：未删除 1：已删除
      */
     @TableField("del_flag")

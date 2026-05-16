@@ -95,6 +95,7 @@ interview-pilot:
     upload-temp-dir: ${INTERVIEW_PILOT_MULTIPART_TEMP_DIR:${interview-pilot.storage.base-dir}/temp/upload}
     audio-temp-dir: ${INTERVIEW_PILOT_AUDIO_TEMP_DIR:${interview-pilot.storage.base-dir}/temp/audio}
     log-dir: ${INTERVIEW_PILOT_LOG_DIR:${interview-pilot.storage.base-dir}/logs}
+    recording-dir: ${INTERVIEW_PILOT_RECORDING_DIR:${interview-pilot.storage.base-dir}/recordings}
   thread-pool:
     general:
       core-pool-size: 50

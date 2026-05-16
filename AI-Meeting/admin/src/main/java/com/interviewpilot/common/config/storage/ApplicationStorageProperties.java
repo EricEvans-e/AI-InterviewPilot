@@ -22,6 +22,8 @@ public class ApplicationStorageProperties {
 
     private String logDir;
 
+    private String recordingDir;
+
     public Path getBasePath() {
         return Path.of(baseDir).toAbsolutePath().normalize();
     }
@@ -36,5 +38,9 @@ public class ApplicationStorageProperties {
 
     public Path getLogPath() {
         return Path.of(logDir).toAbsolutePath().normalize();
+    }
+
+    public Path getRecordingPath() {
+        return Path.of(recordingDir).toAbsolutePath().normalize();
     }
 }

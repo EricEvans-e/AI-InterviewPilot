@@ -13,6 +13,7 @@ export type QaReview = {
   isFollowUp?: boolean;
   followUpNeeded?: boolean;
   followUpCount?: number | null;
+  audioUrl?: string | null;
 };
 
 export type ReviewFeedback = {
