@@ -1,6 +1,6 @@
 <div align="center">
 
-# InterviewPilot2
+# AI-InterviewPilot
 
 **基于大语言模型的 AI 智能模拟面试平台**
 
@@ -34,7 +34,7 @@
 
 ## 项目概述
 
-**InterviewPilot2** 是一个基于大语言模型的 AI 智能模拟面试平台，专为浙江高职提前招生面试备考场景打造。系统支持学生上传简历、AI 智能出题、数字人模拟面试、实时语音交互、多维评分诊断与提升建议，帮助考生在真实校测前进行充分的模拟训练。
+**AI-InterviewPilot** 是一个基于大语言模型的 AI 智能模拟面试平台，专为浙江高职提前招生面试备考场景打造。系统支持学生上传简历、AI 智能出题、数字人模拟面试、实时语音交互、多维评分诊断与提升建议，帮助考生在真实校测前进行充分的模拟训练。
 
 本项目采用前后端分离架构：
 - **后端** (`AI-Meeting/`)：基于 Java 17 + Spring Boot 3.4 + Spring AI 构建的模块化单体应用
@@ -138,7 +138,7 @@
 ## 目录结构
 
 ```
-InterviewPilot2/
+AI-InterviewPilot/
 ├── AI-Meeting/                     # 后端项目（Java Spring Boot）
 │   ├── admin/                      # 核心业务模块
 │   │   ├── src/main/java/com/interviewpilot/
@@ -208,8 +208,8 @@ InterviewPilot2/
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/EricEvans-e/InterviewPilot2.git
-cd InterviewPilot2
+git clone https://github.com/EricEvans-e/AI-InterviewPilot.git
+cd AI-InterviewPilot
 ```
 
 ### 2. 启动基础设施（Docker Compose）
@@ -358,7 +358,7 @@ npm run dev
 ```
 MIT License
 
-Copyright (c) 2026 InterviewPilot2 Contributors
+Copyright (c) 2026 AI-InterviewPilot Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -385,7 +385,7 @@ SOFTWARE.
 
 如有任何问题或建议，欢迎通过以下方式联系：
 
-- **GitHub Issues**: [https://github.com/EricEvans-e/InterviewPilot2/issues](https://github.com/EricEvans-e/InterviewPilot2/issues)
+- **GitHub Issues**: [https://github.com/EricEvans-e/AI-InterviewPilot/issues](https://github.com/EricEvans-e/AI-InterviewPilot/issues)
 
 ---
 
