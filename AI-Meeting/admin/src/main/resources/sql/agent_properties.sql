@@ -10,8 +10,4 @@ INSERT INTO agent_properties (id, agent_name, api_secret, api_key, api_flow_id, 
 INSERT INTO agent_properties (id, agent_name, api_secret, api_key, api_flow_id, create_time, update_time, del_flag) VALUES (12, '面试提问官', 'ZjMyNTgyY2RiYmEzMWQ0NGQzYTVmMTNj', '86f9f60da8d9f65a979dec8ed4978997', '7459029937422643200', '2026-03-18 22:04:34', '2026-03-18 22:04:30', 0);
 
 -- OpenAI 兼容 Agent（ai_provider = openai, field reuse: api_secret=模型名, api_flow_id=API URL）
-INSERT INTO agent_properties (agent_name, api_secret, api_key, api_flow_id, ai_provider, del_flag, create_time, update_time) VALUES
-('Mimo面试评分官', 'mimo-v2.5', 'tp-s7h68tp5edc1zh2co9cw7n9oeakrkwp7fcwwajwom0rdo7wt', 'https://token-plan-sgp.xiaomimimo.com/v1', 'openai', 0, NOW(), NOW()),
-('Mimo面试提问官', 'mimo-v2.5', 'tp-s7h68tp5edc1zh2co9cw7n9oeakrkwp7fcwwajwom0rdo7wt', 'https://token-plan-sgp.xiaomimimo.com/v1', 'openai', 0, NOW(), NOW()),
-('Mimo面试出题官', 'mimo-v2.5', 'tp-s7h68tp5edc1zh2co9cw7n9oeakrkwp7fcwwajwom0rdo7wt', 'https://token-plan-sgp.xiaomimimo.com/v1', 'openai', 0, NOW(), NOW()),
-('Mimo神态分析官', 'mimo-v2.5', 'tp-s7h68tp5edc1zh2co9cw7n9oeakrkwp7fcwwajwom0rdo7wt', 'https://token-plan-sgp.xiaomimimo.com/v1', 'openai', 0, NOW(), NOW());
+-- 如需添加 OpenAI 兼容 Agent，请在此处插入
