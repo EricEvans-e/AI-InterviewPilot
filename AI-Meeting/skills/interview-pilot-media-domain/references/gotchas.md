@@ -14,12 +14,13 @@
 | --- | --- | --- |
 | WebSocket 连不上 | token、path `userId`、鉴权服务 | token 缺失或 userId 不匹配 |
 | 连上了但没心跳 | `heartbeatExecutor` 是否注入 | 线程池未就绪或被关闭 |
-| start 后没有结果 | `TRANSCRIPTION_CONTEXTS`、`XunfeiAudioService` | 真实转写流没有启动 |
+| start 后没有结果 | `TRANSCRIPTION_CONTEXTS`、`MimoAudioService` | 未收到音频块、stop 未触发，或 Mimo ASR 调用失败 |
 | stop 后还在推结果 | 上下文是否已移除 | pipe 未关闭或回调仍在跑 |
-| TTS 任务一直查不到终态 | 任务提交和查询是否是同一 `taskId` | 前端把异步和同步流程混用了 |
+| TTS 返回成功但没有音频 | `LongTextTtsTaskRespDTO.audioBase64` | Mimo TTS 响应没有 `message.audio.data` |
 
 ## 一个实用判断
 
 - `transcription_already_started` 通常是并发/重复命令，不是底层失败。
 - `unknown_command` 通常是前后端命令枚举不一致。
 - `Pipe closed`、`Stream closed` 在停止转写场景里通常是预期结束信号，不一定是报错。
+- `/api/ip/v1/mimo/tts/tasks` 是同步合成后的兼容任务外观，不要按外部平台异步任务轮询排障。

@@ -107,7 +107,7 @@ INSERT INTO ai_properties (
 /api/ip/v1/mimo/audio-to-text/{userId}
 ```
 
-前端会发送 PCM 音频块，后端在 `MimoAudioService` 中封装为 WAV 后调用 Mimo ASR 模型。
+前端会持续发送 PCM 音频块。后端在 `AudioTranscriptionWebSocketHandler` 中缓冲音频流，收到 `stop_transcription` 或连接清理时关闭 pipe，并由 `MimoAudioService` 封装为 WAV 后调用 Mimo ASR。Mimo ASR 返回最终文本，不再提供讯飞式 `pgs` / `rg` 逐句增量修订流。
 
 TTS REST 接口：
 
@@ -117,7 +117,7 @@ GET  /api/ip/v1/mimo/tts/tasks/{taskId}
 POST /api/ip/v1/mimo/tts/synthesize
 ```
 
-`/api/ip/v1/xunfei/tts/**` 暂时作为旧前端兼容别名保留，内部已经走 Mimo TTS。
+Mimo TTS 是同步合成接口。`POST /tasks` 和 `GET /tasks/{taskId}` 保留 task 形态只是为了兼容旧前端；新代码应优先使用 `/synthesize`，并直接读取 `audioBase64`。`/api/ip/v1/xunfei/tts/**` 暂时作为旧前端兼容别名保留，内部已经走 Mimo TTS。
 
 ## 前端配置页面
 
@@ -142,7 +142,7 @@ OpenAI 兼容地址保留 `/v1`，代码会自动拼接 `/chat/completions`。An
 
 ### ASR / TTS 没有响应
 
-检查 `MIMO_ASR_MODEL=mimo-v2.5-asr`、`MIMO_TTS_MODEL=mimo-v2.5-tts`，并确认后端日志里没有 `Mimo API key is missing`。
+检查 `MIMO_ASR_MODEL=mimo-v2.5-asr`、`MIMO_TTS_MODEL=mimo-v2.5-tts`，确认后端日志里没有 `Mimo API key is missing`。ASR 还要确认前端发送了 `stop_transcription`，否则后端不会关闭音频流并发起最终转写。
 
 ### 模型选择器不显示 Mimo
 

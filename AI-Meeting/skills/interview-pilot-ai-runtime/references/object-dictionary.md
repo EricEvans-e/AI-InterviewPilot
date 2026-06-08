@@ -18,9 +18,9 @@
 | --- | --- | --- | --- |
 | `AiChatHandler` | AI 调用策略接口 | Java 接口 | `streamToSink`(流式) + `callSync`(同步)，新增 provider 需实现此接口 |
 | `AiChatHandlerFactory` | AI Handler 路由工厂 | Java 类 | 按 `aiType` 字符串分发：`anthropic` → `AnthropicChatHandler`，其他 → `UniversalAiChatHandler` |
-| `UniversalAiChatHandler` | OpenAI 兼容协议 Handler | Java 类 | 支持 openai/doubao/spark/deepseek，用 Spring AI `OpenAiApi`/`DeepSeekApi` |
-| `AnthropicChatHandler` | Anthropic 协议 Handler | Java 类 | 支持 anthropic，用 WebClient 直接调 Anthropic Messages API，支持 thinking 模式 |
-| `AiPropritiesType` | AI 类型枚举 | Java 枚举 | OPENAI(1)/DOUBAO(2)/SPARK(3)/DEEPSEEK(4)/ANTHROPIC(5)/OTHER(99) |
+| `UniversalAiChatHandler` | OpenAI 兼容协议 Handler | Java 类 | 默认走 Mimo OpenAI-compatible `/v1/chat/completions`；历史 `doubao`/`spark`/`deepseek` 类型会映射到 `openai` 兼容路径 |
+| `AnthropicChatHandler` | Anthropic 协议 Handler | Java 类 | 支持 `anthropic`，用 WebClient 调 Mimo Anthropic-compatible `/anthropic/messages`，支持 thinking 模式 |
+| `AiPropritiesType` | AI 类型枚举 | Java 枚举 | OPENAI(1)/ANTHROPIC(5)/OTHER(99)，旧类型仅兼容映射到 OPENAI |
 | `AiPropertiesDO` | AI 模型配置实体 | MyBatis-Plus entity | 对应 `ai_properties` 表，存 apiKey/apiUrl/modelName/maxTokens/temperature/systemPrompt |
 | `AiContentAccumulator` | 流式内容累积器 | Java 类 | 累积 content + reasoning_content，兼容 OpenAI SSE / Anthropic SSE / Coze workflow |
 

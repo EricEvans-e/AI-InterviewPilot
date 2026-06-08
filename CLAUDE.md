@@ -47,7 +47,7 @@ Root backend package: `com.interviewpilot`. The single Maven module `admin/` is 
 | `interview` | `com.interviewpilot.interview` | Interview flow, state machine, resume parsing, question generation, answer evaluation, follow-up decisions, demeanor scoring, final report |
 | `ai` | `com.interviewpilot.ai` | General AI chat. Defaults to Xiaomi Mimo through OpenAI-compatible and Anthropic-compatible protocols |
 | `agent` | `com.interviewpilot.agent` | Interview agent configuration and scene binding; legacy Xunfei workflow client remains for compatibility |
-| `media` | `com.interviewpilot.media` | Mimo-backed ASR WebSocket and TTS REST APIs |
+| `media` | `com.interviewpilot.media` | Mimo-backed ASR WebSocket transport and synchronous TTS REST APIs |
 | `user` | `com.interviewpilot.user` | User accounts and admin permissions |
 | `auth` | `com.interviewpilot.auth` | Sa-Token auth, WebSocket auth, permission checks |
 | `common` | `com.interviewpilot.common` | Shared infra: DB, Redis, thread pools, result and exception conventions |
@@ -91,7 +91,7 @@ Runtime components:
 
 - `UniversalAiChatHandler`: OpenAI-compatible calls, default Mimo `/v1/chat/completions`
 - `AnthropicChatHandler`: Anthropic-compatible calls, Mimo `/anthropic/messages`, supports thinking output
-- `MimoAudioService`: ASR and TTS via Mimo models
+- `MimoAudioService`: ASR and TTS via Mimo chat-completions models. ASR receives buffered WebSocket audio and returns a final transcript; TTS returns `choices[0].message.audio.data`
 - `InterviewAiInvoker`: interview-specific routing through `agent_properties.ai_provider`
 
 Legacy Xunfei classes remain for compatibility only. Beans are disabled by default using `LEGACY_XUNFEI_ENABLED=false`.
@@ -134,6 +134,8 @@ Current ASR WebSocket path:
 /api/ip/v1/mimo/audio-to-text/{userId}
 ```
 
+The WebSocket is realtime transport for browser PCM chunks. The backend buffers audio, wraps PCM as WAV, and calls Mimo ASR after `stop_transcription` or connection cleanup; do not expect Xunfei-style per-sentence incremental `pgs` / `rg` revisions.
+
 Current TTS paths:
 
 ```text
@@ -143,6 +145,8 @@ Current TTS paths:
 ```
 
 `/api/ip/v1/xunfei/tts/**` remains a backend compatibility alias, but new frontend code should use Mimo paths.
+
+Mimo TTS is synchronous. `/tasks` and `/tasks/{taskId}` keep the old task-shaped API surface for compatibility; new code should prefer `/synthesize` and read `audioBase64`.
 
 ## Interview Constraints
 

@@ -25,20 +25,20 @@
 
 | 对象 | 含义 | 真相源 | 说明 |
 | --- | --- | --- | --- |
-| `LongTextTtsReqDTO` | 长文本合成请求 | HTTP 请求体 | 任务创建入口 |
-| `LongTextTtsTaskRespDTO` | 长文本合成任务响应 | HTTP 响应体 | 任务状态与结果视图 |
-| `taskId` | 任务主键 | 平台任务系统 | 创建后用于轮询查询 |
-| `taskStatus` | 任务状态 | 平台状态 | 不是本地枚举真相 |
-| `audioBase64` / `audioUrl` | 合成结果 | 平台回写或下载地址 | 可能为空直到完成 |
-| `pybufContent` / `pybufUrl` | 拼音内容 | 平台辅助结果 | 非所有场景都有 |
+| `LongTextTtsReqDTO` | 长文本合成请求 | HTTP 请求体 | Mimo TTS 合成入口 |
+| `LongTextTtsTaskRespDTO` | 长文本合成响应 | HTTP 响应体 | 为兼容旧前端保留 task 形态，Mimo 实际同步返回音频 |
+| `taskId` | 兼容任务 ID | Mimo response id 或本地生成值 | 查询接口只返回 completed 兼容状态，不保存历史音频 |
+| `taskStatus` | 兼容任务状态 | 后端适配层 | Mimo 同步成功时固定完成态 `5` |
+| `audioBase64` / `audioUrl` | 合成结果 | `choices[0].message.audio.data` 或兼容地址 | 新 Mimo 路径主要使用 `audioBase64` |
+| `pybufContent` / `pybufUrl` | 旧响应别名 | 前端归一化字段 | 仅为兼容旧调用方 |
 
 ## 4. 生命周期
 
 1. WebSocket `onOpen` 先鉴权，再登记连接映射。
 2. 客户端发送 `start_transcription` 后创建 `TranscriptionSessionContext`。
-3. 转写引擎持续产出 `RealtimeTranscriptionUpdate`，服务端推送 `transcription` 事件。
-4. 收到 `finalPacket` 或显式停止时，发送 `final` 或停止态事件并清理上下文。
-5. TTS 先创建任务，再通过 `taskId` 查询完成态和音频结果。
+3. 客户端持续写入 PCM 音频块，服务端通过 pipe 缓冲。
+4. 显式停止或连接清理时，服务端关闭音频流、调用 Mimo ASR、发送 `transcription` 快照和 `final` 事件并清理上下文。
+5. TTS 调用 Mimo 同步合成；`/tasks` 和 `/tasks/{taskId}` 只是兼容旧任务接口形态。
 
 ## 5. 关键不变量
 
@@ -47,10 +47,11 @@
 - `ping/pong` 只是保活，不是业务事件。
 - `transcription_already_started` 是幂等语义，不是系统故障。
 - `final` 是终态，`transcription` 是中间态。
+- Mimo ASR 不提供讯飞式逐句修订流，前端不要依赖 `pgs` / `rg` 增量去重语义。
 
 ## 6. 常见误判
 
 - WebSocket 连接 session 不等于业务会话 `sessionId`。
 - `stop_transcription` 成功不等于一定会立刻拿到最终文本。
 - `Pipe closed` / `Stream closed` 在停止路径上可能是正常现象。
-- TTS 创建成功只表示任务受理，不表示音频已经可取。
+- TTS 创建成功后应直接检查 `audioBase64`，不要继续等待外部平台任务完成。

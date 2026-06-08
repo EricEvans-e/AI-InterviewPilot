@@ -60,8 +60,8 @@
 
 ### 语音媒体模块
 
-- **实时语音转写（ASR）**：基于 WebSocket + Mimo ASR 实现端到端实时语音识别，前端连接 `/api/ip/v1/mimo/audio-to-text/{userId}`。
-- **长文本语音合成（TTS）**：集成 Mimo TTS，前端通过 `mimoTtsService` 调用 `/api/ip/v1/mimo/tts/**`。
+- **实时语音转写（ASR）**：基于 WebSocket + Mimo ASR 接收浏览器 PCM 音频，前端连接 `/api/ip/v1/mimo/audio-to-text/{userId}`，停止转写后接收最终文本。
+- **长文本语音合成（TTS）**：集成 Mimo TTS，前端通过 `mimoTtsService` 调用 `/api/ip/v1/mimo/tts/**` 并直接消费 `audioBase64`。
 - **WebSocket 通信管理**：基于 JSR 356 `@ServerEndpoint` 实现会话级 WebSocket 连接，支持心跳保活、鉴权校验、二进制音频帧接收与服务端主动推送。
 
 ### 用户与权限模块
