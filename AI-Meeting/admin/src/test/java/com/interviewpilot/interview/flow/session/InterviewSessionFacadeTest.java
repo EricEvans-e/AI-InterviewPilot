@@ -2,6 +2,8 @@ package com.interviewpilot.interview.application;
 
 import com.interviewpilot.interview.api.io.resp.InterviewSessionRestoreRespDTO;
 import com.interviewpilot.interview.api.io.resp.RadarChartDTO;
+import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeRehydrateService;
+import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeSnapshotService;
 import com.interviewpilot.interview.dao.entity.InterviewQuestion;
 import com.interviewpilot.interview.dao.entity.InterviewSession;
 import com.interviewpilot.interview.flow.session.InterviewSessionFacade;
@@ -40,7 +42,9 @@ class InterviewSessionFacadeTest {
                 questionService,
                 recordService,
                 previewService,
-                sessionService
+                sessionService,
+                mock(InterviewSessionRuntimeSnapshotService.class),
+                mock(InterviewSessionRuntimeRehydrateService.class)
         );
 
         InterviewSession session = new InterviewSession();
@@ -84,7 +88,9 @@ class InterviewSessionFacadeTest {
                 questionService,
                 recordService,
                 previewService,
-                sessionService
+                sessionService,
+                mock(InterviewSessionRuntimeSnapshotService.class),
+                mock(InterviewSessionRuntimeRehydrateService.class)
         );
 
         InterviewSession session = new InterviewSession();
@@ -118,7 +124,9 @@ class InterviewSessionFacadeTest {
                 questionService,
                 recordService,
                 previewService,
-                sessionService
+                sessionService,
+                mock(InterviewSessionRuntimeSnapshotService.class),
+                mock(InterviewSessionRuntimeRehydrateService.class)
         );
 
         InterviewSession session = new InterviewSession();

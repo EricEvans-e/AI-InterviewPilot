@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import type { UseMutateFunction } from "@tanstack/react-query";
 import { Loader2, ChevronDown, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useStudentProfile } from "@/hooks/profile/useStudentProfile";
-import type { StudentProfileSaveReqDTO } from "@/services/studentService";
+import type {
+  StudentProfileRespDTO,
+  StudentProfileSaveReqDTO,
+} from "@/services/studentService";
 
 const GRADE_OPTIONS = [
   "高一",
@@ -133,28 +137,34 @@ function MultiSelect({
   );
 }
 
-export default function StudentProfilePage() {
-  const { profile, isLoading, error, saveProfile, isSaving, saveError } =
-    useStudentProfile();
+type StudentProfileFormProps = {
+  profile: StudentProfileRespDTO;
+  saveProfile: UseMutateFunction<void, Error, StudentProfileSaveReqDTO>;
+  isSaving: boolean;
+  saveError: Error | null;
+};
 
-  const [schoolName, setSchoolName] = useState("");
-  const [grade, setGrade] = useState("");
-  const [examCategory, setExamCategory] = useState("");
-  const [trainingStage, setTrainingStage] = useState("");
-  const [collegeIds, setCollegeIds] = useState<number[]>([]);
-  const [majorIds, setMajorIds] = useState<number[]>([]);
+function StudentProfileForm({
+  profile,
+  saveProfile,
+  isSaving,
+  saveError,
+}: StudentProfileFormProps) {
+  const [schoolName, setSchoolName] = useState(profile.schoolName ?? "");
+  const [grade, setGrade] = useState(profile.grade ?? "");
+  const [examCategory, setExamCategory] = useState(
+    profile.examCategory ?? "",
+  );
+  const [trainingStage, setTrainingStage] = useState(
+    profile.trainingStage ?? "",
+  );
+  const [collegeIds, setCollegeIds] = useState<number[]>(
+    profile.targetColleges?.map((c) => c.id) ?? [],
+  );
+  const [majorIds, setMajorIds] = useState<number[]>(
+    profile.targetMajors?.map((m) => m.id) ?? [],
+  );
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    if (profile) {
-      setSchoolName(profile.schoolName ?? "");
-      setGrade(profile.grade ?? "");
-      setExamCategory(profile.examCategory ?? "");
-      setTrainingStage(profile.trainingStage ?? "");
-      setCollegeIds(profile.targetColleges?.map((c) => c.id) ?? []);
-      setMajorIds(profile.targetMajors?.map((m) => m.id) ?? []);
-    }
-  }, [profile]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,6 +186,132 @@ export default function StudentProfilePage() {
 
   const targetColleges = profile?.targetColleges ?? [];
   const targetMajors = profile?.targetMajors ?? [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>个人信息</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* School Name */}
+          <div className="space-y-2">
+            <Label htmlFor="schoolName">学校名称</Label>
+            <Input
+              id="schoolName"
+              value={schoolName}
+              onChange={(e) => setSchoolName(e.target.value)}
+              placeholder="请输入学校名称"
+            />
+          </div>
+
+          {/* Grade */}
+          <div className="space-y-2">
+            <Label htmlFor="grade">年级</Label>
+            <select
+              id="grade"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">请选择年级</option>
+              {GRADE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Exam Category */}
+          <div className="space-y-2">
+            <Label htmlFor="examCategory">考试类别</Label>
+            <select
+              id="examCategory"
+              value={examCategory}
+              onChange={(e) => setExamCategory(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">请选择考试类别</option>
+              {EXAM_CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Training Stage */}
+          <div className="space-y-2">
+            <Label htmlFor="trainingStage">训练阶段</Label>
+            <select
+              id="trainingStage"
+              value={trainingStage}
+              onChange={(e) => setTrainingStage(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">请选择训练阶段</option>
+              {TRAINING_STAGE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Target Colleges */}
+          <MultiSelect
+            label="目标院校"
+            options={targetColleges}
+            selected={collegeIds}
+            onChange={setCollegeIds}
+            placeholder="请选择目标院校"
+          />
+
+          {/* Target Majors */}
+          <MultiSelect
+            label="目标专业"
+            options={targetMajors}
+            selected={majorIds}
+            onChange={setMajorIds}
+            placeholder="请选择目标专业"
+          />
+
+          {/* Status Messages */}
+          {saveError && (
+            <p className="text-sm text-red-600">
+              保存失败：
+              {saveError instanceof Error ? saveError.message : "请稍后重试"}
+            </p>
+          )}
+          {saveSuccess && <p className="text-sm text-green-600">保存成功</p>}
+
+          {/* Submit */}
+          <div className="flex justify-end pt-2">
+            <Button type="submit" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              保存
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+const getProfileFormKey = (profile: StudentProfileRespDTO) =>
+  JSON.stringify({
+    schoolName: profile.schoolName ?? "",
+    grade: profile.grade ?? "",
+    examCategory: profile.examCategory ?? "",
+    trainingStage: profile.trainingStage ?? "",
+    collegeIds: profile.targetColleges?.map((item) => item.id) ?? [],
+    majorIds: profile.targetMajors?.map((item) => item.id) ?? [],
+  });
+
+export default function StudentProfilePage() {
+  const { profile, isLoading, error, saveProfile, isSaving, saveError } =
+    useStudentProfile();
 
   if (isLoading) {
     return (
@@ -203,120 +339,13 @@ export default function StudentProfilePage() {
   return (
     <div className="h-full overflow-y-auto bg-white">
       <div className="mx-auto max-w-2xl px-6 py-10">
-        <Card>
-          <CardHeader>
-            <CardTitle>个人信息</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* School Name */}
-              <div className="space-y-2">
-                <Label htmlFor="schoolName">学校名称</Label>
-                <Input
-                  id="schoolName"
-                  value={schoolName}
-                  onChange={(e) => setSchoolName(e.target.value)}
-                  placeholder="请输入学校名称"
-                />
-              </div>
-
-              {/* Grade */}
-              <div className="space-y-2">
-                <Label htmlFor="grade">年级</Label>
-                <select
-                  id="grade"
-                  value={grade}
-                  onChange={(e) => setGrade(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="">请选择年级</option>
-                  {GRADE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Exam Category */}
-              <div className="space-y-2">
-                <Label htmlFor="examCategory">考试类别</Label>
-                <select
-                  id="examCategory"
-                  value={examCategory}
-                  onChange={(e) => setExamCategory(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="">请选择考试类别</option>
-                  {EXAM_CATEGORY_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Training Stage */}
-              <div className="space-y-2">
-                <Label htmlFor="trainingStage">训练阶段</Label>
-                <select
-                  id="trainingStage"
-                  value={trainingStage}
-                  onChange={(e) => setTrainingStage(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="">请选择训练阶段</option>
-                  {TRAINING_STAGE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Target Colleges */}
-              <MultiSelect
-                label="目标院校"
-                options={targetColleges}
-                selected={collegeIds}
-                onChange={setCollegeIds}
-                placeholder="请选择目标院校"
-              />
-
-              {/* Target Majors */}
-              <MultiSelect
-                label="目标专业"
-                options={targetMajors}
-                selected={majorIds}
-                onChange={setMajorIds}
-                placeholder="请选择目标专业"
-              />
-
-              {/* Status Messages */}
-              {saveError && (
-                <p className="text-sm text-red-600">
-                  保存失败：
-                  {saveError instanceof Error
-                    ? saveError.message
-                    : "请稍后重试"}
-                </p>
-              )}
-              {saveSuccess && (
-                <p className="text-sm text-green-600">保存成功</p>
-              )}
-
-              {/* Submit */}
-              <div className="flex justify-end pt-2">
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  保存
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <StudentProfileForm
+          key={profile ? getProfileFormKey(profile) : "empty-profile"}
+          profile={profile ?? {}}
+          saveProfile={saveProfile}
+          isSaving={isSaving}
+          saveError={saveError}
+        />
       </div>
     </div>
   );

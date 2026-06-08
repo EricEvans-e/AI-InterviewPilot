@@ -110,7 +110,7 @@ export default function LobbyPage() {
   );
 
   const handleStartFromCard = useCallback(
-    async (_questionId: number) => {
+    async () => {
       setStartingMode("card");
       try {
         await handleStartFromBank({
@@ -216,7 +216,7 @@ export default function LobbyPage() {
             totalPages={lobbyData.totalPages}
             totalQuestions={lobbyData.totalQuestions}
             onPageChange={lobbyData.setPageNum}
-            onStart={(questionId) => void handleStartFromCard(questionId)}
+            onStart={() => void handleStartFromCard()}
           />
         </div>
       </div>

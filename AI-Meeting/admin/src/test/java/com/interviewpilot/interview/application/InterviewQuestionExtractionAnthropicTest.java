@@ -12,6 +12,7 @@ import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.shared.InterviewAiInvoker;
 import com.interviewpilot.interview.shared.InterviewResponseParser;
+import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
 import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockMakers;
@@ -35,6 +36,7 @@ class InterviewQuestionExtractionAnthropicTest {
     @Test
     void shouldSkipFileUploadWhenAiProviderIsAnthropic() throws Exception {
         BusinessAgentResolver businessAgentResolver = Mockito.mock(BusinessAgentResolver.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
+        AgentPropertiesLoader agentPropertiesLoader = Mockito.mock(AgentPropertiesLoader.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
         XunfeiWorkflowClient xunfeiWorkflowClient = Mockito.mock(XunfeiWorkflowClient.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
         InterviewAiInvoker interviewAiInvoker = Mockito.mock(InterviewAiInvoker.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
         InterviewAiSessionLockService interviewAiSessionLockService = Mockito.mock(InterviewAiSessionLockService.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
@@ -44,6 +46,7 @@ class InterviewQuestionExtractionAnthropicTest {
 
         InterviewQuestionExtractionService service = new InterviewQuestionExtractionService(
                 businessAgentResolver,
+                agentPropertiesLoader,
                 xunfeiWorkflowClient,
                 interviewAiInvoker,
                 interviewAiSessionLockService,
@@ -63,6 +66,8 @@ class InterviewQuestionExtractionAnthropicTest {
 
         when(businessAgentResolver.resolveRequired(BusinessAgentScene.INTERVIEW_QUESTION_EXTRACTION))
                 .thenReturn(agent);
+        when(agentPropertiesLoader.getByAgentName("面试出题官"))
+                .thenThrow(new RuntimeException("no upload fallback"));
 
         RLock heavyLock = Mockito.mock(RLock.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
         when(interviewAiSessionLockService.acquire("session-anthropic", InterviewAiGuardStage.INTERVIEW_EXTRACTION))
@@ -78,6 +83,7 @@ class InterviewQuestionExtractionAnthropicTest {
                 eq(agent),
                 eq(""),  // fileUrl 为空（Anthropic 跳过上传）
                 eq(InterviewAiGuardStage.INTERVIEW_EXTRACTION),
+                any(),
                 any()
         )).thenReturn(anthropicResponse);
 
@@ -103,6 +109,7 @@ class InterviewQuestionExtractionAnthropicTest {
                 eq(agent),
                 eq(""),
                 eq(InterviewAiGuardStage.INTERVIEW_EXTRACTION),
+                any(),
                 any()
         );
     }

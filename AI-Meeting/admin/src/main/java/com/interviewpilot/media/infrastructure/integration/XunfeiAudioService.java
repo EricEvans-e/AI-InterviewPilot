@@ -389,12 +389,35 @@ public class XunfeiAudioService {
             return;
         }
 
+        if (!finalized) {
+            SegmentState liveSnapshot = findLiveSnapshotEvolutionState(sentencePool, text);
+            if (liveSnapshot != null) {
+                if (liveSnapshot.segId != sn) {
+                    sentencePool.remove(liveSnapshot.segId);
+                    upsertAstSegment(sentencePool, sn, text, false);
+                    SegmentState current = sentencePool.get(sn);
+                    if (current != null) {
+                        current.bg = bg;
+                        current.ed = ed;
+                    }
+                } else {
+                    updateSegmentState(liveSnapshot, text, false, bg, ed);
+                }
+                return;
+            }
+        }
+
         if (bg == null || ed == null) {
             upsertAstSegment(sentencePool, sn, text, finalized);
             return;
         }
 
         SegmentState sameRange = findExactRangeState(sentencePool, bg, ed);
+        if (sameRange != null && !sameRange.finalized && isLikelySameSegmentEvolution(sameRange.text, text)) {
+            updateSegmentState(sameRange, text, finalized, bg, ed);
+            return;
+        }
+
         if (sameRange != null && isPunctuationOnly(text) && StrUtil.isNotBlank(sameRange.text)) {
             sameRange.text = appendTrailingPunctuation(sameRange.text, text);
             sameRange.finalized = sameRange.finalized || finalized;
@@ -416,6 +439,22 @@ public class XunfeiAudioService {
             state.bg = bg;
             state.ed = ed;
         }
+    }
+
+    private SegmentState findLiveSnapshotEvolutionState(TreeMap<Integer, SegmentState> sentencePool, String text) {
+        if (sentencePool == null || sentencePool.isEmpty() || StrUtil.isBlank(text)) {
+            return null;
+        }
+        SegmentState best = null;
+        for (SegmentState state : sentencePool.values()) {
+            if (state == null || state.finalized || StrUtil.isBlank(state.text)) {
+                continue;
+            }
+            if (isLikelySameSegmentEvolution(state.text, text)) {
+                best = state;
+            }
+        }
+        return best;
     }
 
     private SegmentState findExactRangeState(TreeMap<Integer, SegmentState> sentencePool, Integer bg, Integer ed) {

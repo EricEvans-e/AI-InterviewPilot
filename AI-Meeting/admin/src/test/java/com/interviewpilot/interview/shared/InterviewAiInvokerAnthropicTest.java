@@ -2,6 +2,7 @@ package com.interviewpilot.interview.shared;
 
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
 import com.interviewpilot.ai.service.chat.AnthropicChatHandler;
+import com.interviewpilot.ai.service.chat.UniversalAiChatHandler;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
 import com.interviewpilot.interview.application.guard.core.AiCallGuardService;
 import com.interviewpilot.interview.application.guard.singleflight.service.DistributedInterviewAiSingleFlightService;
@@ -27,11 +28,18 @@ class InterviewAiInvokerAnthropicTest {
 
     private final XunfeiWorkflowClient xunfeiWorkflowClient = Mockito.mock(XunfeiWorkflowClient.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
     private final AnthropicChatHandler anthropicChatHandler = Mockito.mock(AnthropicChatHandler.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
+    private final UniversalAiChatHandler universalAiChatHandler = Mockito.mock(UniversalAiChatHandler.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
     private final AiCallGuardService aiCallGuardService = Mockito.mock(AiCallGuardService.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
     private final DistributedInterviewAiSingleFlightService singleFlightService = Mockito.mock(DistributedInterviewAiSingleFlightService.class, Mockito.withSettings().mockMaker(MockMakers.SUBCLASS));
 
     private String invokeDoChat(String input, String sessionId, AgentPropertiesDO agent, String fileUrl, Map<String, Object> params) throws Exception {
-        InterviewAiInvoker invoker = new InterviewAiInvoker(xunfeiWorkflowClient, anthropicChatHandler, aiCallGuardService, singleFlightService);
+        InterviewAiInvoker invoker = new InterviewAiInvoker(
+                xunfeiWorkflowClient,
+                anthropicChatHandler,
+                universalAiChatHandler,
+                aiCallGuardService,
+                singleFlightService
+        );
         Method doChat = InterviewAiInvoker.class.getDeclaredMethod("doChat", String.class, String.class, AgentPropertiesDO.class, String.class, Map.class);
         doChat.setAccessible(true);
         return (String) doChat.invoke(invoker, input, sessionId, agent, fileUrl, params);

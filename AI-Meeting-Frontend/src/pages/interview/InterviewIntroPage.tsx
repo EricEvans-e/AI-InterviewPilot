@@ -43,17 +43,15 @@ export default function InterviewIntroPage() {
         if (cancelled) {
           return;
         }
-        const activeSession =
-          response.records.find((item) =>
-            item.status ? ACTIVE_INTERVIEW_STATUSES.has(item.status) : false,
-          ) ?? null;
-
         // Only show resume-mode sessions (not question-bank sessions)
         const resumeSession =
-          response.records.find((item) =>
-            item.status ? ACTIVE_INTERVIEW_STATUSES.has(item.status) && RESUME_MODE_SESSIONS.has(item.sessionMode) : false,
-          ) ?? null;
-        setLatestActiveSession(activeSession);
+          response.records.find((item) => {
+            if (!item.status || !ACTIVE_INTERVIEW_STATUSES.has(item.status)) {
+              return false;
+            }
+            return RESUME_MODE_SESSIONS.has(item.sessionMode);
+          }) ?? null;
+        setLatestActiveSession(resumeSession);
       } catch (error) {
         if (!cancelled) {
           console.error("Failed to load latest interview session:", error);
@@ -87,7 +85,7 @@ export default function InterviewIntroPage() {
             <InterviewIntroHighlights highlights={introCopy.highlights} />
 
             <div className="flex flex-wrap gap-3">
-              {latestActiveSession && RESUME_MODE_SESSIONS.has(latestActiveSession.sessionMode) ? (
+              {latestActiveSession ? (
                 <Button asChild className="rounded-full">
                   <Link
                     to={`${ROUTES.interviewRoom}/${encodeURIComponent(latestActiveSession.sessionId)}`}
@@ -100,7 +98,7 @@ export default function InterviewIntroPage() {
               <Button
                 asChild
                 className="rounded-full"
-                variant={latestActiveSession && RESUME_MODE_SESSIONS.has(latestActiveSession.sessionMode) ? "outline" : "default"}
+                variant={latestActiveSession ? "outline" : "default"}
               >
                 <Link to={ROUTES.interviewRoom}>
                   {introCopy.startButton}

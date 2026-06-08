@@ -10,6 +10,7 @@
     </parent>
     <artifactId>interview-pilot-admin</artifactId>
     <properties>
+        <argLine></argLine>
         <!-- 与测试依赖/agent 路径保持一致，避免 Mockito 运行时自注入告警 -->
         <mockito.version>5.14.2</mockito.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

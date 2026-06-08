@@ -3,6 +3,7 @@ package com.interviewpilot.interview.api;
 import com.interviewpilot.common.convention.annotation.CurrentUser;
 import com.interviewpilot.common.convention.context.UserContext;
 import com.interviewpilot.common.convention.exception.ClientException;
+import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
 import com.interviewpilot.common.web.GlobalExceptionHandler;
 import com.interviewpilot.interview.service.InterviewRecordService;
 import com.interviewpilot.interview.testing.PressureTestReportUtil;
@@ -46,7 +47,8 @@ class InterviewRecordControllerPressureTest {
     @BeforeEach
     void setUp() {
         interviewRecordService = mock(InterviewRecordService.class);
-        InterviewRecordController controller = new InterviewRecordController(interviewRecordService);
+        ApplicationStorageProperties storageProperties = mock(ApplicationStorageProperties.class);
+        InterviewRecordController controller = new InterviewRecordController(interviewRecordService, storageProperties);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setCustomArgumentResolvers(new MockCurrentUserResolver())
                 .setControllerAdvice(new GlobalExceptionHandler())

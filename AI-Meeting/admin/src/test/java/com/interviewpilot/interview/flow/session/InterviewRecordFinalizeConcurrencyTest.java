@@ -3,6 +3,11 @@ package com.interviewpilot.interview.flow.report;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.interview.application.InterviewSessionOwnershipService;
 import com.interviewpilot.interview.application.finalize.InterviewFinalizeLockService;
+import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeRehydrateService;
+import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeSnapshotService;
+import com.interviewpilot.interview.application.strategy.DimensionScoreResult;
+import com.interviewpilot.interview.application.strategy.DimensionScoreStrategy;
+import com.interviewpilot.interview.application.strategy.WeightedRadarComputationStrategy;
 import com.interviewpilot.interview.dao.entity.InterviewQuestion;
 import com.interviewpilot.interview.dao.entity.InterviewRecordDO;
 import com.interviewpilot.interview.dao.entity.InterviewSession;
@@ -30,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -44,6 +50,10 @@ class InterviewRecordFinalizeConcurrencyTest {
         InterviewSessionService sessionService = mock(InterviewSessionService.class);
         InterviewQuestionService questionService = mock(InterviewQuestionService.class);
         InterviewFinalizeLockService finalizeLockService = mock(InterviewFinalizeLockService.class);
+        InterviewSessionRuntimeSnapshotService runtimeSnapshotService = mock(InterviewSessionRuntimeSnapshotService.class);
+        InterviewSessionRuntimeRehydrateService runtimeRehydrateService = mock(InterviewSessionRuntimeRehydrateService.class);
+        DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
+        WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
         InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
 
         InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
@@ -51,7 +61,11 @@ class InterviewRecordFinalizeConcurrencyTest {
                 ownershipService,
                 sessionService,
                 questionService,
-                finalizeLockService
+                finalizeLockService,
+                runtimeSnapshotService,
+                runtimeRehydrateService,
+                dimensionScoreStrategy,
+                weightedRadarComputationStrategy
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
@@ -82,8 +96,20 @@ class InterviewRecordFinalizeConcurrencyTest {
         when(cacheService.getSessionInterviewQuestions("session-finalize-1")).thenReturn(Map.of("1", "mock-question"));
         when(cacheService.getSessionInterviewDirection("session-finalize-1")).thenReturn("backend");
         when(cacheService.getInterviewTurns("session-finalize-1")).thenReturn(List.of());
+        when(runtimeSnapshotService.loadPersistedTurns("session-finalize-1")).thenReturn(List.of());
         when(cacheService.getRadarChartData("session-finalize-1")).thenReturn(null);
         when(cacheService.getInterviewFlow("session-finalize-1")).thenReturn(null);
+        DimensionScoreResult dimensionScore = new DimensionScoreResult();
+        dimensionScore.setContentScore(91);
+        dimensionScore.setLogicScore(82);
+        dimensionScore.setProfessionalScore(77);
+        dimensionScore.setExpressionScore(82);
+        dimensionScore.setAdaptabilityScore(72);
+        dimensionScore.setTimeControlScore(70);
+        dimensionScore.setEtiquetteScore(70);
+        dimensionScore.setCompositeScore(84);
+        when(dimensionScoreStrategy.compute(anyInt(), any(), any(), anyInt(), anyInt(), any(), any()))
+                .thenReturn(dimensionScore);
 
         when(mapper.selectOne(any())).thenReturn(null);
         when(mapper.insert(any(InterviewRecordDO.class))).thenReturn(1);

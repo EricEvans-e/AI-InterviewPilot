@@ -66,7 +66,6 @@ export class AudioToTextWebSocket {
     this.resetMessageCursor();
 
     this.ws.onopen = () => {
-      console.log("WebSocket Connected");
       this.hasOpened = true;
       this.flushPendingBinaryQueue();
       this.startPing();

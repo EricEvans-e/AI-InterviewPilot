@@ -24,42 +24,50 @@ export default function InterviewPage() {
   const recording = useInterviewRecording(cameraStream, {
     enabled: isReady && camera.isOpen,
   });
+  const {
+    isRecording,
+    startRecording,
+    stopRecording,
+  } = recording;
+  const { handleEndInterview } = interview;
 
   const captureFrame = useCallback(async () => {
     return cameraPreviewRef.current?.captureFrame() ?? null;
   }, []);
 
   useEffect(() => {
-    if (camera.isOpen) {
-      const timer = setTimeout(() => {
-        const stream = cameraPreviewRef.current?.getStream() ?? null;
+    const timer = setTimeout(
+      () => {
+        const stream = camera.isOpen
+          ? cameraPreviewRef.current?.getStream() ?? null
+          : null;
         setCameraStream(stream);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-    setCameraStream(null);
+      },
+      camera.isOpen ? 500 : 0,
+    );
+    return () => clearTimeout(timer);
   }, [camera.isOpen]);
 
   // Auto-start recording when interview is ready and camera stream is available
   const hasStartedRecordingRef = useRef(false);
   useEffect(() => {
-    if (isReady && camera.isOpen && cameraStream && !recording.isRecording && !hasStartedRecordingRef.current) {
+    if (isReady && camera.isOpen && cameraStream && !isRecording && !hasStartedRecordingRef.current) {
       hasStartedRecordingRef.current = true;
-      recording.startRecording();
+      startRecording();
     }
     if (!isReady || !camera.isOpen) {
       hasStartedRecordingRef.current = false;
     }
-  }, [isReady, camera.isOpen, cameraStream, recording]);
+  }, [isReady, camera.isOpen, cameraStream, isRecording, startRecording]);
 
   // Wrap end interview to stop recording first
   const handleEndInterviewWithRecording = useCallback(async () => {
     let recordingBlob: Blob | null = null;
-    if (recording.isRecording) {
-      recordingBlob = await recording.stopRecording();
+    if (isRecording) {
+      recordingBlob = await stopRecording();
     }
-    await interview.handleEndInterview({ recordingBlob });
-  }, [recording, interview.handleEndInterview]);
+    await handleEndInterview({ recordingBlob });
+  }, [handleEndInterview, isRecording, stopRecording]);
 
   const handleInsertNotes = useCallback(
     (notes: string) => {

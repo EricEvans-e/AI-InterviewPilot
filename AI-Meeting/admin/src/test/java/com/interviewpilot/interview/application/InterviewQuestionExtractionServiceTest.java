@@ -12,6 +12,7 @@ import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.shared.InterviewAiInvoker;
 import com.interviewpilot.interview.shared.InterviewResponseParser;
+import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
 import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RLock;
@@ -33,6 +34,7 @@ class InterviewQuestionExtractionServiceTest {
     @Test
     void shouldFailWhenWorkflowFallsBackToSmallTalkInsteadOfQuestions() throws Exception {
         BusinessAgentResolver businessAgentResolver = mock(BusinessAgentResolver.class);
+        AgentPropertiesLoader agentPropertiesLoader = mock(AgentPropertiesLoader.class);
         XunfeiWorkflowClient xunfeiWorkflowClient = mock(XunfeiWorkflowClient.class);
         InterviewAiInvoker interviewAiInvoker = mock(InterviewAiInvoker.class);
         InterviewAiSessionLockService interviewAiSessionLockService = mock(InterviewAiSessionLockService.class);
@@ -41,6 +43,7 @@ class InterviewQuestionExtractionServiceTest {
         InterviewResponseParser interviewResponseParser = new InterviewResponseParser();
         InterviewQuestionExtractionService service = new InterviewQuestionExtractionService(
                 businessAgentResolver,
+                agentPropertiesLoader,
                 xunfeiWorkflowClient,
                 interviewAiInvoker,
                 interviewAiSessionLockService,
@@ -70,6 +73,7 @@ class InterviewQuestionExtractionServiceTest {
                 eq(agent),
                 eq("https://example.com/resume.pdf"),
                 eq(InterviewAiGuardStage.INTERVIEW_EXTRACTION),
+                any(),
                 any()
         )).thenReturn(workflowResponse);
 

@@ -5,6 +5,8 @@ import com.interviewpilot.interview.api.io.req.InterviewQuestionReqDTO;
 import com.interviewpilot.interview.api.io.resp.InterviewAnswerRespDTO;
 import com.interviewpilot.interview.api.io.resp.InterviewQuestionRespDTO;
 import com.interviewpilot.interview.application.InterviewWorkflowService;
+import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeRehydrateService;
+import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeSnapshotService;
 import com.interviewpilot.interview.dao.entity.InterviewSession;
 import com.interviewpilot.interview.flow.report.InterviewResumePreviewService;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
@@ -55,7 +57,9 @@ class InterviewSessionFacadePressureTest {
                 questionService,
                 recordService,
                 previewService,
-                sessionService
+                sessionService,
+                mock(InterviewSessionRuntimeSnapshotService.class),
+                mock(InterviewSessionRuntimeRehydrateService.class)
         );
 
         InterviewSession session = new InterviewSession();
@@ -138,7 +142,9 @@ class InterviewSessionFacadePressureTest {
                 questionService,
                 recordService,
                 previewService,
-                sessionService
+                sessionService,
+                mock(InterviewSessionRuntimeSnapshotService.class),
+                mock(InterviewSessionRuntimeRehydrateService.class)
         );
 
         doNothing().when(sessionService).markResumeUploading(anyString(), anyLong());

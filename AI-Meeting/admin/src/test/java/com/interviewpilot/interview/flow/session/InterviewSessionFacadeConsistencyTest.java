@@ -4,6 +4,8 @@ import com.interviewpilot.interview.api.io.resp.InterviewRecordRespDTO;
 import com.interviewpilot.interview.api.io.resp.InterviewSessionRestoreRespDTO;
 import com.interviewpilot.interview.api.io.resp.RadarChartDTO;
 import com.interviewpilot.interview.application.InterviewWorkflowService;
+import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeRehydrateService;
+import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeSnapshotService;
 import com.interviewpilot.interview.dao.entity.InterviewQuestion;
 import com.interviewpilot.interview.dao.entity.InterviewSession;
 import com.interviewpilot.interview.flow.report.InterviewResumePreviewService;
@@ -49,7 +51,9 @@ class InterviewSessionFacadeConsistencyTest {
                 questionService,
                 recordService,
                 previewService,
-                sessionService
+                sessionService,
+                mock(InterviewSessionRuntimeSnapshotService.class),
+                mock(InterviewSessionRuntimeRehydrateService.class)
         );
 
         InterviewSession session = new InterviewSession();
@@ -94,7 +98,9 @@ class InterviewSessionFacadeConsistencyTest {
                 questionService,
                 recordService,
                 previewService,
-                sessionService
+                sessionService,
+                mock(InterviewSessionRuntimeSnapshotService.class),
+                mock(InterviewSessionRuntimeRehydrateService.class)
         );
 
         InterviewSession session = new InterviewSession();
@@ -125,7 +131,9 @@ class InterviewSessionFacadeConsistencyTest {
                 questionService,
                 recordService,
                 previewService,
-                sessionService
+                sessionService,
+                mock(InterviewSessionRuntimeSnapshotService.class),
+                mock(InterviewSessionRuntimeRehydrateService.class)
         );
 
         InterviewSession session = new InterviewSession();
@@ -160,7 +168,9 @@ class InterviewSessionFacadeConsistencyTest {
                 questionService,
                 recordService,
                 previewService,
-                sessionService
+                sessionService,
+                mock(InterviewSessionRuntimeSnapshotService.class),
+                mock(InterviewSessionRuntimeRehydrateService.class)
         );
 
         InterviewSession session = new InterviewSession();

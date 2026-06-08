@@ -1,0 +1,152 @@
+services:
+  mysql:
+    image: ${MYSQL_IMAGE:-mysql:8.4}
+    container_name: ip-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-122333}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mainshi_agent}
+    ports:
+      - "3307:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./admin/src/main/resources/sql/table.sql:/docker-entrypoint-initdb.d/01-table.sql:ro
+      - ./admin/src/main/resources/sql/admin_permission.sql:/docker-entrypoint-initdb.d/02-admin_permission.sql:ro
+      - ./admin/src/main/resources/sql/agent_properties.sql:/docker-entrypoint-initdb.d/03-agent_properties.sql:ro
+      - ./admin/src/main/resources/sql/ai_properties.sql:/docker-entrypoint-initdb.d/04-ai_properties.sql:ro
+      - ./admin/src/main/resources/sql/t_user.sql:/docker-entrypoint-initdb.d/05-t_user.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${MYSQL_PASSWORD:-122333}"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - interview-pilot
+
+  mongo:
+    image: ${MONGO_IMAGE:-mongo:7.0}
+    container_name: ip-mongo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+    networks:
+      - interview-pilot
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.2}
+    container_name: ip-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - interview-pilot
+
+  backend:
+    image: ${BACKEND_IMAGE:-ai-meeting-backend:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILDER_IMAGE: ${BUILDER_IMAGE:-maven:3.9.11-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${RUNTIME_IMAGE:-eclipse-temurin:17-jre-jammy}
+    container_name: ip-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mainshi_agent}
+      MYSQL_USERNAME: ${MYSQL_USERNAME:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-122333}
+      MONGODB_HOST: mongo
+      MONGODB_PORT: 27017
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-interview_pilot}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      INTERVIEW_PILOT_STORAGE_BASE_DIR: /app/data
+      INTERVIEW_PILOT_MULTIPART_TEMP_DIR: /app/data/temp/upload
+      INTERVIEW_PILOT_AUDIO_TEMP_DIR: /app/data/temp/audio
+      INTERVIEW_PILOT_LOG_DIR: /app/logs
+      # AI 服务密钥（请先在 .env 文件中配置真实值）
+      SPRING_AI_OPENAI_API_KEY: ${SPRING_AI_OPENAI_API_KEY:-}
+      SPRING_AI_OPENAI_BASE_URL: ${SPRING_AI_OPENAI_BASE_URL:-https://api.openai.com}
+      SPRING_AI_OPENAI_MODEL: ${SPRING_AI_OPENAI_MODEL:-gpt-4o-mini}
+      XUNFEI_APP_ID: ${XUNFEI_APP_ID:-}
+      XUNFEI_API_KEY: ${XUNFEI_API_KEY:-}
+      XUNFEI_API_SECRET: ${XUNFEI_API_SECRET:-}
+      XUNFEI_RTA_API_KEY: ${XUNFEI_RTA_API_KEY:-}
+    expose:
+      - "8002"
+    volumes:
+      - backend-data:/app/data
+      - backend-logs:/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8002/actuator/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - interview-pilot
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ai-meeting-frontend:latest}
+    build:
+      context: ../AI-Meeting-Frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_API_TARGET: http://localhost:8002
+        VITE_WS_BASE_URL: ""
+    container_name: ip-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - interview-pilot
+
+volumes:
+  mysql-data:
+  mongo-data:
+  redis-data:
+  backend-data:
+  backend-logs:
+
+networks:
+  interview-pilot:
+    driver: bridge

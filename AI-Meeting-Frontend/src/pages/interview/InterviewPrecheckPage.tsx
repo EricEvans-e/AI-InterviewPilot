@@ -126,10 +126,10 @@ export default function InterviewPrecheckPage() {
   }, []);
 
   // Brightness + face-position loop
-  const runFrameCheck = useCallback(() => {
+  const runFrameCheck = useCallback(function frameCheck() {
     const video = videoRef.current;
     if (!video || video.readyState < 2) {
-      animFrameRef.current = requestAnimationFrame(runFrameCheck);
+      animFrameRef.current = requestAnimationFrame(frameCheck);
       return;
     }
 
@@ -138,7 +138,7 @@ export default function InterviewPrecheckPage() {
     canvas.height = 75;
     const ctx = canvas.getContext("2d");
     if (!ctx) {
-      animFrameRef.current = requestAnimationFrame(runFrameCheck);
+      animFrameRef.current = requestAnimationFrame(frameCheck);
       return;
     }
 
@@ -172,7 +172,7 @@ export default function InterviewPrecheckPage() {
     // If centre is neither too dark nor too bright and differs from edges, likely a face
     setFaceOk(centreBrightness > 30 && centreBrightness < 240);
 
-    animFrameRef.current = requestAnimationFrame(runFrameCheck);
+    animFrameRef.current = requestAnimationFrame(frameCheck);
   }, []);
 
   useEffect(() => {

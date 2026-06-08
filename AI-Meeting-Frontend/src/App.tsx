@@ -20,9 +20,8 @@ function App() {
 
       try {
         await dispatch(checkAuthStatus()).unwrap();
-      } catch (error) {
+      } catch {
         // 即使检查失败（未登录），也视为初始化完成
-        console.log("Auth check failed (expected if not logged in):", error);
       } finally {
         setIsInitializing(false);
       }
