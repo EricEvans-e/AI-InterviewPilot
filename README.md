@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./logo.png" alt="星辰升学 logo" width="180" />
+
 # AI-InterviewPilot
 
 **基于大语言模型的 AI 智能模拟面试平台**
@@ -23,7 +25,7 @@
 - [功能特点](#功能特点)
 - [技术栈](#技术栈)
 - [目录结构](#目录结构)
-- [安装步骤](#安装步骤)
+- [本地完整运行方式](#本地完整运行方式)
 - [使用方法](#使用方法)
 - [系统架构](#系统架构)
 - [贡献指南](#贡献指南)
@@ -191,7 +193,9 @@ AI-InterviewPilot/
 
 ---
 
-## 安装步骤
+## 本地完整运行方式
+
+更详细的本地启动、验证和排障步骤见 [docs/local-run-guide.md](docs/local-run-guide.md)。生产 Docker Compose 部署见 [docs/deployment-guide.md](docs/deployment-guide.md)。
 
 ### 环境要求
 
@@ -205,14 +209,52 @@ AI-InterviewPilot/
 | Redis | 7.x |
 | Docker & Docker Compose | （可选，用于容器化部署） |
 
-### 1. 克隆仓库
+### 1. 准备仓库
 
 ```bash
 git clone https://github.com/EricEvans-e/AI-InterviewPilot.git
 cd AI-InterviewPilot
 ```
 
-### 2. 启动基础设施（Docker Compose）
+如果已经在当前工作区，直接进入项目根目录：
+
+```powershell
+cd E:\Users\Eric\Desktop\AIMeeting
+```
+
+### 2. 配置 Mimo API Key
+
+后端本地启动不会自动读取 `.env` 文件。Windows PowerShell 中请在启动后端的同一个终端设置环境变量：
+
+```powershell
+$env:MIMO_API_KEY="你的-token-plan-api-key"
+$env:SPRING_AI_OPENAI_API_KEY=$env:MIMO_API_KEY
+$env:MIMO_OPENAI_BASE_URL="https://token-plan-cn.xiaomimimo.com/v1"
+$env:MIMO_ANTHROPIC_BASE_URL="https://token-plan-cn.xiaomimimo.com/anthropic"
+$env:MIMO_CHAT_MODEL="mimo-v2.5"
+$env:MIMO_PRO_MODEL="mimo-v2.5-pro"
+$env:MIMO_ASR_MODEL="mimo-v2.5-asr"
+$env:MIMO_TTS_MODEL="mimo-v2.5-tts"
+$env:LEGACY_XUNFEI_ENABLED="false"
+```
+
+Linux / macOS：
+
+```bash
+export MIMO_API_KEY="你的-token-plan-api-key"
+export SPRING_AI_OPENAI_API_KEY="$MIMO_API_KEY"
+export MIMO_OPENAI_BASE_URL="https://token-plan-cn.xiaomimimo.com/v1"
+export MIMO_ANTHROPIC_BASE_URL="https://token-plan-cn.xiaomimimo.com/anthropic"
+export MIMO_CHAT_MODEL="mimo-v2.5"
+export MIMO_PRO_MODEL="mimo-v2.5-pro"
+export MIMO_ASR_MODEL="mimo-v2.5-asr"
+export MIMO_TTS_MODEL="mimo-v2.5-tts"
+export LEGACY_XUNFEI_ENABLED="false"
+```
+
+不要把真实 API Key 写入 README、`.env.example` 或任何会提交到 Git 的文件。
+
+### 3. 启动基础设施
 
 ```bash
 cd AI-Meeting
@@ -226,7 +268,33 @@ docker-compose up -d mysql mongo redis
 
 数据库初始化脚本会自动执行，创建必要的表结构和默认数据。
 
-### 3. 启动后端服务
+确认容器状态：
+
+```bash
+docker-compose ps
+```
+
+如果 MySQL 已经初始化过，并且初始化 SQL 里的 `MIMO_API_KEY` 占位符已经写进数据库，需要把数据库里的模型配置替换成你的真实 key：
+
+```powershell
+docker exec -it ip-mysql mysql -uroot -p122333 mainshi_agent
+```
+
+进入 MySQL 后执行：
+
+```sql
+UPDATE ai_properties
+SET api_key = '你的-token-plan-api-key'
+WHERE api_key = 'MIMO_API_KEY';
+
+UPDATE agent_properties
+SET api_key = '你的-token-plan-api-key'
+WHERE api_key = 'MIMO_API_KEY';
+```
+
+如果你在首次启动数据库前已经改过初始化 SQL 或使用管理后台录入真实 key，可以跳过这一步。
+
+### 4. 启动后端服务
 
 ```bash
 # Linux / macOS
@@ -240,7 +308,17 @@ mvnw.cmd spring-boot:run -pl admin
 
 后端服务默认运行在 **http://localhost:8002**
 
-### 4. 启动前端开发服务器
+健康检查：
+
+```powershell
+Invoke-RestMethod http://localhost:8002/actuator/health
+```
+
+返回 `status: UP` 表示后端基础服务已启动。
+
+### 5. 启动前端开发服务器
+
+另开一个终端：
 
 ```bash
 cd ../AI-Meeting-Frontend
@@ -250,11 +328,108 @@ npm run dev
 
 前端开发服务器默认运行在 **http://localhost:5173**，并代理 `/api` 请求到后端服务。
 
-### 5. 默认登录账号
+前端环境默认配置：
+
+```env
+VITE_API_BASE_URL=/api
+VITE_API_TARGET=http://localhost:8002
+VITE_WS_BASE_URL=
+```
+
+访问：
+
+```text
+http://localhost:5173
+```
+
+### 6. 默认登录账号
 
 | 角色 | 用户名 | 密码 |
 |------|--------|------|
 | 管理员 | admin | admin |
+
+### 7. 验证 AI / ASR / TTS 可用
+
+1. 登录后台，进入 AI 模型配置或智能体场景绑定，确认默认模型为 `mimo-v2.5`，Base URL 为 `https://token-plan-cn.xiaomimimo.com/v1`。
+2. 在通用 AI 对话或 Agent 对话中发送一条消息，确认 SSE 有文本返回。
+3. 在面试页面授权麦克风，开始录音后发送语音，停止转写后应收到最终文本。
+4. 面试题播报或 TTS 测试应返回可播放音频；新链路主要读取 `audioBase64`。
+
+### 8. 一键 Docker 生产式运行
+
+后端仓库提供 `docker-compose.prod.yml`，会同时构建后端和前端镜像，并通过前端 Nginx 暴露 80 端口：
+
+```powershell
+cd E:\Users\Eric\Desktop\AIMeeting\AI-Meeting
+Copy-Item .env.example .env
+```
+
+编辑 `AI-Meeting/.env`，填入真实 `MIMO_API_KEY` 和 `SPRING_AI_OPENAI_API_KEY`，然后启动：
+
+```powershell
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+访问：
+
+```text
+http://localhost
+```
+
+查看日志：
+
+```powershell
+docker logs -f ip-backend
+docker logs -f ip-frontend
+```
+
+停止服务：
+
+```powershell
+docker-compose -f docker-compose.prod.yml down
+```
+
+### 9. 常用检查命令
+
+后端测试：
+
+```powershell
+cd E:\Users\Eric\Desktop\AIMeeting\AI-Meeting
+.\mvnw.cmd -q -pl admin test
+```
+
+前端检查：
+
+```powershell
+cd E:\Users\Eric\Desktop\AIMeeting\AI-Meeting-Frontend
+npm run check
+```
+
+前端构建：
+
+```powershell
+npm run build
+```
+
+密钥泄露扫描：
+
+```powershell
+cd E:\Users\Eric\Desktop\AIMeeting
+rg -n "tp-[A-Za-z0-9]{20,}" . -S
+```
+
+如果扫描命中真实 key，不要提交；先替换成占位符或从文件中移除。
+
+### 10. 常见问题
+
+| 现象 | 处理方式 |
+|------|----------|
+| 后端启动但 AI 无响应 | 确认当前启动终端设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`，并确认数据库 `ai_properties`、`agent_properties` 不是 `MIMO_API_KEY` 占位符 |
+| 前端请求 404 | 确认后端在 `8002`，前端 `VITE_API_TARGET=http://localhost:8002` |
+| WebSocket 连不上 | 确认前端通过 `5173` 访问，Vite proxy 开启 `ws: true`；登录后再进入录音页面 |
+| ASR 没有最终文本 | 需要发送 `stop_transcription` 结束音频流，后端才会调用 Mimo ASR 返回最终文本 |
+| TTS 成功但没声音 | 检查后端返回的 `audioBase64` 是否为空，查看 `MimoAudioService` 调用日志 |
+| MySQL 密码不对 | 本地 compose 默认 root 密码通常是 `122333`；如果使用 `.env` 覆盖，请以 `.env` 为准 |
 
 ---
 

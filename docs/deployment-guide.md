@@ -1,6 +1,6 @@
 # InterviewPilot 生产环境部署指南
 
-本文档提供将 InterviewPilot 前后端完整部署到单台 Linux 服务器的详细步骤。
+本文档提供将 InterviewPilot 前后端完整部署到单台 Linux 服务器的详细步骤。本地开发运行方式见 [local-run-guide.md](local-run-guide.md)。
 
 ---
 
@@ -79,9 +79,10 @@ cd AI-InterviewPilot
 
 ### 3.2 创建环境变量文件
 
-项目根目录已提供 `.env.example` 模板，复制并修改：
+生产 Compose 从 `AI-Meeting` 目录启动，因此需要在 `AI-Meeting` 目录创建 `.env`。模板文件为 `AI-Meeting/.env.example`：
 
 ```bash
+cd /opt/AI-InterviewPilot/AI-Meeting
 cp .env.example .env
 nano .env
 ```
@@ -132,7 +133,7 @@ XUNFEI_RTA_API_KEY=
 ### 4.1 进入后端目录并启动
 
 ```bash
-cd AI-Meeting
+cd /opt/AI-InterviewPilot/AI-Meeting
 
 # 构建镜像并后台启动（首次构建需要 5-15 分钟，取决于网络）
 docker compose -f docker-compose.prod.yml up -d --build
@@ -411,5 +412,6 @@ server {
 | `AI-Meeting-Frontend/Dockerfile` | 前端构建 + Nginx 镜像 |
 | `AI-Meeting-Frontend/docker/nginx.conf` | 前端 Nginx 配置（含反向代理） |
 | `.env` | 环境变量与密钥配置（需手动创建） |
-| `.env.example` | 环境变量模板 |
+| `AI-Meeting/.env.example` | 生产 Compose 环境变量模板，复制为 `AI-Meeting/.env` 后填写真实值 |
+| `docs/local-run-guide.md` | 本地完整运行、验证和排障指南 |
 | `AI-Meeting/admin/src/main/resources/sql/*.sql` | 数据库初始化脚本 |
