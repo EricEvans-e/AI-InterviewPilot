@@ -101,17 +101,25 @@ REDIS_PASSWORD=
 # AI 模型密钥（核心功能依赖，必须配置）
 # ============================================================
 
-# OpenAI 兼容接口（如 OpenAI / DeepSeek / Mimo 等）
-# 如果使用 Mimo（项目默认），base_url 通常为 https://token-plan-sgp.xiaomimimo.com/v1
-SPRING_AI_OPENAI_API_KEY=sk-your-openai-api-key-here
-SPRING_AI_OPENAI_BASE_URL=https://token-plan-sgp.xiaomimimo.com/v1
+# 小米 Mimo Token Plan（项目默认，覆盖聊天、面试、ASR、TTS）
+MIMO_API_KEY=tp-your-token-plan-api-key
+MIMO_OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
+MIMO_ANTHROPIC_BASE_URL=https://token-plan-cn.xiaomimimo.com/anthropic
+MIMO_CHAT_MODEL=mimo-v2.5
+MIMO_PRO_MODEL=mimo-v2.5-pro
+MIMO_ASR_MODEL=mimo-v2.5-asr
+MIMO_TTS_MODEL=mimo-v2.5-tts
+
+# Spring AI 默认也指向 Mimo OpenAI 兼容接口
+SPRING_AI_OPENAI_API_KEY=tp-your-token-plan-api-key
+SPRING_AI_OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
 SPRING_AI_OPENAI_MODEL=mimo-v2.5
 
-# 讯飞开放平台（ASR 语音识别、TTS 语音合成、工作流智能体）
-# 申请地址：https://www.xfyun.cn/
-XUNFEI_APP_ID=your_xunfei_app_id
-XUNFEI_API_KEY=your_xunfei_api_key
-XUNFEI_API_SECRET=your_xunfei_api_secret
+# 讯飞 legacy 集成默认关闭；只有显式启用 legacy.xunfei 时才需要以下变量
+LEGACY_XUNFEI_ENABLED=false
+XUNFEI_APP_ID=
+XUNFEI_API_KEY=
+XUNFEI_API_SECRET=
 XUNFEI_RTA_API_KEY=
 ```
 
@@ -291,7 +299,7 @@ docker system df -v
 |---------|---------|---------|
 | `docker compose up` 卡在 backend 的 `start_period` | MySQL 首次初始化较慢 | 等待 2-3 分钟；或先单独启动基础设施 `docker compose -f docker-compose.prod.yml up -d mysql mongo redis` |
 | 前端页面能打开，但 API 请求报 404/502 | Nginx 未正确代理 `/api` | 确认使用 `docker-compose.prod.yml` 启动；检查 `ip-frontend` 日志 |
-| AI 面试/对话功能无响应 | API Key 未配置或无效 | 检查 `.env` 中的 `SPRING_AI_OPENAI_API_KEY` 和讯飞密钥；重启 `ip-backend` |
+| AI 面试/对话/ASR/TTS 功能无响应 | Mimo API Key 未配置或无效 | 检查 `.env` 中的 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`；重启 `ip-backend` |
 | ASR 语音转写连接失败 | WebSocket 未正确代理 | `nginx.conf` 已配置 `Upgrade` 和 `Connection` 头；确认前端通过 80 端口访问 |
 | 构建时 Maven 下载极慢 | 访问中央仓库网络不畅 | 在 `AI-Meeting/Dockerfile` builder 阶段添加阿里云 Maven 镜像 |
 | 80 端口已被占用 | 服务器已有 Nginx/Apache | 修改 `docker-compose.prod.yml` 前端端口为 `"8080:80"` 或其他端口 |
@@ -332,8 +340,8 @@ server {
     }
 
     # WebSocket 支持
-    location /api/ip/v1/xunfei/audio-to-text/ {
-        proxy_pass http://127.0.0.1:8080/api/ip/v1/xunfei/audio-to-text/;
+    location /api/ip/v1/mimo/audio-to-text/ {
+        proxy_pass http://127.0.0.1:8080/api/ip/v1/mimo/audio-to-text/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

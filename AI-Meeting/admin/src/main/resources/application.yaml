@@ -49,15 +49,15 @@ spring:
         thread-name-prefix: redis-session-async-
   ai:
     openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY:sk-xxxxxxxxxxxxx}
-      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.openai.com}
+      api-key: ${SPRING_AI_OPENAI_API_KEY:${MIMO_API_KEY:}}
+      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://token-plan-cn.xiaomimimo.com/v1}
       chat:
         options:
-          model: ${SPRING_AI_OPENAI_MODEL:gpt-4o-mini}
+          model: ${SPRING_AI_OPENAI_MODEL:mimo-v2.5}
           temperature: ${SPRING_AI_OPENAI_TEMPERATURE:0.7}
       embedding:
         options:
-          model: ${SPRING_AI_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+          model: ${SPRING_AI_OPENAI_EMBEDDING_MODEL:mimo-v2.5}
 
 management:
   endpoints:
@@ -80,19 +80,40 @@ collection:
   vector:
     similarity-threshold: 0.9
 
+mimo:
+  api-key: ${MIMO_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
+  openai-base-url: ${MIMO_OPENAI_BASE_URL:https://token-plan-cn.xiaomimimo.com/v1}
+  anthropic-base-url: ${MIMO_ANTHROPIC_BASE_URL:https://token-plan-cn.xiaomimimo.com/anthropic}
+  chat-model: ${MIMO_CHAT_MODEL:mimo-v2.5}
+  pro-model: ${MIMO_PRO_MODEL:mimo-v2.5-pro}
+  asr-model: ${MIMO_ASR_MODEL:mimo-v2.5-asr}
+  tts-model: ${MIMO_TTS_MODEL:mimo-v2.5-tts}
+  tts-voice: ${MIMO_TTS_VOICE:Chloe}
+  tts-format: ${MIMO_TTS_FORMAT:wav}
+  asr-language: ${MIMO_ASR_LANGUAGE:auto}
+  pcm-sample-rate: ${MIMO_PCM_SAMPLE_RATE:16000}
+  pcm-channels: ${MIMO_PCM_CHANNELS:1}
+  pcm-bits-per-sample: ${MIMO_PCM_BITS_PER_SAMPLE:16}
+
+legacy:
+  xunfei:
+    enabled: ${LEGACY_XUNFEI_ENABLED:false}
+
 xunfei:
   lat-key:
-    app-id: ${XUNFEI_APP_ID:b00b747e}
-    api-key: ${XUNFEI_API_KEY:86f9f60da8d9f65a979dec8ed4978997}
-    api-secret: ${XUNFEI_API_SECRET:ZjMyNTgyY2RiYmEzMWQ0NGQzYTVmMTNj}
+    app-id: ${XUNFEI_APP_ID:}
+    api-key: ${XUNFEI_API_KEY:}
+    api-secret: ${XUNFEI_API_SECRET:}
     rta-api-key: ${XUNFEI_RTA_API_KEY:}
 
 interview-pilot:
   security:
-    require-xunfei-secrets: true
+    require-xunfei-secrets: false
+    require-mimo-secrets: ${REQUIRE_MIMO_SECRETS:false}
   storage:
     base-dir: ${INTERVIEW_PILOT_STORAGE_BASE_DIR:${user.home}/.interview-pilot}
     upload-temp-dir: ${INTERVIEW_PILOT_MULTIPART_TEMP_DIR:${interview-pilot.storage.base-dir}/temp/upload}
+    agent-file-dir: ${INTERVIEW_PILOT_AGENT_FILE_DIR:${interview-pilot.storage.base-dir}/agent-files}
     audio-temp-dir: ${INTERVIEW_PILOT_AUDIO_TEMP_DIR:${interview-pilot.storage.base-dir}/temp/audio}
     log-dir: ${INTERVIEW_PILOT_LOG_DIR:${interview-pilot.storage.base-dir}/logs}
     recording-dir: ${INTERVIEW_PILOT_RECORDING_DIR:${interview-pilot.storage.base-dir}/recordings}

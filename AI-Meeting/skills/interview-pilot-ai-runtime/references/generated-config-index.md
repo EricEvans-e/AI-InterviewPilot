@@ -1,29 +1,44 @@
-# 运行时配置索引（自动生成）
+# Runtime Config Index (Generated)
 
-该文档从 `application.yaml` 和 `interview-followup-rule.yaml` 自动提取。改配置后请重新运行 `scripts/extract_config_index.py`。
+Generated from `application.yaml` and `interview-followup-rule.yaml`. Re-run `scripts/extract_config_index.py` after config changes.
 
 ## spring.ai.openai
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
-| `spring.ai.openai.api-key` | `${SPRING_AI_OPENAI_API_KEY:sk-xxxxxxxxxxxxx}` |
-| `spring.ai.openai.base-url` | `${SPRING_AI_OPENAI_BASE_URL:https://api.openai.com}` |
-| `spring.ai.openai.chat.options.model` | `${SPRING_AI_OPENAI_MODEL:gpt-4o-mini}` |
+| `spring.ai.openai.api-key` | `${SPRING_AI_OPENAI_API_KEY:${MIMO_API_KEY:}}` |
+| `spring.ai.openai.base-url` | `${SPRING_AI_OPENAI_BASE_URL:https://token-plan-cn.xiaomimimo.com/v1}` |
+| `spring.ai.openai.chat.options.model` | `${SPRING_AI_OPENAI_MODEL:mimo-v2.5}` |
 | `spring.ai.openai.chat.options.temperature` | `${SPRING_AI_OPENAI_TEMPERATURE:0.7}` |
-| `spring.ai.openai.embedding.options.model` | `${SPRING_AI_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}` |
+| `spring.ai.openai.embedding.options.model` | `${SPRING_AI_OPENAI_EMBEDDING_MODEL:mimo-v2.5}` |
 
-## xunfei.lat-key
+## mimo
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
-| `xunfei.lat-key.api-key` | `${XUNFEI_API_KEY:e8565c438f59b301616e0498a86ad95d}` |
-| `xunfei.lat-key.api-secret` | `${XUNFEI_API_SECRET:OGZkZGQ5ZDY0Yzc4MTllZWI3ZmU2MDU4}` |
-| `xunfei.lat-key.app-id` | `${XUNFEI_APP_ID:96f3a359}` |
-| `xunfei.lat-key.rta-api-key` | `${XUNFEI_RTA_API_KEY:}` |
+| `mimo.anthropic-base-url` | `${MIMO_ANTHROPIC_BASE_URL:https://token-plan-cn.xiaomimimo.com/anthropic}` |
+| `mimo.api-key` | `${MIMO_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}` |
+| `mimo.asr-language` | `${MIMO_ASR_LANGUAGE:auto}` |
+| `mimo.asr-model` | `${MIMO_ASR_MODEL:mimo-v2.5-asr}` |
+| `mimo.chat-model` | `${MIMO_CHAT_MODEL:mimo-v2.5}` |
+| `mimo.openai-base-url` | `${MIMO_OPENAI_BASE_URL:https://token-plan-cn.xiaomimimo.com/v1}` |
+| `mimo.pcm-bits-per-sample` | `${MIMO_PCM_BITS_PER_SAMPLE:16}` |
+| `mimo.pcm-channels` | `${MIMO_PCM_CHANNELS:1}` |
+| `mimo.pcm-sample-rate` | `${MIMO_PCM_SAMPLE_RATE:16000}` |
+| `mimo.pro-model` | `${MIMO_PRO_MODEL:mimo-v2.5-pro}` |
+| `mimo.tts-format` | `${MIMO_TTS_FORMAT:wav}` |
+| `mimo.tts-model` | `${MIMO_TTS_MODEL:mimo-v2.5-tts}` |
+| `mimo.tts-voice` | `${MIMO_TTS_VOICE:Chloe}` |
+
+## legacy.xunfei
+
+| Key | Value |
+| --- | --- |
+| `legacy.xunfei.enabled` | `${LEGACY_XUNFEI_ENABLED:false}` |
 
 ## interview-pilot.agent-binding
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `interview-pilot.agent-binding.general-agent-chat` | `${INTERVIEW_PILOT_AGENT_GENERAL_CHAT:通用智能体}` |
 | `interview-pilot.agent-binding.interview-answer-evaluation` | `${INTERVIEW_PILOT_AGENT_INTERVIEW_ANSWER_EVALUATION:用户答案评分官}` |
@@ -33,7 +48,7 @@
 
 ## interview-pilot.flow-limit
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `interview-pilot.flow-limit.enable` | `True` |
 | `interview-pilot.flow-limit.interview-ai-call-max-access-count` | `6` |
@@ -50,7 +65,7 @@
 
 ## interview-pilot.ai-guard
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `interview-pilot.ai-guard.circuit-failure-rate-threshold` | `50` |
 | `interview-pilot.ai-guard.circuit-open-state-wait-millis` | `30000` |
@@ -77,7 +92,7 @@
 
 ## interview-pilot.ai-singleflight
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `interview-pilot.ai-singleflight.cleanup-threshold` | `256` |
 | `interview-pilot.ai-singleflight.distributed-enabled` | `True` |
@@ -129,34 +144,34 @@
 
 ## interview-pilot.thread-pool
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `interview-pilot.thread-pool.ai-io.core-pool-size` | `24` |
 | `interview-pilot.thread-pool.ai-io.keep-alive-seconds` | `120` |
 | `interview-pilot.thread-pool.ai-io.max-pool-size` | `64` |
 | `interview-pilot.thread-pool.ai-io.queue-capacity` | `400` |
-| `interview-pilot.thread-pool.ai-io.thread-name-prefix` | `interviewpilot-ai-io-` |
+| `interview-pilot.thread-pool.ai-io.thread-name-prefix` | `ip-ai-io-` |
 | `interview-pilot.thread-pool.cpu.core-pool-size` | `8` |
 | `interview-pilot.thread-pool.cpu.keep-alive-seconds` | `60` |
 | `interview-pilot.thread-pool.cpu.max-pool-size` | `16` |
 | `interview-pilot.thread-pool.cpu.queue-capacity` | `256` |
-| `interview-pilot.thread-pool.cpu.thread-name-prefix` | `interviewpilot-cpu-` |
+| `interview-pilot.thread-pool.cpu.thread-name-prefix` | `ip-cpu-` |
 | `interview-pilot.thread-pool.general.core-pool-size` | `50` |
 | `interview-pilot.thread-pool.general.keep-alive-seconds` | `300` |
 | `interview-pilot.thread-pool.general.max-pool-size` | `200` |
 | `interview-pilot.thread-pool.general.queue-capacity` | `1000` |
-| `interview-pilot.thread-pool.general.thread-name-prefix` | `interviewpilot-async-` |
+| `interview-pilot.thread-pool.general.thread-name-prefix` | `ip-async-` |
 | `interview-pilot.thread-pool.query.core-pool-size` | `16` |
 | `interview-pilot.thread-pool.query.keep-alive-seconds` | `120` |
 | `interview-pilot.thread-pool.query.max-pool-size` | `48` |
 | `interview-pilot.thread-pool.query.queue-capacity` | `600` |
-| `interview-pilot.thread-pool.query.thread-name-prefix` | `interviewpilot-query-` |
+| `interview-pilot.thread-pool.query.thread-name-prefix` | `ip-query-` |
 | `interview-pilot.thread-pool.scheduled-pool-size` | `8` |
-| `interview-pilot.thread-pool.scheduled-thread-name-prefix` | `interviewpilot-schedule-` |
+| `interview-pilot.thread-pool.scheduled-thread-name-prefix` | `ip-schedule-` |
 
 ## interview-pilot.interview.answer-guard
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `interview-pilot.interview.answer-guard.lock-expire-seconds` | `-1` |
 | `interview-pilot.interview.answer-guard.lock-wait-millis` | `0` |
@@ -167,7 +182,7 @@
 
 ## interview-pilot.interview.turn-repair
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `interview-pilot.interview.turn-repair.batch-size` | `50` |
 | `interview-pilot.interview.turn-repair.enable` | `True` |
@@ -176,7 +191,7 @@
 
 ## interview-pilot.redis-session
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `interview-pilot.redis-session.batch-sync-size` | `100` |
 | `interview-pilot.redis-session.clean-interval-seconds` | `300` |
@@ -187,7 +202,7 @@
 
 ## interview-pilot.interview.rule-engine
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `interview-pilot.interview.rule-engine.default-chain-id` | `default_followup_chain` |
 | `interview-pilot.interview.rule-engine.default-low-score-threshold` | `60` |
@@ -198,13 +213,13 @@
 
 ## collection.vector
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `collection.vector.similarity-threshold` | `0.9` |
 
 ## liteflow.rule-source
 
-| 键 | 值 |
+| Key | Value |
 | --- | --- |
 | `liteflow.rule-source` | `classpath:liteflow/interview-followup-chain.xml` |
 

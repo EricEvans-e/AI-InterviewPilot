@@ -1,388 +1,149 @@
 # AI 模型配置与使用指南
 
-本文档说明 InterviewPilot 平台的 AI 模型接入方式、配置方法和使用流程。
+本文描述 InterviewPilot 当前的 AI 接入方式。项目默认使用小米 Mimo Token Plan，覆盖通用聊天、面试链路、ASR 语音识别和 TTS 语音合成。
 
-## 架构概览
+## 默认模型
 
-平台采用**策略模式**管理多种 AI 模型，核心组件：
+| 用途 | 协议 | 默认端点 | 默认模型 |
+| --- | --- | --- | --- |
+| 通用聊天 / 面试链路 | OpenAI 兼容 | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5` |
+| 高推理聊天 | Anthropic 兼容 | `https://token-plan-cn.xiaomimimo.com/anthropic` | `mimo-v2.5-pro` |
+| 语音识别 ASR | OpenAI 兼容 chat completions | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5-asr` |
+| 语音合成 TTS | OpenAI 兼容 chat completions | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5-tts` |
 
+可用 Mimo 模型包括：`mimo-v2.5-pro`、`mimo-v2.5`、`mimo-v2.5-asr`、`mimo-v2.5-tts-voiceclone`、`mimo-v2.5-tts-voicedesign`、`mimo-v2.5-tts`、`mimo-v2-pro`、`mimo-v2-omni`、`mimo-v2-tts`。
+
+## 环境变量
+
+生产或本地运行时在 `.env` / shell 环境中配置：
+
+```env
+MIMO_API_KEY=tp-your-token-plan-api-key
+MIMO_OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
+MIMO_ANTHROPIC_BASE_URL=https://token-plan-cn.xiaomimimo.com/anthropic
+MIMO_CHAT_MODEL=mimo-v2.5
+MIMO_PRO_MODEL=mimo-v2.5-pro
+MIMO_ASR_MODEL=mimo-v2.5-asr
+MIMO_TTS_MODEL=mimo-v2.5-tts
+
+SPRING_AI_OPENAI_API_KEY=tp-your-token-plan-api-key
+SPRING_AI_OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
+SPRING_AI_OPENAI_MODEL=mimo-v2.5
+SPRING_AI_OPENAI_EMBEDDING_MODEL=mimo-v2.5
 ```
+
+不要把真实 API Key 提交到 Git。`XUNFEI_*` 变量仅供 legacy 代码路径使用，默认不需要配置；只有显式设置 `LEGACY_XUNFEI_ENABLED=true` 时才会启用旧讯飞 Bean。
+
+## 后端路由
+
 通用 AI 聊天：
-前端模型选择器 → AiMessageController (SSE) → AiChatHandlerFactory
-    ├─ AnthropicChatHandler (anthropic, Anthropic 协议)
-    └─ UniversalAiChatHandler (openai/deepseek/doubao/spark, OpenAI 兼容)
-    → ai_properties 表
+
+```text
+Frontend model selector
+  -> AiMessageController (SSE)
+  -> AiChatHandlerFactory
+  -> ai_properties
+```
 
 面试链路：
-InterviewSessionFacade → InterviewAiInvoker.doChat()
-    ├─ aiProvider=xingchen    → XunfeiWorkflowClient (iFlytek Workflow)
-    ├─ aiProvider=openai      → AnthropicPromptBuilder + UniversalAiChatHandler.callSync() (OpenAI 兼容, e.g. Mimo)
-    └─ aiProvider=anthropic   → AnthropicPromptBuilder + AnthropicChatHandler.callSync() (Anthropic Messages API)
-    → agent_properties 表
+
+```text
+InterviewSessionFacade
+  -> InterviewAiInvoker.doChat()
+  -> agent_properties scene binding
 ```
 
-### 支持的 AI 提供方
+当前推荐两种 provider：
 
-| 提供方 | aiType | 协议 | Handler | 说明 |
-|--------|--------|------|---------|------|
-| OpenAI | `openai` | OpenAI 兼容 | UniversalAiChatHandler | GPT-4o 等 |
-| 豆包 | `doubao` | OpenAI 兼容 | UniversalAiChatHandler | 字节跳动火山引擎 |
-| iFlytek Spark | `spark` | OpenAI 兼容 | UniversalAiChatHandler | iFlytek Spark 大模型 |
-| DeepSeek | `deepseek` | DeepSeek 专用 | UniversalAiChatHandler | 支持 reasoning_content 思维链 |
-| **Anthropic** | `anthropic` | **Anthropic Messages API** | **AnthropicChatHandler** | Anthropic 兼容模型（如小米 Mimo），支持 thinking 扩展思维 |
+| Provider | 字段值 | Handler | 说明 |
+| --- | --- | --- | --- |
+| Mimo OpenAI 兼容 | `openai` | `UniversalAiChatHandler` | 面试默认链路，使用 `/v1/chat/completions` |
+| Mimo Anthropic 兼容 | `anthropic` | `AnthropicChatHandler` | 通用聊天高推理链路，支持 thinking |
 
-## Anthropic 配置
+`xingchen` / 讯飞工作流仍作为 legacy 兼容保留，但默认初始化 SQL 和前端配置已经切换到 Mimo。
 
-### 前置条件
+## 数据库配置
 
-- 后端服务已启动（MySQL、MongoDB、Redis 已就绪）
-- 拥有 Anthropic 兼容 API Key（如 [小米 Mimo 平台](https://xiaomimimo.com) 获取）
+`ai_properties` 用于通用聊天和教师后台 AI 题目生成。默认初始化记录位于 `AI-Meeting/admin/src/main/resources/sql/ai_properties.sql`，使用占位符 `MIMO_API_KEY`，部署时请在数据库或环境变量中替换为真实 key。
 
-### 方式一：SQL 直接插入
-
-连接 MySQL `mainshi_agent` 数据库，执行：
+示例：
 
 ```sql
 INSERT INTO ai_properties (
     ai_name, ai_type, api_key, api_url, model_name,
-    max_tokens, temperature, system_prompt, is_enabled, is_default, del_flag, create_time, update_time
+    max_tokens, temperature, is_enabled, is_default, del_flag, create_time, update_time
 ) VALUES (
-    'Mimo V2.5 Pro',           -- 显示名称（前端模型选择器展示）
-    'anthropic',                -- aiType 标识（必须为 'anthropic'）
-    'tp-s7h68tp5edc1zh2co9cw7n9oeakrkwp7fcwwajwom0rdo7wt',  -- API Key
-    'https://token-plan-sgp.xiaomimimo.com/anthropic',       -- API 地址
-    'mimo-v2.5-pro',            -- 模型名称
-    8192,                       -- 最大输出 token 数
-    1.0,                        -- 采样温度 (0-1.5)
-    '你是InterviewPilot平台的智能助手，专注于浙江高职提前招生面试辅导。',  -- 系统提示词
-    1,                          -- 启用状态 (1=启用, 0=禁用)
-    1,                          -- 默认模型 (1=是, 0=否)
-    0,                          -- 软删除 (0=正常)
-    NOW(), NOW()
+    'Mimo V2.5',
+    'openai',
+    'MIMO_API_KEY',
+    'https://token-plan-cn.xiaomimimo.com/v1',
+    'mimo-v2.5',
+    32768,
+    0.7,
+    1,
+    1,
+    0,
+    NOW(),
+    NOW()
 );
 ```
 
-### 方式二：管理后台配置
-
-1. 以管理员身份登录后台
-2. 进入 `AI 配置管理` 页面（`/api/ip/v1/ai-properties`）
-3. 点击「新增」，填写以下字段：
-
-| 字段 | 值 | 说明 |
-|------|-----|------|
-| AI 名称 | Mimo V2.5 Pro | 前端展示名 |
-| AI 类型 | anthropic | 选择 anthropic 类型 |
-| API Key | tp-s7h68tp5... | 你的 Mimo API Key |
-| API 地址 | https://token-plan-sgp.xiaomimimo.com/anthropic | 留空则使用默认值 |
-| 模型名称 | mimo-v2.5-pro | 可选值见下方 |
-| 最大 Token | 8192 | 范围 1-131072 |
-| 温度 | 1.0 | 范围 0-1.5 |
-| 系统提示词 | 你是... | 可选 |
-| 启用 | 是 | 开关 |
-
-### 可用模型
-
-| 模型名称 | 特点 | 默认 max_tokens | thinking 支持 |
-|----------|------|-----------------|---------------|
-| `mimo-v2.5-pro` | 最强推理能力 | 131072 | 默认启用 |
-| `mimo-v2.5` | 平衡性能与速度 | 32768 | 默认启用 |
-| `mimo-v2-pro` | 高性能 | 131072 | 默认启用 |
-| `mimo-v2-omni` | 多模态 | 32768 | 默认启用 |
-| `mimo-v2-flash` | 快速响应 | 65536 | 默认关闭 |
-
-### API 地址说明
-
-| 地址 | 用途 |
-|------|------|
-| `https://token-plan-sgp.xiaomimimo.com/anthropic` | Token 计划端点（新加坡） |
-| `https://api.xiaomimimo.com/anthropic/v1` | 官方默认端点 |
-
-配置时 `api_url` 填写**不含** `/messages` 的基础路径，代码会自动拼接 `/messages` 端点。
-
-## 其他模型配置
-
-### DeepSeek
-
-```sql
-INSERT INTO ai_properties (ai_name, ai_type, api_key, api_url, model_name, max_tokens, temperature, is_enabled, is_default, del_flag, create_time, update_time)
-VALUES ('DeepSeek V4 Flash', 'deepseek', 'sk-xxx', 'https://api.deepseek.com', 'deepseek-v4-flash', 8192, 0.7, 1, 1, 0, NOW(), NOW());
-```
-
-### 豆包（火山引擎）
-
-```sql
-INSERT INTO ai_properties (ai_name, ai_type, api_key, api_url, model_name, max_tokens, temperature, is_enabled, is_default, del_flag, create_time, update_time)
-VALUES ('豆包 Pro', 'doubao', 'ak-xxx', 'https://ark.cn-beijing.volces.com/api/v3', 'doubao-pro-32k', 8192, 0.7, 1, 0, 0, NOW(), NOW());
-```
-
-### iFlytek Spark
-
-```sql
-INSERT INTO ai_properties (ai_name, ai_type, api_key, api_url, model_name, max_tokens, temperature, is_enabled, is_default, del_flag, create_time, update_time)
-VALUES ('星火 4.0', 'spark', 'ak-xxx', 'https://spark-api-open.xf-yun.com/v1', 'generalv3.5', 8192, 0.7, 1, 0, 0, NOW(), NOW());
-```
-
-## 使用方式
-
-### 前端 AI 聊天
-
-1. 登录后进入 AI 聊天页面
-2. 点击模型选择器，会自动列出所有已启用的模型（通过 `GET /api/ip/v1/ai-properties/options` 获取）
-3. 选择 "Mimo V2.5 Pro" 即可使用 Mimo 进行对话
-4. 对话以 SSE 流式输出，支持 thinking 思维链展示
-
-### 面试系统中的 AI 模型
-
-面试系统的模型配置在 `agent_properties` 表中，不走 `ai_properties`。支持三种 AI 提供商：
-
-| 提供商 | ai_provider | 协议 | Handler | 说明 |
-|--------|-------------|------|---------|------|
-| iFlytek | `xingchen`（默认） | iFlytek Workflow | XunfeiWorkflowClient | 支持文件上传 |
-| OpenAI 兼容 | `openai` | **OpenAI 兼容** | UniversalAiChatHandler | 纯文本 prompt（如 Mimo），出题用 PDF 文本提取 |
-| Anthropic | `anthropic` | Anthropic Messages API | AnthropicChatHandler | 纯文本 prompt |
-
-面试链路的四个场景均可使用 OpenAI 兼容模式：评分、追问、出题、神态分析。出题场景使用 openai/anthropic 时，PDF 通过 `PdfTextExtractor` 提取文本后发送。
-
-#### 配置方式
-
-`agent_properties` 表的 `ai_provider` 字段决定使用哪个提供商。当 `ai_provider = openai` 时，字段复用约定：
+`agent_properties` 用于面试各场景绑定。OpenAI 兼容 provider 的字段约定：
 
 | 字段 | 用途 |
-|------|------|
-| `api_key` | API Key（如 Mimo 的 `tp-` 开头 key） |
-| `api_secret` | 模型名称（如 `mimo-v2.5`） |
-| `api_flow_id` | API 地址（如 `https://token-plan-sgp.xiaomimimo.com/v1`） |
+| --- | --- |
+| `api_key` | Mimo API Key |
+| `api_secret` | 模型名，例如 `mimo-v2.5` |
+| `api_flow_id` | OpenAI 兼容基础地址，例如 `https://token-plan-cn.xiaomimimo.com/v1` |
+| `ai_provider` | 固定为 `openai` |
+| `scene_code` | 面试业务场景编码 |
+| `is_active` | 当前场景是否启用该 agent |
 
-```sql
--- 插入 OpenAI 兼容面试 Agent（以 Mimo 为例）
-INSERT INTO agent_properties (agent_name, api_secret, api_key, api_flow_id, ai_provider, del_flag, create_time, update_time) VALUES
-('Mimo面试评分官', 'mimo-v2.5', 'tp-xxx', 'https://token-plan-sgp.xiaomimimo.com/v1', 'openai', 0, NOW(), NOW());
+## ASR / TTS
+
+前端实时 ASR WebSocket：
+
+```text
+/api/ip/v1/mimo/audio-to-text/{userId}
 ```
 
-#### 方式一：管理后台 UI 切换（推荐）
+前端会发送 PCM 音频块，后端在 `MimoAudioService` 中封装为 WAV 后调用 Mimo ASR 模型。
 
-管理员访问 `/admin/agent-config` 页面，可为每个面试场景（出题、评分、追问、神态分析）选择使用 iFlytek 或 OpenAI 兼容 agent。切换即时生效，无需重启后端。
+TTS REST 接口：
 
-#### 方式二：YAML 配置（Fallback）
-
-在 `application.yaml` 的 `agent-binding` 中配置默认绑定（当 DB 中无 active agent 时生效）：
-
-```yaml
-interview-pilot:
-  agent-binding:
-    interview-answer-evaluation: Mimo面试评分官
-    interview-question-asking: Mimo面试提问官
-    interview-question-extraction: Mimo面试出题官
-    interview-demeanor: Mimo神态分析官
+```text
+POST /api/ip/v1/mimo/tts/tasks
+GET  /api/ip/v1/mimo/tts/tasks/{taskId}
+POST /api/ip/v1/mimo/tts/synthesize
 ```
 
-> **优先级**：DB `is_active=1 + scene_code` > YAML `agent-binding` > 默认 agent name
+`/api/ip/v1/xunfei/tts/**` 暂时作为旧前端兼容别名保留，内部已经走 Mimo TTS。
 
-#### 技术细节
+## 前端配置页面
 
-面试链路调用流程：
-
-```
-InterviewAiInvoker.doChat()
-    ↓ agentProperties.getAiProvider()
-    ├─ "xingchen"  → XunfeiWorkflowClient.chat()（iFlytek Workflow）
-    ├─ "openai"      → AnthropicPromptBuilder.build() → UniversalAiChatHandler.callSync()（OpenAI 兼容）
-    └─ "anthropic" → AnthropicPromptBuilder.build() → AnthropicChatHandler.callSync()（Anthropic Messages API）
-```
-
-`AnthropicPromptBuilder` 将结构化 workflow 参数（`AGENT_USER_INPUT`、`question`、`resume_context` 等）转换为纯文本 prompt，自动适配评分、追问、出题等场景。
-
-注意事项：
-- `openai` 模式使用 OpenAI 兼容协议（`/v1/chat/completions`），不是 Anthropic 协议
-- 出题场景：openai/anthropic 通过 `PdfTextExtractor` 提取 PDF 文本后发送；文件上传到 iFlytek 仅用于简历预览
-- 神态分析场景在 openai/anthropic 模式下跳过图片上传，使用文本分析
-
-### AI 题目生成
-
-题库管理的「AI 拓题」功能支持选择 AI 模型：
-
-1. 进入题库管理后台
-2. 点击「AI 生成题目」
-3. 在「AI 模型」下拉框选择具体模型（按 `id` 精确选择，不依赖 `aiType`）
-4. 填写生成条件（院校、专业、题型等）
-5. 系统通过 `QuestionAiGenerateService.callAiSync()` 同步调用所选模型生成题目
-
-模型选择优先级：`aiPropertiesId`（精确 ID）> `aiType`（按类型查默认）> 系统默认 DeepSeek。前端传递 `aiPropertiesId`（模型记录的数据库 ID），后端直接 `getById()` 查找。
-
-## 教师后台 — AI 模型配置页面
-
-教师和管理员可通过 `/teacher/ai-config` 页面管理 AI 模型，无需直接操作数据库。
-
-### 功能
-
-- **分页浏览**：支持按名称、类型筛选
-- **新增/编辑**：填写 AI 名称、类型、API Key、API 地址、模型名称、Token 数、温度、系统提示词
-- **启用/禁用**：开关切换 `is_enabled` 状态
-- **删除**：软删除（`del_flag=1`）
-- **设为默认**：点击星标按钮，将该模型设为其 `ai_type` 下的默认模型（`is_default=1`），同一 `ai_type` 下其他记录自动取消默认
-
-### API 端点
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/ip/v1/ai-properties` | 分页查询（支持 `aiName`、`aiType`、`isEnabled` 筛选） |
-| GET | `/api/ip/v1/ai-properties/enabled` | 获取所有启用的模型（用于下拉选择器） |
-| GET | `/api/ip/v1/ai-properties/{id}` | 获取单个配置详情 |
-| POST | `/api/ip/v1/ai-properties` | 新增配置 |
-| PUT | `/api/ip/v1/ai-properties` | 更新配置 |
-| DELETE | `/api/ip/v1/ai-properties/{id}` | 删除配置 |
-| PUT | `/api/ip/v1/ai-properties/{id}/status?isEnabled=0\|1` | 启用/禁用 |
-| PUT | `/api/ip/v1/ai-properties/{id}/default` | 设为默认模型 |
-
-所有端点需要 `teacher` 或 `admin` 角色（`@SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)`）。
-
-## 技术细节
-
-### AnthropicChatHandler 工作原理
-
-```
-请求流程：
-1. 前端发送 POST /api/ip/v1/ai/sessions/{sessionId}/chat
-2. AiMessageServiceImpl 解析 aiId → 加载 AiPropertiesDO (aiType=anthropic)
-3. AiChatHandlerFactory.getHandler("anthropic") → 返回 AnthropicChatHandler
-4. AnthropicChatHandler.streamToSink():
-   a. 构建 Anthropic Messages API 请求体
-   b. WebClient POST 到 {apiUrl}/messages
-   c. 请求头: x-api-key + anthropic-version: 2023-06-01
-   d. 解析 SSE 事件流 (content_block_delta → text_delta / thinking_delta)
-   e. 包装为 AiChatStreamRespDTO 推送到 FluxSink
-5. 前端收到 SSE 数据，渲染文本和思考过程
-```
-
-### Anthropic SSE 事件格式
-
-Mimo 使用 Anthropic Messages API 的流式输出格式：
-
-```
-event: message_start
-data: {"type":"message_start","message":{"id":"msg_xxx","role":"assistant","model":"mimo-v2.5-pro"}}
-
-event: content_block_start
-data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}
-
-event: content_block_delta
-data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"让我分析..."}}
-
-event: content_block_stop
-data: {"type":"content_block_stop","index":0}
-
-event: content_block_start
-data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}
-
-event: content_block_delta
-data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"根据您的问题..."}}
-
-event: content_block_stop
-data: {"type":"content_block_stop","index":1}
-
-event: message_delta
-data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"input_tokens":100,"output_tokens":500}}
-
-event: message_stop
-data: {"type":"message_stop"}
-```
-
-### 前端兼容性
-
-Mimo 的 SSE 数据会被转换为与现有前端兼容的格式：
-
-| Anthropic 事件 | 转换后的 DTO | 前端处理 |
-|---------------|-------------|---------|
-| `thinking_delta` | `{"type":"reasoning_content","content":"..."}` | 思维链展示 |
-| `text_delta` | `{"type":"content","content":"..."}` | 正常文本展示 |
-
-前端无需任何改动，通过 `ai_properties/options` API 自动发现新模型。
-
-### thinking 模式
-
-对于 `mimo-v2.5-pro` 和 `mimo-v2-pro` 模型，代码会自动启用 thinking 扩展思维：
-
-```json
-{
-  "model": "mimo-v2.5-pro",
-  "thinking": {
-    "type": "enabled"
-  },
-  "messages": [...]
-}
-```
-
-thinking 输出会以 `reasoning_content` 类型推送到前端，与 DeepSeek 的深度思考展示一致。
-
-## 添加新的 AI 提供方
-
-如果需要接入新的 AI 模型，根据其协议类型选择不同方案：
-
-### 方案 A：OpenAI 兼容协议
-
-大多数模型（如通义千问、文心一言、Claude via OpenAI-compatible proxy）都提供 OpenAI 兼容接口：
-
-1. 在 `AiPropritiesType` 枚举中新增值
-2. 在 `ai_properties` 表插入配置
-3. 无需代码改动，`UniversalAiChatHandler` 自动处理
-
-### 方案 B：非 OpenAI 协议（如 Anthropic 原生、自定义协议）
-
-1. 在 `AiPropritiesType` 枚举中新增值
-2. 创建新的 `XxxChatHandler implements AiChatHandler`
-3. 在 `AiChatHandlerFactory` 中添加路由逻辑
-4. 实现 `streamToSink()` 和 `callSync()` 方法
-
-参考 `AnthropicChatHandler.java` 的实现。
+教师后台 `/teacher/ai-config` 只展示 `openai` 和 `anthropic` 两类 Mimo 兼容模型。管理员后台 `/admin/agent-config` 可为出题、评分、追问、神态分析等场景切换 active agent。
 
 ## 常见问题
 
-### Q: Anthropic 调用返回 401
+### 401 Unauthorized
 
-检查 `api_key` 是否正确，格式应为 `tp-` 开头的字符串。确认 `api_url` 不含 `/messages` 后缀。
+检查 `MIMO_API_KEY` 或数据库里的 `api_key` 是否为有效 `tp-` 开头 key。不要把 OpenAI `sk-` key 填到 Mimo 端点。
 
-### Q: Mimo 调用返回 401
+### 404 Not Found
 
-确认 `api_key` 有效（`tp-` 开头）。`api_url` 应为：
-- OpenAI 兼容（面试链路）：`https://token-plan-sgp.xiaomimimo.com/v1`
-- Anthropic 协议（通用聊天）：`https://token-plan-sgp.xiaomimimo.com/anthropic`
+检查端点是否使用中国区 Token Plan 地址：
 
-### Q: Mimo 调用返回 404
-
-确认 `api_url` 正确。面试链路使用 OpenAI 兼容协议，`api_url` 应以 `/v1` 结尾（如 `https://token-plan-sgp.xiaomimimo.com/v1`），代码会自动拼接 `/chat/completions`。
-
-### Q: thinking 内容不展示
-
-确认前端 SSE 消费逻辑支持 `reasoning_content` 类型。InterviewPilot 前端已内置支持。
-
-### Q: 如何切换默认模型
-
-`ai_properties` 表有 `is_default` 字段（`TINYINT(1)`）。同一 `ai_type` 下 `is_default=1` 的记录优先被选中。教师后台 `/teacher/ai-config` 页面可点击星标按钮设置默认模型。后端 `getEnabledByAiType()` 按 `is_default DESC, create_time DESC` 排序，取第一条。
-
-### Q: 模型选择器不显示 Mimo
-
-检查 `ai_properties` 表中 Mimo 记录的 `is_enabled = 1` 且 `del_flag = 0`。前端通过 `GET /api/ip/v1/ai-properties/options` 拉取选项列表。
-
-## 数据库表结构参考
-
-```sql
-CREATE TABLE ai_properties (
-    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
-    ai_name       VARCHAR(100)  COMMENT '显示名称',
-    ai_type       VARCHAR(50)   COMMENT '类型标识: openai/doubao/spark/deepseek/anthropic',
-    api_key       VARCHAR(500)  COMMENT 'API 密钥',
-    api_secret    VARCHAR(500)  COMMENT 'API 密钥（部分提供方需要）',
-    api_url       VARCHAR(500)  COMMENT 'API 地址（留空使用枚举默认值）',
-    project_id    VARCHAR(200)  COMMENT '项目 ID（OpenAI 需要）',
-    organization_id VARCHAR(200) COMMENT '组织 ID（OpenAI 需要）',
-    model_name    VARCHAR(100)  COMMENT '模型名称',
-    max_tokens    INT           COMMENT '最大输出 token',
-    temperature   DECIMAL(3,1)  COMMENT '采样温度',
-    system_prompt TEXT          COMMENT '系统提示词',
-    is_enabled    TINYINT DEFAULT 1 COMMENT '启用状态',
-    is_default    TINYINT DEFAULT 0 COMMENT '是否为该 ai_type 的默认模型',
-    del_flag      TINYINT DEFAULT 0 COMMENT '软删除',
-    create_time   DATETIME,
-    update_time   DATETIME
-) COMMENT 'AI 模型配置表';
+```text
+https://token-plan-cn.xiaomimimo.com/v1
+https://token-plan-cn.xiaomimimo.com/anthropic
 ```
+
+OpenAI 兼容地址保留 `/v1`，代码会自动拼接 `/chat/completions`。Anthropic 兼容地址不要手动追加 `/messages`，代码会自动拼接。
+
+### ASR / TTS 没有响应
+
+检查 `MIMO_ASR_MODEL=mimo-v2.5-asr`、`MIMO_TTS_MODEL=mimo-v2.5-tts`，并确认后端日志里没有 `Mimo API key is missing`。
+
+### 模型选择器不显示 Mimo
+
+检查 `ai_properties` 表中记录满足 `is_enabled = 1` 且 `del_flag = 0`。前端通过 `GET /api/ip/v1/ai-properties/options` 拉取模型列表。

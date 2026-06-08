@@ -8,15 +8,15 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.interviewpilot.ai.service.AiPropertiesService;
-import com.interviewpilot.common.convention.exception.ClientException;
-import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
-import com.interviewpilot.ai.dao.mapper.AiPropertiesMapper;
 import com.interviewpilot.ai.api.io.req.AiPropertiesCreateReqDTO;
 import com.interviewpilot.ai.api.io.req.AiPropertiesPageReqDTO;
 import com.interviewpilot.ai.api.io.req.AiPropertiesUpdateReqDTO;
 import com.interviewpilot.ai.api.io.resp.AiModelOptionRespDTO;
 import com.interviewpilot.ai.api.io.resp.AiPropertiesRespDTO;
+import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
+import com.interviewpilot.ai.dao.mapper.AiPropertiesMapper;
+import com.interviewpilot.ai.service.AiPropertiesService;
+import com.interviewpilot.common.convention.exception.ClientException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,14 +26,12 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiPropertiesDO> implements AiPropertiesService {
-
-    // ... (其他方法省略)
+public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiPropertiesDO>
+        implements AiPropertiesService {
 
     @Override
     public List<AiModelOptionRespDTO> getAvailableAiModels() {
-        List<AiPropertiesRespDTO> enabledProperties = getAllEnabledAiProperties();
-        return enabledProperties.stream()
+        return getAllEnabledAiProperties().stream()
                 .map(prop -> AiModelOptionRespDTO.builder()
                         .id(prop.getId())
                         .aiName(prop.getAiName())
@@ -49,7 +47,7 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
                 .eq(AiPropertiesDO::getDelFlag, 0);
 
         if (baseMapper.selectCount(queryWrapper) > 0) {
-            throw new ClientException("AI名称已存在");
+            throw new ClientException("AI name already exists");
         }
 
         AiPropertiesDO aiPropertiesDO = new AiPropertiesDO();
@@ -69,17 +67,18 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
     public void updateAiProperties(AiPropertiesUpdateReqDTO requestParam) {
         AiPropertiesDO existingRecord = baseMapper.selectById(requestParam.getId());
         if (existingRecord == null || existingRecord.getDelFlag() == 1) {
-            throw new ClientException("AI配置不存在");
+            throw new ClientException("AI config does not exist");
         }
 
-        if (StrUtil.isNotBlank(requestParam.getAiName()) && !requestParam.getAiName().equals(existingRecord.getAiName())) {
+        if (StrUtil.isNotBlank(requestParam.getAiName())
+                && !requestParam.getAiName().equals(existingRecord.getAiName())) {
             LambdaQueryWrapper<AiPropertiesDO> queryWrapper = Wrappers.lambdaQuery(AiPropertiesDO.class)
                     .eq(AiPropertiesDO::getAiName, requestParam.getAiName())
                     .eq(AiPropertiesDO::getDelFlag, 0)
                     .ne(AiPropertiesDO::getId, requestParam.getId());
 
             if (baseMapper.selectCount(queryWrapper) > 0) {
-                throw new ClientException("AI名称已存在");
+                throw new ClientException("AI name already exists");
             }
         }
 
@@ -94,7 +93,7 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
     public void deleteAiProperties(Long id) {
         AiPropertiesDO existingRecord = baseMapper.selectById(id);
         if (existingRecord == null || existingRecord.getDelFlag() == 1) {
-            throw new ClientException("AI配置不存在");
+            throw new ClientException("AI config does not exist");
         }
 
         LambdaUpdateWrapper<AiPropertiesDO> updateWrapper = Wrappers.lambdaUpdate(AiPropertiesDO.class)
@@ -109,16 +108,14 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
     public AiPropertiesRespDTO getAiPropertiesById(Long id) {
         AiPropertiesDO aiPropertiesDO = baseMapper.selectById(id);
         if (aiPropertiesDO == null || aiPropertiesDO.getDelFlag() == 1) {
-            throw new ClientException("AI配置不存在");
+            throw new ClientException("AI config does not exist");
         }
 
         AiPropertiesRespDTO respDTO = new AiPropertiesRespDTO();
         BeanUtil.copyProperties(aiPropertiesDO, respDTO);
-
         if (StrUtil.isNotBlank(respDTO.getApiKey())) {
             respDTO.setApiKey(maskApiKey(respDTO.getApiKey()));
         }
-
         return respDTO;
     }
 
@@ -134,18 +131,9 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
         IPage<AiPropertiesDO> page = baseMapper.selectPage(requestParam, queryWrapper);
 
         IPage<AiPropertiesRespDTO> resultPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
-        List<AiPropertiesRespDTO> records = page.getRecords().stream()
-                .map(record -> {
-                    AiPropertiesRespDTO respDTO = new AiPropertiesRespDTO();
-                    BeanUtil.copyProperties(record, respDTO);
-                    if (StrUtil.isNotBlank(respDTO.getApiKey())) {
-                        respDTO.setApiKey(maskApiKey(respDTO.getApiKey()));
-                    }
-                    return respDTO;
-                })
-                .collect(Collectors.toList());
-
-        resultPage.setRecords(records);
+        resultPage.setRecords(page.getRecords().stream()
+                .map(this::toMaskedResponse)
+                .collect(Collectors.toList()));
         return resultPage;
     }
 
@@ -156,17 +144,8 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
                 .eq(AiPropertiesDO::getIsEnabled, 1)
                 .orderByDesc(AiPropertiesDO::getCreateTime);
 
-        List<AiPropertiesDO> list = baseMapper.selectList(queryWrapper);
-
-        return list.stream()
-                .map(record -> {
-                    AiPropertiesRespDTO respDTO = new AiPropertiesRespDTO();
-                    BeanUtil.copyProperties(record, respDTO);
-                    if (StrUtil.isNotBlank(respDTO.getApiKey())) {
-                        respDTO.setApiKey(maskApiKey(respDTO.getApiKey()));
-                    }
-                    return respDTO;
-                })
+        return baseMapper.selectList(queryWrapper).stream()
+                .map(this::toMaskedResponse)
                 .collect(Collectors.toList());
     }
 
@@ -174,7 +153,7 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
     public void toggleAiPropertiesStatus(Long id, Integer isEnabled) {
         AiPropertiesDO existingRecord = baseMapper.selectById(id);
         if (existingRecord == null || existingRecord.getDelFlag() == 1) {
-            throw new ClientException("AI配置不存在");
+            throw new ClientException("AI config does not exist");
         }
 
         LambdaUpdateWrapper<AiPropertiesDO> updateWrapper = Wrappers.lambdaUpdate(AiPropertiesDO.class)
@@ -189,10 +168,9 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
     public void setDefaultAiProperties(Long id) {
         AiPropertiesDO target = baseMapper.selectById(id);
         if (target == null || target.getDelFlag() == 1) {
-            throw new ClientException("AI配置不存在");
+            throw new ClientException("AI config does not exist");
         }
 
-        // Unset other defaults of the same type
         LambdaUpdateWrapper<AiPropertiesDO> unsetWrapper = Wrappers.lambdaUpdate(AiPropertiesDO.class)
                 .eq(AiPropertiesDO::getAiType, target.getAiType())
                 .eq(AiPropertiesDO::getDelFlag, 0)
@@ -201,7 +179,6 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
                 .set(AiPropertiesDO::getUpdateTime, new Date());
         baseMapper.update(null, unsetWrapper);
 
-        // Set this one as default
         LambdaUpdateWrapper<AiPropertiesDO> setWrapper = Wrappers.lambdaUpdate(AiPropertiesDO.class)
                 .eq(AiPropertiesDO::getId, id)
                 .set(AiPropertiesDO::getIsDefault, 1)
@@ -228,12 +205,21 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
     }
 
     @Override
-    public AiPropertiesDO getDefaultDoubaoConfig() {
-        AiPropertiesDO doubaoConfig = getEnabledByAiType("doubao");
-        if (doubaoConfig == null) {
-            throw new ClientException("豆包AI配置不存在或未启用");
+    public AiPropertiesDO getDefaultMimoConfig() {
+        AiPropertiesDO mimoConfig = getEnabledByAiType("openai");
+        if (mimoConfig == null) {
+            throw new ClientException("Mimo AI config does not exist or is disabled");
         }
-        return doubaoConfig;
+        return mimoConfig;
+    }
+
+    private AiPropertiesRespDTO toMaskedResponse(AiPropertiesDO record) {
+        AiPropertiesRespDTO respDTO = new AiPropertiesRespDTO();
+        BeanUtil.copyProperties(record, respDTO);
+        if (StrUtil.isNotBlank(respDTO.getApiKey())) {
+            respDTO.setApiKey(maskApiKey(respDTO.getApiKey()));
+        }
+        return respDTO;
     }
 
     private String maskApiKey(String apiKey) {
@@ -243,4 +229,3 @@ public class AiPropertiesServiceImpl extends ServiceImpl<AiPropertiesMapper, AiP
         return apiKey.substring(0, 4) + "****" + apiKey.substring(apiKey.length() - 4);
     }
 }
-

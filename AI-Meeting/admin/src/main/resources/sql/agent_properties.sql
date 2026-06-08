@@ -1,13 +1,16 @@
 SET NAMES utf8mb4;
 
--- DDL 迁移：为已有表添加 ai_provider 列
-ALTER TABLE agent_properties ADD COLUMN ai_provider VARCHAR(50) DEFAULT 'xingchen' COMMENT 'AI 提供商: xingchen, openai, anthropic';
-
--- 原有 XingChen Agent（ai_provider 默认为 xingchen）
-INSERT INTO agent_properties (id, agent_name, api_secret, api_key, api_flow_id, create_time, update_time, del_flag) VALUES (8, '面试出题官', 'ZjMyNTgyY2RiYmEzMWQ0NGQzYTVmMTNj', '86f9f60da8d9f65a979dec8ed4978997', '7459045326128074752', '2025-07-14 13:24:03', '2025-07-14 13:24:03', 0);
-INSERT INTO agent_properties (id, agent_name, api_secret, api_key, api_flow_id, create_time, update_time, del_flag) VALUES (9, '神态分析官', 'ZjMyNTgyY2RiYmEzMWQ0NGQzYTVmMTNj', '86f9f60da8d9f65a979dec8ed4978997', '7459030807713374208', '2025-07-15 13:46:36', '2025-07-15 13:46:36', 0);
-INSERT INTO agent_properties (id, agent_name, api_secret, api_key, api_flow_id, create_time, update_time, del_flag) VALUES (11, '用户答案评分官', 'ZjMyNTgyY2RiYmEzMWQ0NGQzYTVmMTNj', '86f9f60da8d9f65a979dec8ed4978997', '7459027621355634688', '2025-07-15 15:51:27', '2025-07-15 15:51:27', 0);
-INSERT INTO agent_properties (id, agent_name, api_secret, api_key, api_flow_id, create_time, update_time, del_flag) VALUES (12, '面试提问官', 'ZjMyNTgyY2RiYmEzMWQ0NGQzYTVmMTNj', '86f9f60da8d9f65a979dec8ed4978997', '7459029937422643200', '2026-03-18 22:04:34', '2026-03-18 22:04:30', 0);
-
--- OpenAI 兼容 Agent（ai_provider = openai, field reuse: api_secret=模型名, api_flow_id=API URL）
--- 如需添加 OpenAI 兼容 Agent，请在此处插入
+INSERT INTO agent_properties (
+    id, agent_name, api_secret, api_key, api_flow_id, ai_provider,
+    scene_code, is_active, create_time, update_time, del_flag
+) VALUES
+(8, 'Mimo Interview Question Extractor', 'mimo-v2.5', 'MIMO_API_KEY', 'https://token-plan-cn.xiaomimimo.com/v1', 'openai',
+ 'interview-question-extraction', 1, NOW(), NOW(), 0),
+(9, 'Mimo Demeanor Analyst', 'mimo-v2.5', 'MIMO_API_KEY', 'https://token-plan-cn.xiaomimimo.com/v1', 'openai',
+ 'interview-demeanor', 1, NOW(), NOW(), 0),
+(11, 'Mimo Answer Evaluator', 'mimo-v2.5', 'MIMO_API_KEY', 'https://token-plan-cn.xiaomimimo.com/v1', 'openai',
+ 'interview-answer-evaluation', 1, NOW(), NOW(), 0),
+(12, 'Mimo Interview Questioner', 'mimo-v2.5', 'MIMO_API_KEY', 'https://token-plan-cn.xiaomimimo.com/v1', 'openai',
+ 'interview-question-asking', 1, NOW(), NOW(), 0),
+(13, 'Mimo General Agent', 'mimo-v2.5', 'MIMO_API_KEY', 'https://token-plan-cn.xiaomimimo.com/v1', 'openai',
+ 'general-agent-chat', 1, NOW(), NOW(), 0);

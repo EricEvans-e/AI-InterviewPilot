@@ -12,7 +12,8 @@ FOLLOWUP_YAML = ROOT / "admin" / "src" / "main" / "resources" / "interview-follo
 OUT = Path(__file__).resolve().parents[1] / "references" / "generated-config-index.md"
 TARGET_PREFIXES = [
     "spring.ai.openai",
-    "xunfei.lat-key",
+    "mimo",
+    "legacy.xunfei",
     "interview-pilot.agent-binding",
     "interview-pilot.flow-limit",
     "interview-pilot.ai-guard",
@@ -73,16 +74,16 @@ def main() -> None:
     grouped = group_by_prefix(merged)
 
     lines = [
-        "# 运行时配置索引（自动生成）",
+        "# Runtime Config Index (Generated)",
         "",
-        "该文档从 `application.yaml` 和 `interview-followup-rule.yaml` 自动提取。改配置后请重新运行 `scripts/extract_config_index.py`。",
+        "Generated from `application.yaml` and `interview-followup-rule.yaml`. Re-run `scripts/extract_config_index.py` after config changes.",
         "",
     ]
     for prefix in TARGET_PREFIXES:
         items = grouped.get(prefix)
         if not items:
             continue
-        lines.extend([f"## {prefix}", "", "| 键 | 值 |", "| --- | --- |"])
+        lines.extend([f"## {prefix}", "", "| Key | Value |", "| --- | --- |"])
         for key, value in items:
             display = str(value).replace("\n", "<br>")
             lines.append(f"| `{key}` | `{display}` |")

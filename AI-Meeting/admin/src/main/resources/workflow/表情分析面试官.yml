@@ -313,12 +313,12 @@ flowData:
         llmId: 13
         url: wss://spark-api.cn-huabei-1.xf-yun.com/v2.1/image
         multiMode: true
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         patchId: '0'
         isThink: false
         templateErrMsg: ''
         domain: image
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         maxTokens: 2048
         temperature: 0.5
         systemTemplate: 你现在是面试官对表情识别助手，你需要识别面试候选人的表情，并对他的面试表情进行简单的评估，以帮助面试官来综合评估面试表现

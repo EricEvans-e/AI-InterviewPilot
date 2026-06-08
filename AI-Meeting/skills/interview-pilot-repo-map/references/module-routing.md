@@ -1,31 +1,20 @@
-# 模块路由
+# Module Routing
 
-## 模块职责
+## Responsibilities
 
-- `auth`：登录态、`@CurrentUser`、权限、WebSocket 鉴权。
-- `agent`：通用 Agent 会话、SSE 聊天、Agent 属性、文件上传。
-- `interview`：面试会话、题目提取、答题流水线、评分、追问、恢复、收尾。
-- `media`：实时转写、WebSocket 推送、长文本 TTS。
-- `conversation`：会话消息历史、流式会话消息持久化、会话归属。
-- `ai`：模型接入、工具编排、统一 AI 调用能力。
-- `shared`：通用 DTO、枚举、结果封装、公共约束。
+- `auth`: login state, `@CurrentUser`, roles, WebSocket authentication.
+- `agent`: generic agent chat, SSE, agent properties, scene binding, file assets.
+- `interview`: interview sessions, question extraction, answer pipeline, scoring, follow-up, restore, finalize.
+- `media`: Mimo ASR, WebSocket push, TTS.
+- `conversation`: chat history, streaming message persistence, session ownership.
+- `ai`: model providers, unified AI invocation, chat handlers.
+- `shared`: common DTOs, enums, result wrappers, shared constraints.
 
-## 典型切法
+## Routing Rules
 
-- 看到 `/api/ip/v1/interview/**`，先去 `interview-pilot-interview-domain`。
-- 看到 `/api/ip/v1/agents/**`，先去 `interview-pilot-agent-domain`。
-- 看到 `/api/ip/v1/xunfei/**` 或 WebSocket 转写端点，先去 `interview-pilot-media-domain`。
-- 看到登录、token、`@CurrentUser`、管理员判断，先去 `interview-pilot-auth-user`。
-- 看到 `interview-pilot.ai-guard`、`interview-pilot.ai-singleflight`、`interview-pilot.flow-limit`，先去 `interview-pilot-ai-runtime`。
-
-## 边界判断
-
-- 面试域改动常常会连到 `agent` 的场景绑定和 `media` 的转写输入，但主域仍是 `interview`。
-- 只要改动的核心目标是“答题流程、评分结果、追问规则、会话状态”，就不要把它当成通用 Agent 改动。
-- 只要改动的核心目标是“聊天记忆、普通对话、文件资产”，就不要把它当成面试链路。
-- 只要改动的核心目标是“实时音频、推送、TTS”，就不要把它当成纯 REST 接口。
-
-## 交接信号
-
-- 需求同时涉及一个域的 API 和另一个域的配置，说明已经越过总路由层，应该切到对应领域 Skill。
-- 需求同时涉及工作流 YAML、Java DTO、缓存键和状态机，说明应该切到 `interview-pilot-change-playbook`。
+- `/api/ip/v1/interview/**` -> `interview-pilot-interview-domain`.
+- `/api/ip/v1/agents/**` -> `interview-pilot-agent-domain`.
+- `/api/ip/v1/mimo/**`, `/api/ip/v1/websocket/**`, or realtime `@ServerEndpoint` -> `interview-pilot-media-domain`.
+- `/api/ip/v1/xunfei/**` -> legacy media compatibility path; still start with `interview-pilot-media-domain`.
+- Login, token, `@CurrentUser`, admin checks -> `interview-pilot-auth-user`.
+- `interview-pilot.ai-guard`, `interview-pilot.ai-singleflight`, `interview-pilot.flow-limit` -> `interview-pilot-ai-runtime`.

@@ -21,9 +21,6 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.Generation;
-import org.springframework.ai.deepseek.DeepSeekChatModel;
-import org.springframework.ai.deepseek.DeepSeekChatOptions;
-import org.springframework.ai.deepseek.api.DeepSeekApi;
 import org.springframework.ai.model.SimpleApiKey;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -168,40 +165,6 @@ public class UniversalAiChatHandler implements AiChatHandler {
                 .responseTimeout(Duration.ofMinutes(3));
         WebClient.Builder webClientBuilder = WebClient.builder()
                 .clientConnector(new ReactorClientHttpConnector(httpClient));
-
-        if (AiPropritiesType.DEEPSEEK.getType().equalsIgnoreCase(aiProperties.getAiType())) {
-            DeepSeekApi deepSeekApi = new DeepSeekApi(
-                    baseUrl,
-                    new SimpleApiKey(apiKey),
-                    new LinkedMultiValueMap<>(),
-                    "/chat/completions",
-                    "/beta",
-                    restClientBuilder,
-                    webClientBuilder,
-                    new DefaultResponseErrorHandler()
-            );
-
-            DeepSeekChatOptions.Builder optionsBuilder = DeepSeekChatOptions.builder()
-                    .model(aiProperties.getModelName());
-
-            if (aiProperties.getMaxTokens() != null) {
-                optionsBuilder.maxTokens(aiProperties.getMaxTokens());
-            }
-
-            DeepSeekChatOptions options = optionsBuilder.build();
-            ToolCallingManager toolCallingManager = ToolCallingManager.builder().build();
-
-            DeepSeekChatModel chatModel = new DeepSeekChatModel(
-                    deepSeekApi,
-                    options,
-                    toolCallingManager,
-                    RetryTemplate.defaultInstance(),
-                    ObservationRegistry.NOOP
-            );
-            return ChatClient.builder(chatModel)
-                    .defaultOptions(options)
-                    .build();
-        }
 
         OpenAiApi openAiApi = new OpenAiApi(
                 baseUrl,

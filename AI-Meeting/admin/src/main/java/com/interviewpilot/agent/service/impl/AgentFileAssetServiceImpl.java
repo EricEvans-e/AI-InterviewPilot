@@ -10,16 +10,23 @@ import com.interviewpilot.agent.dao.entity.AgentFileAssetDO;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
 import com.interviewpilot.agent.dao.mapper.AgentFileAssetMapper;
 import com.interviewpilot.agent.service.AgentFileAssetService;
+import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.common.enums.AgentErrorCodeEnum;
 import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -28,11 +35,13 @@ public class AgentFileAssetServiceImpl extends ServiceImpl<AgentFileAssetMapper,
         implements AgentFileAssetService {
 
     private static final String DEFAULT_BIZ_TYPE = "general";
+    private static final String SOURCE_PLATFORM_MIMO_LOCAL = "mimo-local";
     private static final String SOURCE_PLATFORM_XUNFEI = "xingchen";
 
-    private final XunfeiWorkflowClient xunfeiWorkflowClient;
+    private final ObjectProvider<XunfeiWorkflowClient> xunfeiWorkflowClientProvider;
     private final AgentResolver agentResolver;
     private final BusinessAgentResolver businessAgentResolver;
+    private final ApplicationStorageProperties storageProperties;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -46,31 +55,24 @@ public class AgentFileAssetServiceImpl extends ServiceImpl<AgentFileAssetMapper,
         }
 
         AgentPropertiesDO agentProperties = resolveAgentProperties(sessionId);
-        if (StrUtil.isBlank(agentProperties.getApiKey()) || StrUtil.isBlank(agentProperties.getApiSecret())) {
-            throw new ClientException("agent api credentials are missing", AgentErrorCodeEnum.AGENT_SAVE_ERROR);
-        }
-
-        String fileUrl;
-        try {
-            fileUrl = xunfeiWorkflowClient.uploadFile(file, agentProperties.getApiKey(), agentProperties.getApiSecret());
-        } catch (Exception ex) {
-            log.error("File upload to xunfei workflow failed, agentId={}, fileName={}",
-                    agentProperties.getId(), file.getOriginalFilename(), ex);
-            throw new ClientException(
-                    "upload to xunfei workflow failed: " + ex.getMessage(),
-                    ex,
-                    AgentErrorCodeEnum.AGENT_SAVE_ERROR
-            );
-        }
-
         String originalFileName = normalizeFileName(file.getOriginalFilename());
+        String sourcePlatform;
+        String fileUrl;
+        if (SOURCE_PLATFORM_XUNFEI.equalsIgnoreCase(agentProperties.getAiProvider())) {
+            sourcePlatform = SOURCE_PLATFORM_XUNFEI;
+            fileUrl = uploadToLegacyXunfei(file, agentProperties);
+        } else {
+            sourcePlatform = SOURCE_PLATFORM_MIMO_LOCAL;
+            fileUrl = saveLocalAgentFile(file, originalFileName);
+        }
+
         Date now = new Date();
         AgentFileAssetDO fileAssetDO = new AgentFileAssetDO();
         fileAssetDO.setAgentId(agentProperties.getId());
         fileAssetDO.setSessionId(StrUtil.isBlank(sessionId) ? null : sessionId.trim());
         fileAssetDO.setUserName(StrUtil.blankToDefault(username, "unknown"));
         fileAssetDO.setBizType(StrUtil.blankToDefault(bizType, DEFAULT_BIZ_TYPE));
-        fileAssetDO.setSourcePlatform(SOURCE_PLATFORM_XUNFEI);
+        fileAssetDO.setSourcePlatform(sourcePlatform);
         fileAssetDO.setFileName(originalFileName);
         fileAssetDO.setFileExt(extractFileExt(originalFileName));
         fileAssetDO.setContentType(file.getContentType());
@@ -96,6 +98,60 @@ public class AgentFileAssetServiceImpl extends ServiceImpl<AgentFileAssetMapper,
         respDTO.setFileUrl(fileAssetDO.getFileUrl());
         respDTO.setCreateTime(fileAssetDO.getCreateTime());
         return respDTO;
+    }
+
+    private String uploadToLegacyXunfei(MultipartFile file, AgentPropertiesDO agentProperties) {
+        if (StrUtil.isBlank(agentProperties.getApiKey()) || StrUtil.isBlank(agentProperties.getApiSecret())) {
+            throw new ClientException("legacy xunfei agent api credentials are missing", AgentErrorCodeEnum.AGENT_SAVE_ERROR);
+        }
+
+        try {
+            return legacyXunfeiWorkflowClient().uploadFile(file, agentProperties.getApiKey(), agentProperties.getApiSecret());
+        } catch (Exception ex) {
+            log.error("File upload to legacy xunfei workflow failed, agentId={}, fileName={}",
+                    agentProperties.getId(), file.getOriginalFilename(), ex);
+            throw new ClientException(
+                    "upload to legacy xunfei workflow failed: " + ex.getMessage(),
+                    ex,
+                    AgentErrorCodeEnum.AGENT_SAVE_ERROR
+            );
+        }
+    }
+
+    private XunfeiWorkflowClient legacyXunfeiWorkflowClient() {
+        XunfeiWorkflowClient client = xunfeiWorkflowClientProvider.getIfAvailable();
+        if (client == null) {
+            throw new ClientException("legacy xingchen provider requires LEGACY_XUNFEI_ENABLED=true",
+                    AgentErrorCodeEnum.AGENT_SAVE_ERROR);
+        }
+        return client;
+    }
+
+    private String saveLocalAgentFile(MultipartFile file, String originalFileName) {
+        try {
+            Path storageDir = storageProperties.getAgentFilePath();
+            Files.createDirectories(storageDir);
+            String extension = extractFileExt(originalFileName);
+            String storedFileName = UUID.randomUUID()
+                    + (StrUtil.isBlank(extension) ? "" : "." + extension);
+            Path target = storageDir.resolve(storedFileName).normalize();
+            if (!target.startsWith(storageDir)) {
+                throw new ClientException("invalid file path", AgentErrorCodeEnum.AGENT_SAVE_ERROR);
+            }
+            try (InputStream inputStream = file.getInputStream()) {
+                Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return "/agent-files/" + storedFileName;
+        } catch (ClientException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Local agent file save failed, fileName={}", originalFileName, ex);
+            throw new ClientException(
+                    "save local agent file failed: " + ex.getMessage(),
+                    ex,
+                    AgentErrorCodeEnum.AGENT_SAVE_ERROR
+            );
+        }
     }
 
     private AgentPropertiesDO resolveAgentProperties(String sessionId) {

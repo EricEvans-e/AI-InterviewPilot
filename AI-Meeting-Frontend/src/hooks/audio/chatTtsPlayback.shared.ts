@@ -1,5 +1,5 @@
 import { AppError, ErrorCode } from "@/lib/errors";
-import { xunfeiTtsService } from "@/services/xunfeiTtsService";
+import { mimoTtsService } from "@/services/mimoTtsService";
 
 export const INTERVIEW_QUESTION_TTS_REQUEST = Object.freeze({
   vcn: "x4_mingge",
@@ -30,5 +30,5 @@ export const normalizeBase64Audio = (value: string) =>
     .replace(/_/g, "/");
 
 export type SynthesizedTtsTask = Awaited<
-  ReturnType<typeof xunfeiTtsService.synthesize>
+  ReturnType<typeof mimoTtsService.synthesize>
 >;

@@ -48,20 +48,20 @@
 
 ### AI 对话模块
 
-- **多模型统一接入**：基于 Spring AI 封装 `UniversalAiChatHandler`，通过 OpenAI 兼容协议统一接入 DeepSeek、星火、豆包等模型，运行时可切换。
-- **SSE 流式响应**：基于 WebFlux Flux + SSE 实现打字机式流式输出，支持 DeepSeek `reasoning_content` 思维链展示。
+- **Mimo 统一接入**：后端通过 `UniversalAiChatHandler` 接入 Mimo OpenAI 兼容协议，通过 `AnthropicChatHandler` 接入 Mimo Anthropic 兼容协议，运行时可切换。
+- **SSE 流式响应**：基于 WebFlux Flux + SSE 实现打字机式流式输出，支持 Mimo thinking / `reasoning_content` 展示。
 - **会话管理**：支持创建、分页查询、结束、删除对话，消息持久化至 MongoDB，支持历史消息回溯。
 
 ### 智能体（Agent）模块
 
-- **智能体配置管理**：支持运行时创建、更新、启停智能体配置（API Key / Secret / FlowId / 系统提示词等），按需绑定不同星云工作流。
-- **Agent SSE 对话**：智能体对话走星辰大模型工作流接口，支持上下文多轮记忆与流式输出。
+- **智能体配置管理**：支持运行时创建、更新、启停智能体配置（API Key / 模型名 / Base URL / 系统提示词等），按需绑定不同面试场景。
+- **Agent SSE 对话**：智能体对话默认走 Mimo 兼容接口，支持上下文多轮记忆与流式输出。
 - **文件上传**：支持为智能体会话上传附件，由 `FileUploadUtil` 统一处理文件类型校验与持久化。
 
 ### 语音媒体模块
 
-- **实时语音转写（ASR）**：基于 WebSocket + iFlytek 大模型 AST 实现端到端实时语音识别，支持分段增量去重（TreeMap + seg_id/pgs 重叠比对）、`committedText / liveText / displayText` 三级文本渲染，解决重复文本与前缀误删问题。
-- **长文本语音合成（TTS）**：集成 iFlytek 长文本 TTS 异步接口，支持创建合成任务、轮询状态、同步等待三种模式，可配置音色、语速、音量与音频编码格式。
+- **实时语音转写（ASR）**：基于 WebSocket + Mimo ASR 实现端到端实时语音识别，前端连接 `/api/ip/v1/mimo/audio-to-text/{userId}`。
+- **长文本语音合成（TTS）**：集成 Mimo TTS，前端通过 `mimoTtsService` 调用 `/api/ip/v1/mimo/tts/**`。
 - **WebSocket 通信管理**：基于 JSR 356 `@ServerEndpoint` 实现会话级 WebSocket 连接，支持心跳保活、鉴权校验、二进制音频帧接收与服务端主动推送。
 
 ### 用户与权限模块
@@ -75,7 +75,7 @@
 1. 负责 AI 面试答题主链路设计，串联评分/追问 Agent 协同工作，基于 EnumMap 状态机 + LiteFlow 规则链 实现追问裁决与流程推进；设计题级分布式锁 + 幂等防重 + 答题轮次异步补偿机制，保障答题闭环的数据一致性。
 2. 主导 AI 面试长会话状态治理与恢复架构升级，基于 Mongo Snapshot + Redis 懒加载 构建可恢复运行态体系，并引入热冷分层、CAS 并发保护与恢复幂等补偿，解决 Redis 异常导致的会话中断与状态丢失问题。
 3. 设计并实现面试 AI 分布式 Single-flight框架，基于 Redis Lua、状态机与 Fencing Token 实现多实例场景下同请求跨节点去重、结果回放、失败分类和超时接管；已接入评分、追问、抽题、神态分析等链路，并结合 心跳机制 和本地降级机制提升 AI 调用稳定性与成本控制能力。
-4. 设计并优化基于 WebSocket + Xunfei AST 的实时 ASR 链路，实现分段增量去重，解决重复文本等问题，借鉴 NIO Buffer 的异步缓冲思想设计会话级 TranscriptionSessionContext，实现音频接收与下游推流解耦，并基于 TreeMap + seg_id/pgs/rg/bg/ed 完成分段增量去重与有序重建，解决重复文本、前缀误删和结果抖动问题
+4. 将前端实时 ASR/TTS 链路迁移到 Mimo：ASR 使用 `/api/ip/v1/mimo/audio-to-text/{userId}`，TTS 使用 `mimoTtsService`，旧 `xunfeiTtsService` 仅作为兼容别名。
 5. 设计并推动面向 AI Coding 的 Skill 业务知识体系，将分散、过时、不可持续维护的传统文档升级为可被 Code Agent 直接消费的模块化业务知识单元，解决复杂业务开发中的知识断层与隐性规则丢失问题。
 
 ## 在哪购买？
@@ -100,7 +100,7 @@
 | ---------------- | -------- | ---------------------------------------------- |
 | Java             | 17       | 开发语言                                       |
 | Spring Boot      | 3.4.4    | 应用框架                                       |
-| Spring AI        | 1.0.0    | AI 集成框架，统一多模型接入（DeepSeek / 星辰） |
+| Spring AI        | 1.0.0    | AI 集成框架，默认接入 Mimo OpenAI/Anthropic 兼容协议 |
 | MyBatis-Plus     | 3.5.9    | ORM 持久层框架                                 |
 | MySQL            | 8.0      | 关系型数据库                                   |
 | MongoDB          | 6.x      | 文档数据库，存储运行态快照与对话消息           |
@@ -108,7 +108,7 @@
 | Sa-Token         | 1.39.0   | 权限认证框架，集成 Redis 共享登录态            |
 | Resilience4j     | 2.2.0    | 熔断、限流、重试、舱壁隔离                     |
 | LiteFlow         | 2.15.3.2 | 规则引擎，驱动追问裁决等业务规则链             |
-| iFlytek WebSDK   | 3.0.2    | 语音转写（IAT）、OCR、表情识别、大模型 AST     |
+| Mimo Token Plan  | -        | 文本模型、语音转写（ASR）和语音合成（TTS）     |
 | OkHttp           | 4.9.3    | HTTP / WebSocket 客户端                        |
 | WebSocket / SSE  | -        | 实时 ASR 双向通信、AI 流式响应                 |
 | Maven            | 3.6.3+   | 构建工具                                       |

@@ -1,7 +1,7 @@
 package com.interviewpilot.media.infrastructure.websocket;
 
 import com.alibaba.fastjson2.JSONObject;
-import com.interviewpilot.media.infrastructure.integration.XunfeiAudioService.RealtimeTranscriptionUpdate;
+import com.interviewpilot.media.infrastructure.integration.MimoAudioService.RealtimeTranscriptionUpdate;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;

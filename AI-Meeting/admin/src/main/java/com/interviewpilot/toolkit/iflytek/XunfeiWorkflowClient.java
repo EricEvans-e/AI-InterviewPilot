@@ -3,6 +3,7 @@ package com.interviewpilot.toolkit.iflytek;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,6 +24,7 @@ import java.util.function.Consumer;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(prefix = "legacy.xunfei", name = "enabled", havingValue = "true")
 public class XunfeiWorkflowClient {
 
     public void chat(String input,

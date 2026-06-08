@@ -134,7 +134,7 @@ public class AiMessageServiceImpl implements AiMessageService {
     private AiPropertiesDO resolveAiProperties(Long aiId) {
         AiPropertiesDO aiProperties;
         if (aiId == null) {
-            aiProperties = aiPropertiesService.getDefaultDoubaoConfig();
+            aiProperties = aiPropertiesService.getDefaultMimoConfig();
             if (aiProperties == null) {
                 throw new ClientException("Default AI config does not exist");
             }

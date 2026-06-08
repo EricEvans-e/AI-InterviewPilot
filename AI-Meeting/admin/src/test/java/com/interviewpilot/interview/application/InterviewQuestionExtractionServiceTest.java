@@ -3,6 +3,7 @@ package com.interviewpilot.interview.application;
 import com.interviewpilot.agent.application.BusinessAgentResolver;
 import com.interviewpilot.agent.application.BusinessAgentScene;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
+import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
 import com.interviewpilot.interview.api.io.req.InterviewQuestionReqDTO;
 import com.interviewpilot.interview.api.io.resp.InterviewQuestionRespDTO;
 import com.interviewpilot.interview.application.guard.core.InterviewAiGuardStage;
@@ -12,13 +13,15 @@ import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.shared.InterviewAiInvoker;
 import com.interviewpilot.interview.shared.InterviewResponseParser;
-import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
 import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.redisson.api.RLock;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,10 +34,12 @@ import static org.mockito.Mockito.when;
 
 class InterviewQuestionExtractionServiceTest {
 
+    @TempDir
+    Path tempDir;
+
     @Test
     void shouldFailWhenWorkflowFallsBackToSmallTalkInsteadOfQuestions() throws Exception {
         BusinessAgentResolver businessAgentResolver = mock(BusinessAgentResolver.class);
-        AgentPropertiesLoader agentPropertiesLoader = mock(AgentPropertiesLoader.class);
         XunfeiWorkflowClient xunfeiWorkflowClient = mock(XunfeiWorkflowClient.class);
         InterviewAiInvoker interviewAiInvoker = mock(InterviewAiInvoker.class);
         InterviewAiSessionLockService interviewAiSessionLockService = mock(InterviewAiSessionLockService.class);
@@ -43,13 +48,13 @@ class InterviewQuestionExtractionServiceTest {
         InterviewResponseParser interviewResponseParser = new InterviewResponseParser();
         InterviewQuestionExtractionService service = new InterviewQuestionExtractionService(
                 businessAgentResolver,
-                agentPropertiesLoader,
-                xunfeiWorkflowClient,
+                providerOf(xunfeiWorkflowClient),
                 interviewAiInvoker,
                 interviewAiSessionLockService,
                 interviewQuestionService,
                 interviewQuestionCacheService,
-                interviewResponseParser
+                interviewResponseParser,
+                storageProperties()
         );
 
         AgentPropertiesDO agent = new AgentPropertiesDO();
@@ -100,5 +105,36 @@ class InterviewQuestionExtractionServiceTest {
         verify(interviewQuestionCacheService, never()).cacheInterviewQuestions(eq("session-1"), any());
         verify(interviewQuestionCacheService, never()).initInterviewFlow(eq("session-1"), any());
         verify(interviewAiSessionLockService).release(heavyLock);
+    }
+
+    private ApplicationStorageProperties storageProperties() {
+        ApplicationStorageProperties properties = new ApplicationStorageProperties();
+        properties.setBaseDir(tempDir.toString());
+        properties.setAgentFileDir(tempDir.resolve("agent-files").toString());
+        return properties;
+    }
+
+    private ObjectProvider<XunfeiWorkflowClient> providerOf(XunfeiWorkflowClient client) {
+        return new ObjectProvider<>() {
+            @Override
+            public XunfeiWorkflowClient getObject(Object... args) {
+                return client;
+            }
+
+            @Override
+            public XunfeiWorkflowClient getIfAvailable() {
+                return client;
+            }
+
+            @Override
+            public XunfeiWorkflowClient getIfUnique() {
+                return client;
+            }
+
+            @Override
+            public XunfeiWorkflowClient getObject() {
+                return client;
+            }
+        };
     }
 }

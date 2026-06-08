@@ -20,6 +20,7 @@ import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.redisson.api.RLock;
 import org.springframework.stereotype.Service;
 
@@ -38,8 +39,11 @@ public class InterviewDemeanorService {
     private static final String KEY_SERIOUSNESS_LEVEL = "seriousnessLevel";
     private static final String KEY_EMOTICON_HANDLING = "emoticonHandling";
     private static final String KEY_COMPOSITE_SCORE = "compositeScore";
+    private static final String PROVIDER_OPENAI = "openai";
+    private static final String PROVIDER_ANTHROPIC = "anthropic";
+    private static final String PROVIDER_XINGCHEN = "xingchen";
 
-    private final XunfeiWorkflowClient xunfeiWorkflowClient;
+    private final ObjectProvider<XunfeiWorkflowClient> xunfeiWorkflowClientProvider;
     private final BusinessAgentResolver businessAgentResolver;
     private final InterviewQuestionCacheService interviewQuestionCacheService;
     private final InterviewAiInvoker interviewAiInvoker;
@@ -67,16 +71,20 @@ public class InterviewDemeanorService {
                 throw new ClientException(InterviewErrorCodeEnum.AGENT_CONFIG_NOT_FOUND);
             }
 
-            boolean isAnthropic = "anthropic".equalsIgnoreCase(agentProperties.getAiProvider());
+            String provider = StrUtil.blankToDefault(agentProperties.getAiProvider(), PROVIDER_OPENAI);
+            boolean isLegacyXingchen = PROVIDER_XINGCHEN.equalsIgnoreCase(provider);
+            boolean isMimoCompatible = PROVIDER_OPENAI.equalsIgnoreCase(provider)
+                    || PROVIDER_ANTHROPIC.equalsIgnoreCase(provider);
 
-            if (isAnthropic) {
+            if (isMimoCompatible) {
                 // Anthropic 没有文件上传 API，跳过图片上传，使用纯文本 prompt
-                log.info("Anthropic provider detected, skipping image upload for demeanor");
-            } else {
+                log.info("Mimo-compatible provider detected, skipping legacy image upload for demeanor, provider={}",
+                        provider);
+            } else if (isLegacyXingchen) {
                 // Upload image first and get a workflow-readable URL.
                 if (reqDTO.getUserPhoto() != null && !reqDTO.getUserPhoto().isEmpty()) {
                     try {
-                        imageUrl = xunfeiWorkflowClient.uploadFile(
+                        imageUrl = legacyXunfeiWorkflowClient().uploadFile(
                                 reqDTO.getUserPhoto(),
                                 agentProperties.getApiKey(),
                                 agentProperties.getApiSecret()
@@ -93,6 +101,9 @@ public class InterviewDemeanorService {
                 if (imageUrl == null) {
                     throw new ClientException(InterviewErrorCodeEnum.DEMEANOR_USER_PHOTO_NOT_FOUND);
                 }
+            } else {
+                throw new ClientException("unsupported demeanor AI provider: " + provider,
+                        InterviewErrorCodeEnum.AGENT_CONFIG_NOT_FOUND);
             }
 
             String promptBuilder = "Evaluate this photo and return integer scores (0-100) for panicLevel, seriousnessLevel, emoticonHandling and compositeScore.";
@@ -198,6 +209,15 @@ public class InterviewDemeanorService {
         AgentPropertiesDO agentProperties = businessAgentResolver.resolveRequired(BusinessAgentScene.INTERVIEW_DEMEANOR);
         reqDTO.setAgentId(agentProperties.getId());
         return agentProperties;
+    }
+
+    private XunfeiWorkflowClient legacyXunfeiWorkflowClient() {
+        XunfeiWorkflowClient client = xunfeiWorkflowClientProvider.getIfAvailable();
+        if (client == null) {
+            throw new ClientException("legacy xingchen provider requires LEGACY_XUNFEI_ENABLED=true",
+                    InterviewErrorCodeEnum.DEMEANOR_FILE_UPLOAD_FAILED);
+        }
+        return client;
     }
 
     private InterviewErrorCodeEnum mapAiGuardError(InterviewAiGuardErrorCode errorCode) {

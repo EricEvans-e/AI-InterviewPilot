@@ -19,13 +19,8 @@ import type {
 } from "@/services/teacherService";
 
 const AI_TYPE_OPTIONS = [
-  { value: "deepseek", label: "DeepSeek" },
-  { value: "openai", label: "OpenAI" },
-  { value: "anthropic", label: "Anthropic" },
-  { value: "doubao", label: "豆包" },
-  { value: "spark", label: "讯飞星火" },
-  { value: "qwen", label: "通义千问" },
-  { value: "claude", label: "Claude" },
+  { value: "openai", label: "Mimo OpenAI Compatible" },
+  { value: "anthropic", label: "Mimo Anthropic Compatible" },
 ];
 
 const PAGE_SIZE = 10;
@@ -394,7 +389,7 @@ export default function TeacherAiConfigPage() {
               <Input
                 value={form.aiName}
                 onChange={(e) => setForm({ ...form, aiName: e.target.value })}
-                placeholder="如：DeepSeek-V3"
+                placeholder="如：Mimo V2.5"
               />
             </div>
             <div className="space-y-1.5">
@@ -424,7 +419,7 @@ export default function TeacherAiConfigPage() {
               <Input
                 value={form.modelName}
                 onChange={(e) => setForm({ ...form, modelName: e.target.value })}
-                placeholder="如：deepseek-chat"
+                placeholder="如：mimo-v2.5"
               />
             </div>
             <div className="space-y-1.5">
@@ -434,7 +429,7 @@ export default function TeacherAiConfigPage() {
               <Input
                 value={form.apiUrl}
                 onChange={(e) => setForm({ ...form, apiUrl: e.target.value })}
-                placeholder="https://api.deepseek.com/v1"
+                placeholder="https://token-plan-cn.xiaomimimo.com/v1"
               />
             </div>
           </div>

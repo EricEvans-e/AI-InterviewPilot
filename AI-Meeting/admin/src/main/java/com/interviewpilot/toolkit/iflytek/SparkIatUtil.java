@@ -6,6 +6,7 @@ import jakarta.annotation.Resource;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -19,6 +20,7 @@ import java.util.function.Consumer;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(prefix = "legacy.xunfei", name = "enabled", havingValue = "true")
 public class SparkIatUtil {
 
     /**

@@ -5,6 +5,8 @@ import cn.hutool.crypto.digest.DigestUtil;
 import com.interviewpilot.agent.application.BusinessAgentResolver;
 import com.interviewpilot.agent.application.BusinessAgentScene;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
+import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
+import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.interview.api.io.req.InterviewQuestionReqDTO;
 import com.interviewpilot.interview.api.io.resp.InterviewQuestionRespDTO;
 import com.interviewpilot.interview.application.guard.core.InterviewAiGuardException;
@@ -15,18 +17,23 @@ import com.interviewpilot.interview.shared.InterviewResponseParser;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.toolkit.PdfTextExtractor;
-import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
 import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.redisson.api.RLock;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -41,13 +48,13 @@ public class InterviewQuestionExtractionService {
                     + "Do not output smallTalk, greetings, or fallback chat content.";
 
     private final BusinessAgentResolver businessAgentResolver;
-    private final AgentPropertiesLoader agentPropertiesLoader;
-    private final XunfeiWorkflowClient xunfeiWorkflowClient;
+    private final ObjectProvider<XunfeiWorkflowClient> xunfeiWorkflowClientProvider;
     private final InterviewAiInvoker interviewAiInvoker;
     private final InterviewAiSessionLockService interviewAiSessionLockService;
     private final InterviewQuestionService interviewQuestionService;
     private final InterviewQuestionCacheService interviewQuestionCacheService;
     private final InterviewResponseParser interviewResponseParser;
+    private final ApplicationStorageProperties storageProperties;
 
     public InterviewQuestionRespDTO extractInterviewQuestions(InterviewQuestionReqDTO reqDTO) {
         InterviewQuestionRespDTO response = new InterviewQuestionRespDTO();
@@ -69,22 +76,9 @@ public class InterviewQuestionExtractionService {
                 return response;
             }
 
-            // Mimo/Anthropic 不支持文件上传，用默认出题 agent 上传（仅用于简历预览）
-            AgentPropertiesDO uploadAgent = agentProperties;
             String provider = agentProperties.getAiProvider();
-            if ("openai".equalsIgnoreCase(provider) || "anthropic".equalsIgnoreCase(provider)) {
-                try {
-                    uploadAgent = businessAgentResolver.resolveRequired(BusinessAgentScene.INTERVIEW_QUESTION_EXTRACTION);
-                    if ("openai".equalsIgnoreCase(uploadAgent.getAiProvider()) || "anthropic".equalsIgnoreCase(uploadAgent.getAiProvider())) {
-                        // 当前 active 的也是 Mimo/Anthropic，用 fallback 名称找iFlytek agent
-                        uploadAgent = agentPropertiesLoader.getByAgentName("面试出题官");
-                    }
-                } catch (Exception e) {
-                    log.warn("No agent available for file upload, resume preview will be unavailable");
-                }
-            }
 
-            String fileUrl = uploadResumeIfPresent(reqDTO, uploadAgent, response);
+            String fileUrl = uploadResumeIfPresent(reqDTO, agentProperties, response);
             if (fileUrl == null) {
                 return response;
             }
@@ -195,14 +189,12 @@ public class InterviewQuestionExtractionService {
             response.setErrorMessage("resume file does not exist");
             return null;
         }
-        // Anthropic/Mimo 没有文件上传 API，跳过上传，直接返回空字符串（后续走纯文本 prompt）
         String provider = agentProperties.getAiProvider();
         if ("anthropic".equalsIgnoreCase(provider) || "openai".equalsIgnoreCase(provider)) {
-            log.info("Anthropic provider detected, skipping file upload for extraction");
-            return "";
+            return saveResumeLocally(reqDTO);
         }
         try {
-            String fileUrl = xunfeiWorkflowClient.uploadFile(
+            String fileUrl = legacyXunfeiWorkflowClient().uploadFile(
                     reqDTO.getResumePdf(),
                     agentProperties.getApiKey(),
                     agentProperties.getApiSecret()
@@ -214,6 +206,52 @@ public class InterviewQuestionExtractionService {
             response.setErrorMessage("failed to upload resume file");
             return null;
         }
+    }
+
+    private XunfeiWorkflowClient legacyXunfeiWorkflowClient() {
+        XunfeiWorkflowClient client = xunfeiWorkflowClientProvider.getIfAvailable();
+        if (client == null) {
+            throw new ClientException("legacy xingchen provider requires LEGACY_XUNFEI_ENABLED=true");
+        }
+        return client;
+    }
+
+    private String saveResumeLocally(InterviewQuestionReqDTO reqDTO) {
+        try {
+            Path storageDir = storageProperties.getAgentFilePath();
+            Files.createDirectories(storageDir);
+            String extension = extractFileExt(reqDTO.getResumePdf().getOriginalFilename());
+            String storedFileName = "resume-"
+                    + StrUtil.blankToDefault(reqDTO.getSessionId(), UUID.randomUUID().toString())
+                    + "-"
+                    + UUID.randomUUID()
+                    + (StrUtil.isBlank(extension) ? ".pdf" : "." + extension);
+            Path target = storageDir.resolve(storedFileName).normalize();
+            if (!target.startsWith(storageDir)) {
+                throw new ClientException("invalid resume file path");
+            }
+            try (InputStream inputStream = reqDTO.getResumePdf().getInputStream()) {
+                Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+            log.info("Resume saved locally for Mimo extraction, sessionId={}, file={}",
+                    reqDTO.getSessionId(), storedFileName);
+            return "/agent-files/" + storedFileName;
+        } catch (ClientException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new ClientException("failed to save resume preview file: " + ex.getMessage());
+        }
+    }
+
+    private String extractFileExt(String fileName) {
+        if (StrUtil.isBlank(fileName)) {
+            return null;
+        }
+        int idx = fileName.lastIndexOf('.');
+        if (idx < 0 || idx == fileName.length() - 1) {
+            return null;
+        }
+        return fileName.substring(idx + 1).toLowerCase();
     }
 
     private void persistRawResponse(InterviewQuestionReqDTO reqDTO, String fullContent, long responseTime) {

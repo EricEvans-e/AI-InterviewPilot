@@ -28,5 +28,9 @@ public class WebConfig implements WebMvcConfigurer {
         String recordingDir = storageProperties.getRecordingPath().toAbsolutePath().normalize() + "/";
         registry.addResourceHandler("/recordings/**")
                 .addResourceLocations("file:" + recordingDir);
+
+        String agentFileDir = storageProperties.getAgentFilePath().toAbsolutePath().normalize() + "/";
+        registry.addResourceHandler("/agent-files/**")
+                .addResourceLocations("file:" + agentFileDir);
     }
 }

@@ -8,6 +8,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Response;
 import okhttp3.WebSocket;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -23,6 +24,7 @@ import java.util.function.Consumer;
  */
 @Slf4j
 @Service
+@ConditionalOnProperty(prefix = "legacy.xunfei", name = "enabled", havingValue = "true")
 public class SparkIatService {
 
     /**

@@ -21,6 +21,7 @@ import okhttp3.Response;
 import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 import org.apache.commons.codec.binary.StringUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,6 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "legacy.xunfei", name = "enabled", havingValue = "true")
 public class XunfeiAudioService {
 
     private static final OkHttpClient WS_CLIENT = new OkHttpClient.Builder()

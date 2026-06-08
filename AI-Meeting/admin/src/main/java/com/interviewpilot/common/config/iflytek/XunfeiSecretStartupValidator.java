@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "interview-pilot.security", name = "require-xunfei-secrets", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "interview-pilot.security", name = "require-xunfei-secrets", havingValue = "true")
 public class XunfeiSecretStartupValidator {
 
     private final XunfeiLatProperties properties;

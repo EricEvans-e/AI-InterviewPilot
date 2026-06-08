@@ -416,9 +416,9 @@ flowData:
         schema:
           type: array-string
       nodeParam:
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         toolDescription: 对用户的简历进行评分
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         flowId: '7335939657312624642'
         version: v4.0
       icon: https://oss-beijing-m8.openstorage.cn/pro-bucket/sparkBot/common/workflow/icon/flow-icon.png
@@ -565,10 +565,10 @@ flowData:
       nodeParam:
         repoId:
         - 6bb6f71f98e4470fa76b3aa731d2900f
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         score: 0.1
         search_mode: direct
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         repos:
         - repoId: 6bb6f71f98e4470fa76b3aa731d2900f
           name: 后端题库
@@ -587,7 +587,7 @@ flowData:
           description: ''
           updateTime: '2025-07-11T10:19:35.000+08:00'
           source: 0
-          userId: '19496768956'
+          userId: 'LEGACY_XUNFEI_UID'
           fileCount: 1
           coreRepoId: 6bb6f71f98e4470fa76b3aa731d2900f
           deleted: false
@@ -725,7 +725,7 @@ flowData:
         promptPrefix: 根据{{Query}}来去知识库选择对应方向的面试题
         url: wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat
         multiMode: false
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         modelName: Qwen_v2.5_7b_Instruct
         patchId: '0'
         isThink: false
@@ -761,7 +761,7 @@ flowData:
           nameErrMsg: ''
           descriptionErrMsg: ''
         domain: xqwen257bchat
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         maxTokens: 2048
         temperature: 0.5
         model: spark
@@ -965,13 +965,13 @@ flowData:
         llmId: 10000021
         url: wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat
         multiMode: false
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         modelName: Qwen3-Next-80B-A3B-Instruct
         patchId: '0'
         isThink: false
         templateErrMsg: ''
         domain: xop3qwen80bnext
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         maxTokens: 2048
         temperature: 0.5
         systemTemplate: 把这些从知识库内抽取的题目{{input}},和简历的定制化题目{{resumeQuestions}}合并为一个questions输出,总数控制在10条左右
@@ -1059,7 +1059,7 @@ flowData:
         promptPrefix: 你是一个面试题出题官，同时你还可能在抽取题目后，对用户答案进行检查，如果用户聊与编程无关的，则进入默认意图
         url: wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat
         multiMode: false
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         modelName: Qwen_v2.5_7b_Instruct
         patchId: '0'
         isThink: false
@@ -1077,7 +1077,7 @@ flowData:
           nameErrMsg: ''
           descriptionErrMsg: ''
         domain: xqwen257bchat
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         maxTokens: 2048
         temperature: 0.5
         model: spark
@@ -1176,13 +1176,13 @@ flowData:
         llmId: 10000021
         url: wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat
         multiMode: false
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         modelName: Qwen3-Next-80B-A3B-Instruct
         patchId: '0'
         isThink: false
         templateErrMsg: ''
         domain: xop3qwen80bnext
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         maxTokens: 2048
         temperature: 0.5
         systemTemplate: 现在是面试时间，不能回答用户的非面试题问题，需要引导用户

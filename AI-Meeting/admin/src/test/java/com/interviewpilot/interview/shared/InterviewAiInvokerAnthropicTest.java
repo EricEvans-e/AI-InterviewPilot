@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockMakers;
 import org.mockito.Mockito;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -34,7 +35,7 @@ class InterviewAiInvokerAnthropicTest {
 
     private String invokeDoChat(String input, String sessionId, AgentPropertiesDO agent, String fileUrl, Map<String, Object> params) throws Exception {
         InterviewAiInvoker invoker = new InterviewAiInvoker(
-                xunfeiWorkflowClient,
+                providerOf(xunfeiWorkflowClient),
                 anthropicChatHandler,
                 universalAiChatHandler,
                 aiCallGuardService,
@@ -51,7 +52,7 @@ class InterviewAiInvokerAnthropicTest {
         agent.setAiProvider("anthropic");
         agent.setApiKey("tp-test-key");
         agent.setApiSecret("mimo-v2.5-pro");
-        agent.setApiFlowId("https://token-plan-sgp.xiaomimimo.com/anthropic");
+        agent.setApiFlowId("https://token-plan-cn.xiaomimimo.com/anthropic");
 
         Map<String, Object> params = new HashMap<>();
         params.put("question", "什么是多态？");
@@ -73,7 +74,7 @@ class InterviewAiInvokerAnthropicTest {
         agent.setAiProvider("anthropic");
         agent.setApiKey("tp-test-key");
         agent.setApiSecret("mimo-v2.5-pro");
-        agent.setApiFlowId("https://token-plan-sgp.xiaomimimo.com/anthropic");
+        agent.setApiFlowId("https://token-plan-cn.xiaomimimo.com/anthropic");
 
         Map<String, Object> params = new HashMap<>();
         params.put("question", "什么是微服务？");
@@ -92,7 +93,7 @@ class InterviewAiInvokerAnthropicTest {
         AiPropertiesDO capturedProps = captor.getValue();
         assertEquals("tp-test-key", capturedProps.getApiKey());
         assertEquals("mimo-v2.5-pro", capturedProps.getModelName());
-        assertEquals("https://token-plan-sgp.xiaomimimo.com/anthropic", capturedProps.getApiUrl());
+        assertEquals("https://token-plan-cn.xiaomimimo.com/anthropic", capturedProps.getApiUrl());
     }
 
     @Test
@@ -144,5 +145,29 @@ class InterviewAiInvokerAnthropicTest {
         String prompt = promptCaptor.getValue();
         assertEquals(true, prompt.contains("追问"), "prompt 应包含追问描述");
         assertEquals(true, prompt.contains("第 2/3 次追问"), "prompt 应包含追问次数");
+    }
+
+    private ObjectProvider<XunfeiWorkflowClient> providerOf(XunfeiWorkflowClient client) {
+        return new ObjectProvider<>() {
+            @Override
+            public XunfeiWorkflowClient getObject(Object... args) {
+                return client;
+            }
+
+            @Override
+            public XunfeiWorkflowClient getIfAvailable() {
+                return client;
+            }
+
+            @Override
+            public XunfeiWorkflowClient getIfUnique() {
+                return client;
+            }
+
+            @Override
+            public XunfeiWorkflowClient getObject() {
+                return client;
+            }
+        };
     }
 }

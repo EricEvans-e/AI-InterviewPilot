@@ -6,7 +6,7 @@ import {
 } from "@/hooks/audio/chatTtsPlayback.shared";
 import { useChatTtsAudioCache } from "@/hooks/audio/useChatTtsAudioCache";
 import { useChatTtsAudioElement } from "@/hooks/audio/useChatTtsAudioElement";
-import { xunfeiTtsService } from "@/services/xunfeiTtsService";
+import { mimoTtsService } from "@/services/mimoTtsService";
 
 export function useChatTtsPlayback(messages: ChatMessage[]) {
   const loadingControllerRef = useRef<AbortController | null>(null);
@@ -105,7 +105,7 @@ export function useChatTtsPlayback(messages: ChatMessage[]) {
           }
         }
 
-        const task = await xunfeiTtsService.synthesize(
+        const task = await mimoTtsService.synthesize(
           {
             ...INTERVIEW_QUESTION_TTS_REQUEST,
             text: ttsText,

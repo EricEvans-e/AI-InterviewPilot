@@ -342,11 +342,11 @@ flowData:
         handlingEdge: normal_one_of::b11073d5-950f-452d-96eb-5bbc5186aaf7
         auditing: default
         llmId: 10000021
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         patchId: '0'
         isThink: false
         templateErrMsg: ''
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         maxTokens: 2048
         temperature: 0.5
         model: spark

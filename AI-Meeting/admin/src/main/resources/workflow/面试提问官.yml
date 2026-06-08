@@ -377,13 +377,13 @@ flowData:
         llmId: 10000021
         url: wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat
         multiMode: false
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         modelName: Qwen3-Next-80B-A3B-Instruct
         patchId: '0'
         isThink: false
         templateErrMsg: ''
         domain: xop3qwen80bnext
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         maxTokens: 2048
         temperature: 0.5
         systemTemplate: |+
@@ -571,7 +571,7 @@ flowData:
           default: ''
         required: false
       nodeParam:
-        uid: '19496768956'
+        uid: 'LEGACY_XUNFEI_UID'
         code: |
           import json
           import re
@@ -656,7 +656,7 @@ flowData:
                   "difficulty": "MEDIUM",
                   "ask_to_user": ask
               }
-        appId: 12a0a7e2
+        appId: LEGACY_XUNFEI_APP_ID
         codeErrMsg: ''
       icon: https://oss-beijing-m8.openstorage.cn/SparkBotProd/icon/icon-wrapper-question.svg
       description: 面向开发者提供代码开发能力，目前仅支持python语言，允许使用该节点已定义的变量作为参数传入，返回语句用于输出函数的结果

@@ -123,11 +123,7 @@ public class QuestionAiGenerateService {
         } else if (StrUtil.isNotBlank(aiType)) {
             aiProperties = aiPropertiesService.getEnabledByAiType(aiType);
         } else {
-            // 使用默认AI配置（优先 DeepSeek）
-            aiProperties = aiPropertiesService.getEnabledByAiType("deepseek");
-            if (aiProperties == null) {
-                aiProperties = aiPropertiesService.getDefaultDoubaoConfig();
-            }
+            aiProperties = aiPropertiesService.getDefaultMimoConfig();
         }
 
         if (aiProperties == null) {

@@ -6,12 +6,14 @@ import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
 import com.interviewpilot.ai.service.chat.AnthropicChatHandler;
 import com.interviewpilot.ai.service.chat.UniversalAiChatHandler;
 import com.interviewpilot.agent.dao.entity.AgentPropertiesDO;
+import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.interview.application.guard.core.AiCallGuardService;
 import com.interviewpilot.interview.application.guard.core.InterviewAiGuardStage;
 import com.interviewpilot.interview.application.guard.singleflight.service.DistributedInterviewAiSingleFlightService;
 import com.interviewpilot.toolkit.iflytek.XunfeiWorkflowClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.io.OutputStream;
@@ -29,7 +31,11 @@ import java.util.concurrent.Callable;
 @RequiredArgsConstructor
 public class InterviewAiInvoker {
 
-    private final XunfeiWorkflowClient xunfeiWorkflowClient;
+    private static final String PROVIDER_OPENAI = "openai";
+    private static final String PROVIDER_ANTHROPIC = "anthropic";
+    private static final String PROVIDER_XINGCHEN = "xingchen";
+
+    private final ObjectProvider<XunfeiWorkflowClient> xunfeiWorkflowClientProvider;
     private final AnthropicChatHandler anthropicChatHandler;
     private final UniversalAiChatHandler universalAiChatHandler;
     private final AiCallGuardService aiCallGuardService;
@@ -148,13 +154,17 @@ public class InterviewAiInvoker {
             String fileUrl,
             Map<String, Object> parameters) throws Exception {
         String aiProvider = agentProperties.getAiProvider();
-        if ("anthropic".equalsIgnoreCase(aiProvider)) {
+        if (PROVIDER_ANTHROPIC.equalsIgnoreCase(aiProvider)) {
             return doChatAnthropic(input, sessionId, agentProperties, parameters);
         }
-        if ("openai".equalsIgnoreCase(aiProvider)) {
+        if (PROVIDER_OPENAI.equalsIgnoreCase(aiProvider)) {
             return doChatOpenAI(input, sessionId, agentProperties, parameters);
         }
-        return doChatXunfei(input, sessionId, agentProperties, fileUrl, parameters);
+        if (PROVIDER_XINGCHEN.equalsIgnoreCase(aiProvider)) {
+            return doChatXunfei(input, sessionId, agentProperties, fileUrl, parameters);
+        }
+        throw new ClientException("unsupported interview AI provider: "
+                + StrUtil.blankToDefault(aiProvider, PROVIDER_OPENAI));
     }
 
     private String doChatXunfei(
@@ -164,7 +174,7 @@ public class InterviewAiInvoker {
             String fileUrl,
             Map<String, Object> parameters) throws Exception {
         StringBuilder aiResponse = new StringBuilder();
-        xunfeiWorkflowClient.chat(
+        legacyXunfeiWorkflowClient().chat(
                 input,
                 StrUtil.isNotBlank(sessionId) ? sessionId : "evaluation_" + System.currentTimeMillis(),
                 "{}",
@@ -188,6 +198,14 @@ public class InterviewAiInvoker {
                 parameters
         );
         return aiResponse.toString();
+    }
+
+    private XunfeiWorkflowClient legacyXunfeiWorkflowClient() {
+        XunfeiWorkflowClient client = xunfeiWorkflowClientProvider.getIfAvailable();
+        if (client == null) {
+            throw new ClientException("legacy xingchen provider requires LEGACY_XUNFEI_ENABLED=true");
+        }
+        return client;
     }
 
     /**

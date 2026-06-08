@@ -2,8 +2,8 @@ package com.interviewpilot.media.infrastructure.websocket;
 
 import com.alibaba.fastjson2.JSON;
 import com.interviewpilot.auth.application.WebSocketAuthService;
-import com.interviewpilot.media.infrastructure.integration.XunfeiAudioService;
-import com.interviewpilot.media.infrastructure.integration.XunfeiAudioService.RealtimeTranscriptionUpdate;
+import com.interviewpilot.media.infrastructure.integration.MimoAudioService;
+import com.interviewpilot.media.infrastructure.integration.MimoAudioService.RealtimeTranscriptionUpdate;
 import jakarta.websocket.CloseReason;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
@@ -38,16 +38,16 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @Slf4j
 @Component
-@ServerEndpoint(value = "/api/ip/v1/xunfei/audio-to-text/{userId}")
+@ServerEndpoint(value = "/api/ip/v1/mimo/audio-to-text/{userId}")
 public class AudioTranscriptionWebSocketHandler {
 
-    private static volatile XunfeiAudioService xunfeiAudioService;
+    private static volatile MimoAudioService mimoAudioService;
     private static volatile WebSocketAuthService webSocketAuthService;
     private static volatile ScheduledExecutorService heartbeatExecutor;
 
     @Autowired
-    public void setXunfeiAudioService(XunfeiAudioService service) {
-        AudioTranscriptionWebSocketHandler.xunfeiAudioService = service;
+    public void setMimoAudioService(MimoAudioService service) {
+        AudioTranscriptionWebSocketHandler.mimoAudioService = service;
     }
 
     @Autowired
@@ -257,8 +257,8 @@ public class AudioTranscriptionWebSocketHandler {
     private TranscriptionSessionContext createAndStartTranscriptionSession(Session session, String userId) {
         String sessionId = session.getId();
         try {
-            if (xunfeiAudioService == null) {
-                log.error("XunfeiAudioService is not injected yet, cannot start transcription. sessionId={}", sessionId);
+            if (mimoAudioService == null) {
+                log.error("MimoAudioService is not injected yet, cannot start transcription. sessionId={}", sessionId);
                 return null;
             }
             PipedInputStream audioInputStream = new PipedInputStream(64 * 1024);
@@ -266,7 +266,7 @@ public class AudioTranscriptionWebSocketHandler {
             AtomicBoolean active = new AtomicBoolean(true);
             TranscriptionSessionContext context = new TranscriptionSessionContext(audioInputStream, audioOutputStream, active);
 
-            CompletableFuture<String> future = xunfeiAudioService.realTimeAudioToText(audioInputStream, update ->
+            CompletableFuture<String> future = mimoAudioService.realTimeAudioToText(audioInputStream, update ->
                     {
                         context.lastUpdate.set(update);
                         sendMessage(session, createResponse("transcription", "Partial snapshot", update, true));
@@ -279,7 +279,7 @@ public class AudioTranscriptionWebSocketHandler {
                     sendMessage(session, createResponse("error", "Transcription failed: " + throwable.getMessage(), null));
                 } else {
                     log.info("Transcription finished, userId={}, sessionId={}", userId, sessionId);
-                    if (!context.stopRequested.get() && finalResult != null) {
+                    if (finalResult != null) {
                         sendMessage(session, createResponse("final", "Transcription completed",
                                 buildFinalUpdate(finalResult, context.lastUpdate.get()), true));
                     }

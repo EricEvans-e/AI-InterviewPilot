@@ -23,6 +23,7 @@ public class ApplicationStorageInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         createDirectory(storageProperties.getBasePath());
         createDirectory(storageProperties.getUploadTempPath());
+        createDirectory(storageProperties.getAgentFilePath());
         createDirectory(storageProperties.getAudioTempPath());
         createDirectory(storageProperties.getLogPath());
         log.info("Runtime storage ready, baseDir={}", storageProperties.getBasePath());

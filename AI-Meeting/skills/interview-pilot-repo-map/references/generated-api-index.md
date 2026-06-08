@@ -61,10 +61,10 @@
 | `media` | `admin/src/main/java/com/interviewpilot/media/api/WebSocketController.java` | `WebSocketController` | `POST /api/ip/v1/websocket/notification/{userId}` | `sendNotification` | 未显式声明 |  |
 | `media` | `admin/src/main/java/com/interviewpilot/media/api/WebSocketController.java` | `WebSocketController` | `POST /api/ip/v1/websocket/send-message` | `sendMessage` | 未显式声明 |  |
 | `media` | `admin/src/main/java/com/interviewpilot/media/api/WebSocketController.java` | `WebSocketController` | `POST /api/ip/v1/websocket/transcription/{userId}` | `sendTranscriptionResult` | 未显式声明 |  |
-| `media` | `admin/src/main/java/com/interviewpilot/media/api/XunfeiTtsController.java` | `XunfeiTtsController` | `GET /api/ip/v1/xunfei/tts/tasks/{taskId}` | `queryTask` | 未显式声明 |  |
-| `media` | `admin/src/main/java/com/interviewpilot/media/api/XunfeiTtsController.java` | `XunfeiTtsController` | `POST /api/ip/v1/xunfei/tts/synthesize` | `synthesizeAndWait` | 未显式声明 |  |
-| `media` | `admin/src/main/java/com/interviewpilot/media/api/XunfeiTtsController.java` | `XunfeiTtsController` | `POST /api/ip/v1/xunfei/tts/tasks` | `createTask` | 未显式声明 |  |
-| `media` | `admin/src/main/java/com/interviewpilot/media/infrastructure/websocket/AudioTranscriptionWebSocketHandler.java` | `AudioTranscriptionWebSocketHandler` | `WEBSOCKET /api/ip/v1/xunfei/audio-to-text/{userId}` | `onOpen/onMessage/onClose` | 需要 | 实时转写 |
+| `media` | `admin/src/main/java/com/interviewpilot/media/api/XunfeiTtsController.java` | `XunfeiTtsController` | `GET /api/ip/v1/mimo/tts/tasks/{taskId}` | `queryTask` | 未显式声明 |  |
+| `media` | `admin/src/main/java/com/interviewpilot/media/api/XunfeiTtsController.java` | `XunfeiTtsController` | `POST /api/ip/v1/mimo/tts/synthesize` | `synthesizeAndWait` | 未显式声明 |  |
+| `media` | `admin/src/main/java/com/interviewpilot/media/api/XunfeiTtsController.java` | `XunfeiTtsController` | `POST /api/ip/v1/mimo/tts/tasks` | `createTask` | 未显式声明 |  |
+| `media` | `admin/src/main/java/com/interviewpilot/media/infrastructure/websocket/AudioTranscriptionWebSocketHandler.java` | `AudioTranscriptionWebSocketHandler` | `WEBSOCKET /api/ip/v1/mimo/audio-to-text/{userId}` | `onOpen/onMessage/onClose` | 需要 | 实时转写 |
 | `user` | `admin/src/main/java/com/interviewpilot/user/api/UserController.java` | `UserController` | `GET /api/ip/v1/users/actual/{username}` | `getActualUserByUsername` | 未显式声明 |  |
 | `user` | `admin/src/main/java/com/interviewpilot/user/api/UserController.java` | `UserController` | `GET /api/ip/v1/users/check-login` | `checkLogin` | 未显式声明 |  |
 | `user` | `admin/src/main/java/com/interviewpilot/user/api/UserController.java` | `UserController` | `GET /api/ip/v1/users/has-username` | `hasUsername` | 未显式声明 |  |

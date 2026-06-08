@@ -18,6 +18,8 @@ public class ApplicationStorageProperties {
 
     private String uploadTempDir;
 
+    private String agentFileDir;
+
     private String audioTempDir;
 
     private String logDir;
@@ -30,6 +32,13 @@ public class ApplicationStorageProperties {
 
     public Path getUploadTempPath() {
         return Path.of(uploadTempDir).toAbsolutePath().normalize();
+    }
+
+    public Path getAgentFilePath() {
+        String path = agentFileDir == null || agentFileDir.isBlank()
+                ? getBasePath().resolve("agent-files").toString()
+                : agentFileDir;
+        return Path.of(path).toAbsolutePath().normalize();
     }
 
     public Path getAudioTempPath() {

@@ -6,8 +6,11 @@ import java.nio.charset.StandardCharsets;
 public class WorkflowRequest {
 
     public static void main(String[] args) throws Exception {
-        String apiKey = "e8565c438f59b301616e0498a86ad95d";
-        String apiSecret = "OGZkZGQ5ZDY0Yzc4MTllZWI3ZmU2MDU4";
+        String apiKey = System.getenv("LEGACY_XUNFEI_API_KEY");
+        String apiSecret = System.getenv("LEGACY_XUNFEI_API_SECRET");
+        if (apiKey == null || apiKey.isBlank() || apiSecret == null || apiSecret.isBlank()) {
+            throw new IllegalStateException("Set LEGACY_XUNFEI_API_KEY and LEGACY_XUNFEI_API_SECRET to run this legacy smoke test");
+        }
 
         String urlString = "https://xingchen-api.xf-yun.com/workflow/v1/chat/completions";
         URL url = new URL(urlString);

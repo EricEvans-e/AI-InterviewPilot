@@ -84,4 +84,11 @@ describe("AudioToTextWebSocket message handling", () => {
 
     expect(onTranscription).toHaveBeenCalledWith("");
   });
+
+  it("uses the Mimo transcription websocket endpoint", () => {
+    const url = (instance as unknown as { url: string }).url;
+
+    expect(url).toContain("/api/ip/v1/mimo/audio-to-text/tester");
+    expect(url).not.toContain("/xunfei/");
+  });
 });

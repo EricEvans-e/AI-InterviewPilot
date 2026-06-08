@@ -19,7 +19,7 @@ import { useInterviewRouteRecovery } from "@/hooks/interview/session/useIntervie
 import { useInterviewSessionStorage } from "@/hooks/interview/session/useInterviewSessionStorage";
 import { generateRequestId } from "@/hooks/interview/shared/interviewUtils";
 import { interviewService } from "@/services/interviewService";
-import { xunfeiTtsService } from "@/services/xunfeiTtsService";
+import { mimoTtsService } from "@/services/mimoTtsService";
 
 export function useInterviewSessionFlow(user: InterviewFlowUser) {
   const navigate = useNavigate();
@@ -107,7 +107,7 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
     // Fire and forget — do not block the UI flow
     (async () => {
       try {
-        const task = await xunfeiTtsService.synthesize({ text });
+        const task = await mimoTtsService.synthesize({ text });
 
         let audioSrc: string;
         if (task.audioBase64) {

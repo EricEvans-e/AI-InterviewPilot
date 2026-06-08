@@ -36,7 +36,7 @@ export class AudioToTextWebSocket {
   private buildWebSocketUrl(userId: string) {
     const wsBase = this.resolveWebSocketBaseUrl();
     const apiBase = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
-    const path = `${apiBase}/ip/v1/xunfei/audio-to-text/${encodeURIComponent(userId)}`;
+    const path = `${apiBase}/ip/v1/mimo/audio-to-text/${encodeURIComponent(userId)}`;
     const token = getAuthToken();
 
     if (!token) {

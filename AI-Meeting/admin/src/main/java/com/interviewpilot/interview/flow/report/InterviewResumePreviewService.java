@@ -1,6 +1,7 @@
 package com.interviewpilot.interview.flow.report;
 
 import cn.hutool.core.util.StrUtil;
+import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.common.convention.exception.ServiceException;
 import com.interviewpilot.interview.dao.entity.InterviewQuestion;
@@ -15,6 +16,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -29,6 +32,7 @@ public class InterviewResumePreviewService {
 
     private final InterviewQuestionService interviewQuestionService;
     private final InterviewSessionService interviewSessionService;
+    private final ApplicationStorageProperties storageProperties;
 
     public ResumePreviewResource loadResumePreview(String sessionId) {
         InterviewQuestion question = interviewQuestionService.getBySessionId(sessionId);
@@ -39,6 +43,10 @@ public class InterviewResumePreviewService {
         }
         if (StrUtil.isBlank(resumeFileUrl)) {
             throw new ClientException("Resume preview source is missing");
+        }
+
+        if (isLocalAgentFileUrl(resumeFileUrl)) {
+            return loadLocalAgentFile(resumeFileUrl.trim(), sessionId);
         }
 
         Request request = new Request.Builder()
@@ -69,7 +77,42 @@ public class InterviewResumePreviewService {
         }
     }
 
+    private ResumePreviewResource loadLocalAgentFile(String sourceUrl, String sessionId) {
+        Path agentFileDir = storageProperties.getAgentFilePath();
+        String relativePath = sourceUrl.substring("/agent-files/".length());
+        Path filePath = agentFileDir.resolve(relativePath).normalize();
+        if (!filePath.startsWith(agentFileDir)) {
+            throw new ClientException("Resume preview source is invalid");
+        }
+
+        try {
+            byte[] content = Files.readAllBytes(filePath);
+            if (content.length == 0) {
+                throw new ServiceException("Failed to load resume preview: empty content");
+            }
+            return new ResumePreviewResource(
+                    content,
+                    resolveContentType(content, null),
+                    resolveFileName(sourceUrl, sessionId)
+            );
+        } catch (ClientException | ServiceException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new ServiceException("Failed to load local resume preview: " + ex.getMessage());
+        }
+    }
+
+    private boolean isLocalAgentFileUrl(String resumeFileUrl) {
+        return resumeFileUrl != null && resumeFileUrl.trim().startsWith("/agent-files/");
+    }
+
     private String resolveFileName(String sourceUrl, String sessionId) {
+        if (sourceUrl != null && sourceUrl.startsWith("/agent-files/")) {
+            String lastSegment = sourceUrl.substring(sourceUrl.lastIndexOf('/') + 1);
+            if (StrUtil.isNotBlank(lastSegment)) {
+                return lastSegment.endsWith(".pdf") ? lastSegment : lastSegment + ".pdf";
+            }
+        }
         HttpUrl parsedUrl = HttpUrl.parse(sourceUrl);
         if (parsedUrl != null && parsedUrl.pathSize() > 0) {
             String lastSegment = parsedUrl.pathSegments().get(parsedUrl.pathSize() - 1);

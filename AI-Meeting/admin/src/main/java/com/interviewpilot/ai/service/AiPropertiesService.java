@@ -34,11 +34,10 @@ public interface AiPropertiesService extends IService<AiPropertiesDO> {
 
     AiPropertiesDO getEnabledByAiType(String aiType);
 
-    AiPropertiesDO getDefaultDoubaoConfig();
+    AiPropertiesDO getDefaultMimoConfig();
 
     /**
      * 获取所有可用AI模型（用于前端下拉列表）
      */
     List<AiModelOptionRespDTO> getAvailableAiModels();
 }
-
