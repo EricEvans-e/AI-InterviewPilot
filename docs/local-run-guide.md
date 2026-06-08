@@ -374,3 +374,4 @@ rg -n "tp-[A-Za-z0-9]{20,}" . -S
 | TTS 成功但无声音 | 检查后端返回的 `audioBase64` 是否为空，并查看 `MimoAudioService` 日志 |
 | MySQL 密码不对 | 本地 compose 默认 root 密码是 `122333`；如果通过 `.env` 覆盖，以 `.env` 为准 |
 | 端口冲突 | 修改 `docker-compose.yml` 或 `docker-compose.prod.yml` 中对应端口映射，或停止本机已有服务 |
+| Redis 启动时报 `Bind for 0.0.0.0:6379 failed` | 先执行 `docker stop interviewpilot-redis` 释放 6379，再重新执行 `docker compose up -d mysql mongo redis` |

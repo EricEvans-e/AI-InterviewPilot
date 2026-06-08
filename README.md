@@ -430,6 +430,7 @@ rg -n "tp-[A-Za-z0-9]{20,}" . -S
 | ASR 没有最终文本 | 需要发送 `stop_transcription` 结束音频流，后端才会调用 Mimo ASR 返回最终文本 |
 | TTS 成功但没声音 | 检查后端返回的 `audioBase64` 是否为空，查看 `MimoAudioService` 调用日志 |
 | MySQL 密码不对 | 本地 compose 默认 root 密码通常是 `122333`；如果使用 `.env` 覆盖，请以 `.env` 为准 |
+| Redis 报 `Bind for 0.0.0.0:6379 failed` | 说明本机已有 Redis 占用 6379；先执行 `docker stop interviewpilot-redis`，再重试 `docker compose up -d mysql mongo redis` |
 
 ---
 
