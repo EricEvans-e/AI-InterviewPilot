@@ -42,10 +42,19 @@ public class InterviewQuestionExtractionService {
 
     private static final int MAX_EMPTY_QUESTIONS_RETRIES = 2;
 
+    private static final int MIN_USABLE_RESUME_TEXT_LENGTH = 80;
+
+    private static final int MAX_VISION_OCR_PAGES = 3;
+
     private static final String EXTRACTION_PROMPT =
             "Extract technical interview questions from the uploaded resume. "
                     + "Return JSON only with keys questions, sugest, type, and resumeScore. "
                     + "Do not output smallTalk, greetings, or fallback chat content.";
+
+    private static final String VISION_OCR_PROMPT =
+            "OCR this scanned resume page. Return only the readable resume text. "
+                    + "Keep names, education, work experience, projects, skills, metrics, and dates. "
+                    + "Do not generate interview questions in this step.";
 
     private final BusinessAgentResolver businessAgentResolver;
     private final ObjectProvider<XunfeiWorkflowClient> xunfeiWorkflowClientProvider;
@@ -86,11 +95,7 @@ public class InterviewQuestionExtractionService {
             // Anthropic/Mimo 不支持文件上传，需要将 PDF 转为文本后通过 prompt 传递
             Map<String, Object> extractionParams = null;
             if ("anthropic".equalsIgnoreCase(provider) || "openai".equalsIgnoreCase(provider)) {
-                String resumeText = PdfTextExtractor.extractText(reqDTO.getResumePdf());
-                if (StrUtil.isNotBlank(resumeText)) {
-                    extractionParams = new HashMap<>();
-                    extractionParams.put("resume_text", resumeText);
-                }
+                extractionParams = resolveResumeExtractionParams(reqDTO, agentProperties);
             }
 
             String fullContent = null;
@@ -214,6 +219,89 @@ public class InterviewQuestionExtractionService {
             throw new ClientException("legacy xingchen provider requires LEGACY_XUNFEI_ENABLED=true");
         }
         return client;
+    }
+
+    private Map<String, Object> resolveResumeExtractionParams(
+            InterviewQuestionReqDTO reqDTO,
+            AgentPropertiesDO agentProperties) throws Exception {
+        Map<String, Object> extractionParams = new HashMap<>();
+        String resumeText = PdfTextExtractor.extractText(reqDTO.getResumePdf());
+        if (isUsableResumeText(resumeText)) {
+            extractionParams.put("resume_text", resumeText);
+            extractionParams.put("resume_extraction_mode", "pdf_text");
+            return extractionParams;
+        }
+
+        if (!"openai".equalsIgnoreCase(agentProperties.getAiProvider())) {
+            if (StrUtil.isNotBlank(resumeText)) {
+                extractionParams.put("resume_text", resumeText);
+                extractionParams.put("resume_extraction_mode", "pdf_text_short");
+            }
+            return extractionParams.isEmpty() ? null : extractionParams;
+        }
+
+        String visionText = extractResumeTextFromRenderedPages(reqDTO, agentProperties);
+        if (StrUtil.isNotBlank(visionText)) {
+            extractionParams.put("resume_text", visionText);
+            extractionParams.put("resume_extraction_mode", "pdf_image_vision_ocr");
+            return extractionParams;
+        }
+
+        if (StrUtil.isNotBlank(resumeText)) {
+            extractionParams.put("resume_text", resumeText);
+            extractionParams.put("resume_extraction_mode", "pdf_text_short");
+            return extractionParams;
+        }
+        return null;
+    }
+
+    private boolean isUsableResumeText(String resumeText) {
+        if (StrUtil.isBlank(resumeText)) {
+            return false;
+        }
+        String compact = resumeText.replaceAll("\\s+", "");
+        return compact.length() >= MIN_USABLE_RESUME_TEXT_LENGTH;
+    }
+
+    private String extractResumeTextFromRenderedPages(
+            InterviewQuestionReqDTO reqDTO,
+            AgentPropertiesDO agentProperties) throws Exception {
+        List<byte[]> renderedPages = PdfTextExtractor.renderFirstPagesAsPng(reqDTO.getResumePdf(), MAX_VISION_OCR_PAGES);
+        if (renderedPages.isEmpty()) {
+            log.warn("Vision OCR skipped because PDF rendering returned no pages, sessionId={}", reqDTO.getSessionId());
+            return null;
+        }
+
+        StringBuilder extractedText = new StringBuilder();
+        for (int i = 0; i < renderedPages.size(); i++) {
+            byte[] pageImage = renderedPages.get(i);
+            String singleFlightKey = interviewAiInvoker.buildSingleFlightKey(
+                    InterviewAiGuardStage.INTERVIEW_EXTRACTION,
+                    reqDTO.getSessionId(),
+                    "vision-ocr-page-" + (i + 1)
+            );
+            String pageText = interviewAiInvoker.callAiSyncWithImage(
+                    VISION_OCR_PROMPT + "\nPage: " + (i + 1),
+                    reqDTO.getSessionId(),
+                    agentProperties,
+                    pageImage,
+                    "image/png",
+                    InterviewAiGuardStage.INTERVIEW_EXTRACTION,
+                    singleFlightKey
+            );
+            if (StrUtil.isNotBlank(pageText)) {
+                extractedText
+                        .append("\n\n[PDF page ")
+                        .append(i + 1)
+                        .append("]\n")
+                        .append(pageText.trim());
+            }
+        }
+
+        String text = extractedText.toString().trim();
+        log.info("Vision OCR extracted resume text, sessionId={}, pageCount={}, textLength={}",
+                reqDTO.getSessionId(), renderedPages.size(), text.length());
+        return text;
     }
 
     private String saveResumeLocally(InterviewQuestionReqDTO reqDTO) {

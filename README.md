@@ -50,7 +50,7 @@
 
 | 功能模块 | 说明 |
 |---------|------|
-| **智能简历解析** | 上传 PDF 简历后，AI 自动解析内容并生成与经历深度关联的个性化面试题目 |
+| **智能简历解析** | 上传 PDF 简历后优先抽取文本层，扫描版 PDF 会渲染为图片并通过 Mimo 视觉模型读取，再生成与经历深度关联的个性化面试题目 |
 | **数字人模拟面试** | 支持真人风格数字人面试官，TTS 语音播报题目，模拟真实面试场景 |
 | **多种面试模式** | 结构化面试、半结构化面试、专业认知面试、综合素质面试 |
 | **实时语音交互** | 基于 WebSocket 接收麦克风音频，停止转写后由 Mimo ASR 返回最终文本 |
@@ -200,6 +200,7 @@ AI-InterviewPilot/
 ### Report readiness notes
 
 - The report page is now designed to show base report data first and keep waiting for delayed assets instead of failing fast on the first timeout.
+- Resume PDF analysis is text-first. If the uploaded PDF has no usable text layer, the backend renders up to the first 3 pages as PNG images and uses the Mimo vision path to read the resume before generating interview questions.
 - Interview recording playback can appear a little later than the first report payload. The frontend now keeps polling for the recording URL for about one minute before giving up.
 - Reference answers are manual on the report page. Clicking `生成参考答案` sends a longer-lived request and, if the request times out on the client side, the frontend continues polling the saved report result before surfacing an error.
 - Final report persistence no longer blocks on synchronous AI review-summary generation. The first saved snapshot uses fast rule-based review content so the page can open earlier.

@@ -171,6 +171,7 @@ OpenAI 兼容地址保留 `/v1`，代码会自动拼接 `/chat/completions`。`m
 
 - Interview question generation, follow-up questions, and normal interview chat still default to `mimo-v2.5`.
 - `mimo-v2.5-pro` should remain reserved for pure-text high-reasoning chat paths. Do not bind it to visual flows such as demeanor/image analysis.
+- Resume-based interview question generation is also a possible vision path: normal PDFs use extracted text, but scanned PDFs are rendered to PNG pages and read through the Mimo vision OCR fallback before question generation. Keep the interview-question extraction agent on `mimo-v2.5`.
 - Final report persistence no longer waits for a synchronous AI review-summary call. The first saved report snapshot uses fast rule-based review content so the report page can open earlier.
 - Manual reference-answer generation still uses AI, but it is no longer part of the first report-load critical path.
 - Manual interview-conclusion generation now follows the same pattern: the first report load shows rule-based `reviewFeedback`, and the report page exposes a separate `生成 AI 结论` action for the slower AI summary path.

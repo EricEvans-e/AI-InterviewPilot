@@ -390,6 +390,9 @@ rg -n "tp-[A-Za-z0-9]{20,}" . -S
 
 ## Report and Reference Answer Runtime Notes
 
+- Resume PDF extraction is text-first. For normal PDFs, PDFBox text extraction is passed to the interview-question model as `resume_text` with `resume_extraction_mode=pdf_text`.
+- If a resume PDF has no usable text layer, the backend renders up to the first 3 pages as PNG images and asks the OpenAI-compatible Mimo vision model to OCR the resume before generating questions. The interview-question extraction agent must therefore use a vision-capable model such as `mimo-v2.5`, not pure-text `mimo-v2.5-pro`.
+- For scanned resume PDFs, backend logs should include `PDF pages rendered for vision OCR` and `Vision OCR extracted resume text` before the normal question-generation response is parsed.
 - Final report persistence now uses a fast first snapshot. The backend does not block report creation on a synchronous AI review-summary call.
 - When report creation or finalize is still in progress, the frontend treats timeout/finalize states as transient and keeps polling instead of failing immediately.
 - Recording playback can appear after the first report payload because `recordingUrl` may be written back later than the base interview record. The frontend now polls for the recording URL for roughly 60 seconds.
