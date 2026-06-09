@@ -26,6 +26,8 @@ public class InterviewTurnLog {
 
     private String feedback;
 
+    private String referenceAnswer;
+
     private Boolean followUpNeeded;
 
     private Boolean isFollowUp;

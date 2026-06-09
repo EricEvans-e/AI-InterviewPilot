@@ -74,6 +74,7 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
     private final DimensionScoreStrategy dimensionScoreStrategy;
     private final WeightedRadarComputationStrategy weightedRadarComputationStrategy;
     private final InterviewReportAiReviewService interviewReportAiReviewService;
+    private final InterviewReferenceAnswerService interviewReferenceAnswerService;
 
     @Override
     public void saveInterviewRecord(String sessionId, Long userId, InterviewRecordSaveReqDTO requestParam) {
@@ -523,6 +524,11 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
             String interviewSuggestions,
             InterviewRecordDO record) {
         List<InterviewTurnLog> turns = runtimeSnapshotService.loadPersistedTurns(session.getSessionId());
+        turns = interviewReferenceAnswerService.attachReferenceAnswers(
+                session.getSessionId(),
+                interviewDirection,
+                turns
+        );
         RadarChartDTO radarChart = interviewQuestionCacheService.getRadarChartData(session.getSessionId());
 
         // 将 7 维分数写入雷达图 DTO，确保快照包含完整维度数据
@@ -583,6 +589,11 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         if (turns == null || turns.isEmpty()) {
             turns = runtimeSnapshotService.loadPersistedTurns(sessionId);
         }
+        turns = interviewReferenceAnswerService.attachReferenceAnswers(
+                sessionId,
+                record == null ? null : record.getInterviewDirection(),
+                turns
+        );
         respDTO.setPlaybackItems(buildPlaybackItems(turns));
         respDTO.setReviewFeedback(resolveReviewFeedback(snapshot, turns, radarChart, record));
     }
@@ -946,6 +957,7 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
             item.setAnswerContent(turn.getAnswerContent());
             item.setScore(turn.getScore());
             item.setFeedback(turn.getFeedback());
+            item.setReferenceAnswer(turn.getReferenceAnswer());
             item.setTotalScore(turn.getTotalScore());
             item.setFollowUpNeeded(turn.getFollowUpNeeded());
             item.setIsFollowUp(turn.getIsFollowUp());

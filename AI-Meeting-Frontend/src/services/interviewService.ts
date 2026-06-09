@@ -121,6 +121,7 @@ export interface InterviewQaReview {
   answer?: string | null;
   score?: number | string | null;
   feedback?: string | null;
+  referenceAnswer?: string | null;
   isFollowUp?: boolean | null;
   followUpNeeded?: boolean | null;
   followUpCount?: number | string | null;

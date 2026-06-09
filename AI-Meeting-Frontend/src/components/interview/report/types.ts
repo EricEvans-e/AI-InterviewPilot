@@ -10,6 +10,7 @@ export type QaReview = {
   answer: string;
   score: number | null;
   feedback?: string | null;
+  referenceAnswer?: string | null;
   isFollowUp?: boolean;
   followUpNeeded?: boolean;
   followUpCount?: number | null;

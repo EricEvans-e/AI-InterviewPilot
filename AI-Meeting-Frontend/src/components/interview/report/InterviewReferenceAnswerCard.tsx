@@ -15,12 +15,15 @@ type ReferenceItem = {
   key: string;
   label: string;
   question: string;
-  feedback: string;
+  referenceAnswer: string;
 };
 
 const buildReferenceItems = (qaReviews: QaReview[]): ReferenceItem[] => {
   return qaReviews
-    .filter((item) => item.feedback && item.feedback.trim().length > 0)
+    .filter(
+      (item) =>
+        item.referenceAnswer && item.referenceAnswer.trim().length > 0,
+    )
     .map((item, index) => {
       const label = item.isFollowUp
         ? `追问 ${item.questionNumber || index + 1}`
@@ -30,7 +33,7 @@ const buildReferenceItems = (qaReviews: QaReview[]): ReferenceItem[] => {
         key: `${item.questionNumber || "qa"}-${index}`,
         label,
         question: item.question,
-        feedback: item.feedback!.trim(),
+        referenceAnswer: item.referenceAnswer!.trim(),
       };
     });
 };
@@ -51,7 +54,7 @@ export default function InterviewReferenceAnswerCard({
   };
 
   return (
-    <Card className="border-slate-100 p-6">
+    <Card className="min-w-0 border-slate-100 p-6">
       <p className="text-sm font-medium text-slate-900">参考答案</p>
 
       {isLoading ? (
@@ -70,7 +73,7 @@ export default function InterviewReferenceAnswerCard({
             return (
               <motion.div
                 key={item.key}
-                className="rounded-lg border border-slate-100 p-4"
+                className="min-w-0 rounded-lg border border-slate-100 p-4"
                 initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 transition={{
@@ -79,12 +82,12 @@ export default function InterviewReferenceAnswerCard({
                   ease: [0.22, 1, 0.36, 1],
                 }}
               >
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
                     <span className="text-[11px] text-slate-500">
                       {item.label}
                     </span>
-                    <p className="text-sm font-medium text-slate-900 truncate">
+                    <p className="line-clamp-2 break-words text-sm font-medium leading-5 text-slate-900">
                       {item.question}
                     </p>
                   </div>
@@ -118,8 +121,8 @@ export default function InterviewReferenceAnswerCard({
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs leading-6 text-blue-800">
-                        {item.feedback}
+                      <div className="mt-3 break-words rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs leading-6 text-blue-800">
+                        {item.referenceAnswer}
                       </div>
                     </motion.div>
                   )}

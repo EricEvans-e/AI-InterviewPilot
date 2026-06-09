@@ -181,6 +181,35 @@ describe("buildInterviewReportViewModel", () => {
     ]);
   });
 
+  it("parses reference answers from playback items without replacing feedback", () => {
+    const viewModel = buildInterviewReportViewModel({
+      id: 9,
+      userId: 1,
+      sessionId: "session-9",
+      playbackItems: [
+        {
+          questionNumber: "1",
+          question: "Q1",
+          answer: "A1",
+          score: 86,
+          feedback: "evaluation feedback",
+          referenceAnswer: "generated reference answer",
+        },
+      ],
+    });
+
+    expect(viewModel.qaReviews).toEqual([
+      {
+        questionNumber: "1",
+        question: "Q1",
+        answer: "A1",
+        score: 86,
+        feedback: "evaluation feedback",
+        referenceAnswer: "generated reference answer",
+      },
+    ]);
+  });
+
   it("prefers record.radarChart over top-level and snapshot radar data", () => {
     const viewModel = buildInterviewReportViewModel({
       id: 5,

@@ -239,6 +239,16 @@ const parseQaReview = (value: unknown): QaReview | null => {
     payload.score_comment,
     payload.comment,
   );
+  const referenceAnswer = pickFirstString(
+    payload.referenceAnswer,
+    payload.reference_answer,
+    payload.standardAnswer,
+    payload.standard_answer,
+    payload.sampleAnswer,
+    payload.sample_answer,
+    payload.answerReference,
+    payload.answer_reference,
+  );
   const isFollowUp = toBoolean(payload.isFollowUp ?? payload.is_follow_up);
   const followUpNeeded = toBoolean(
     payload.followUpNeeded ?? payload.follow_up_needed,
@@ -254,6 +264,7 @@ const parseQaReview = (value: unknown): QaReview | null => {
     answer: answer || "回答内容缺失",
     score,
     ...(feedback ? { feedback } : {}),
+    ...(referenceAnswer ? { referenceAnswer } : {}),
     ...(seq !== null ? { seq } : {}),
     ...(questionNumber ? { questionNumber } : {}),
     ...(isFollowUp !== null ? { isFollowUp } : {}),

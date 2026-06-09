@@ -15,6 +15,7 @@ import com.interviewpilot.interview.dao.entity.InterviewSession;
 import com.interviewpilot.interview.dao.mapper.InterviewRecordMapper;
 import com.interviewpilot.interview.flow.report.InterviewReportAiReviewService;
 import com.interviewpilot.interview.flow.report.InterviewRecordServiceImpl;
+import com.interviewpilot.interview.flow.report.InterviewReferenceAnswerService;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.service.InterviewSessionService;
@@ -57,7 +58,10 @@ class InterviewRecordServiceImplTest {
         DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
         WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
         InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
+        InterviewReferenceAnswerService referenceAnswerService = mock(InterviewReferenceAnswerService.class);
         InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
+        when(referenceAnswerService.attachReferenceAnswers(any(), any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(2));
         InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
                 cacheService,
                 ownershipService,
@@ -68,7 +72,8 @@ class InterviewRecordServiceImplTest {
                 runtimeRehydrateService,
                 dimensionScoreStrategy,
                 weightedRadarComputationStrategy,
-                reportAiReviewService
+                reportAiReviewService,
+                referenceAnswerService
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
@@ -212,7 +217,10 @@ class InterviewRecordServiceImplTest {
         DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
         WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
         InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
+        InterviewReferenceAnswerService referenceAnswerService = mock(InterviewReferenceAnswerService.class);
         InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
+        when(referenceAnswerService.attachReferenceAnswers(any(), any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(2));
         InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
                 cacheService,
                 ownershipService,
@@ -223,7 +231,8 @@ class InterviewRecordServiceImplTest {
                 runtimeRehydrateService,
                 dimensionScoreStrategy,
                 weightedRadarComputationStrategy,
-                reportAiReviewService
+                reportAiReviewService,
+                referenceAnswerService
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 

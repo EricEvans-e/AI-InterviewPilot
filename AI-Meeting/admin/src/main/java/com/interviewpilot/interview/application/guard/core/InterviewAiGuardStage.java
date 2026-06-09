@@ -16,6 +16,8 @@ public final class InterviewAiGuardStage {
     public static final String INTERVIEW_DEMEANOR = "interview-demeanor";
     /** 报告总结阶段（AI 生成整场面试分析与建议） */
     public static final String INTERVIEW_REPORT_REVIEW = "interview-report-review";
+    /** 参考答案生成阶段（报告复盘用，不参与候选人评分） */
+    public static final String INTERVIEW_REFERENCE_ANSWER = "interview-reference-answer";
 
     private InterviewAiGuardStage() {
     }

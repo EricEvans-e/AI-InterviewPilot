@@ -49,6 +49,11 @@ public class InterviewPlaybackItemRespDTO {
     private String feedback;
 
     /**
+     * 参考答案/参考回答，用于报告复盘展示。
+     */
+    private String referenceAnswer;
+
+    /**
      * 累计总分。
      */
     private Integer totalScore;
