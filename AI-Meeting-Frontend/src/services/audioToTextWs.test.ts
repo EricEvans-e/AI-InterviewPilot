@@ -119,7 +119,7 @@ describe("AudioToTextWebSocket message handling", () => {
       public onerror = socket.onerror;
       public onclose = socket.onclose;
 
-      constructor(_url: string) {}
+      constructor() {}
     }
 
     vi.stubGlobal("WebSocket", MockWebSocket as unknown as typeof WebSocket);
