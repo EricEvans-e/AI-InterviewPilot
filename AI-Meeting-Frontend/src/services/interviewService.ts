@@ -655,10 +655,7 @@ const normalizeInterviewSessionRestore = (
 
 const shouldFallbackToLegacyPath = (error: unknown) => {
   if (!(error instanceof AppError)) return false;
-  return (
-    error.code === ErrorCode.RESOURCE_NOT_FOUND ||
-    error.code === ErrorCode.OPERATION_FAILED
-  );
+  return error.code === ErrorCode.RESOURCE_NOT_FOUND;
 };
 
 const getWithPathFallback = async <T>(

@@ -4,6 +4,7 @@ import {
   type InterviewRecordResult,
   type InterviewReviewFeedbackResult,
 } from "@/services/interviewService";
+import { AppError, ErrorCode } from "@/lib/errors";
 import type {
   QaReview,
   RadarPoint,
@@ -396,6 +397,37 @@ const extractReviewFeedback = (
   };
 };
 
+const REPORT_FINALIZE_RETRY_DELAY_MS = 1_200;
+const REPORT_FINALIZE_RETRY_ATTEMPTS = 5;
+
+const waitForReportFinalizeRetry = () =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, REPORT_FINALIZE_RETRY_DELAY_MS);
+  });
+
+const isFinalizeProcessingError = (error: unknown) => {
+  if (!(error instanceof AppError)) return false;
+  return (
+    error.code === ErrorCode.OPERATION_FAILED &&
+    error.message.toLowerCase().includes("finalize is processing")
+  );
+};
+
+const waitForFinalizedRecord = async (sessionId: string) => {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < REPORT_FINALIZE_RETRY_ATTEMPTS; attempt += 1) {
+    await waitForReportFinalizeRetry();
+    try {
+      return await interviewService.getInterviewRecordBySessionId(sessionId);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+};
+
 export async function fetchInterviewReportQueryData(
   sessionId: string,
 ): Promise<ReportQueryData> {
@@ -411,7 +443,15 @@ export async function fetchInterviewReportQueryData(
         "[useInterviewReportData] manual save failed, fallback save-from-redis",
         manualSaveError,
       );
-      await interviewService.saveInterviewRecordFromRedis(sessionId);
+      try {
+        await interviewService.saveInterviewRecordFromRedis(sessionId);
+      } catch (saveFromRedisError) {
+        if (!isFinalizeProcessingError(saveFromRedisError)) {
+          throw saveFromRedisError;
+        }
+        const record = await waitForFinalizedRecord(sessionId);
+        return { record };
+      }
     }
 
     const record =

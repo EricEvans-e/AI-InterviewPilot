@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AppError, ErrorCode } from "@/lib/errors";
 import {
   buildInterviewReportViewModel,
   fetchInterviewReportQueryData,
@@ -326,5 +327,81 @@ describe("fetchInterviewReportQueryData", () => {
     expect(saveRedisSpy).toHaveBeenCalledTimes(1);
     expect(radarSpy).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries record query when finalize is still processing", async () => {
+    vi.useFakeTimers();
+    const record = {
+      id: 102,
+      userId: 1,
+      sessionId: "session-102",
+    };
+
+    const getRecordSpy = vi
+      .spyOn(interviewService, "getInterviewRecordBySessionId")
+      .mockRejectedValueOnce(new Error("not ready"))
+      .mockResolvedValueOnce(record);
+    const saveSpy = vi
+      .spyOn(interviewService, "saveInterviewRecord")
+      .mockRejectedValueOnce(new Error("save failed"));
+    const saveRedisSpy = vi
+      .spyOn(interviewService, "saveInterviewRecordFromRedis")
+      .mockRejectedValueOnce(
+        new AppError(
+          ErrorCode.OPERATION_FAILED,
+          "finalize is processing, please retry",
+        ),
+      );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const pending = fetchInterviewReportQueryData("session-102");
+    await vi.runAllTimersAsync();
+    const result = await pending;
+
+    expect(result).toEqual({ record });
+    expect(getRecordSpy).toHaveBeenCalledTimes(2);
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(saveRedisSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("polls record query until finalize writes the report", async () => {
+    vi.useFakeTimers();
+    const record = {
+      id: 103,
+      userId: 1,
+      sessionId: "session-103",
+    };
+
+    const getRecordSpy = vi
+      .spyOn(interviewService, "getInterviewRecordBySessionId")
+      .mockRejectedValueOnce(new Error("not ready"))
+      .mockRejectedValueOnce(new Error("still not ready"))
+      .mockRejectedValueOnce(new Error("still processing"))
+      .mockResolvedValueOnce(record);
+    const saveSpy = vi
+      .spyOn(interviewService, "saveInterviewRecord")
+      .mockRejectedValueOnce(new Error("save failed"));
+    const saveRedisSpy = vi
+      .spyOn(interviewService, "saveInterviewRecordFromRedis")
+      .mockRejectedValueOnce(
+        new AppError(
+          ErrorCode.OPERATION_FAILED,
+          "finalize is processing, please retry",
+        ),
+      );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const pending = fetchInterviewReportQueryData("session-103");
+    await vi.runAllTimersAsync();
+    const result = await pending;
+
+    expect(result).toEqual({ record });
+    expect(getRecordSpy).toHaveBeenCalledTimes(4);
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(saveRedisSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 });

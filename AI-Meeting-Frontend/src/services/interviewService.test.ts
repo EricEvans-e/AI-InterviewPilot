@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AppError, ErrorCode } from "@/lib/errors";
+import requestService from "@/lib/request";
 import {
   type AnswerInterviewQuestionResult,
   interviewService,
@@ -60,5 +61,33 @@ describe("interviewService.answerInterviewQuestion", () => {
 
     expect(error).toBeInstanceOf(AppError);
     expect((error as AppError).code).toBe(ErrorCode.CLIENT_VALIDATION_ERROR);
+  });
+});
+
+describe("interviewService.saveInterviewRecordFromRedis", () => {
+  it("does not fallback to legacy path for business operation failures", async () => {
+    const postSpy = vi
+      .spyOn(requestService, "post")
+      .mockRejectedValueOnce(
+        new AppError(
+          ErrorCode.OPERATION_FAILED,
+          "finalize is processing, please retry",
+        ),
+      )
+      .mockResolvedValueOnce(undefined);
+
+    const error = await interviewService
+      .saveInterviewRecordFromRedis("session-1")
+      .catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(AppError);
+    expect((error as AppError).code).toBe(ErrorCode.OPERATION_FAILED);
+    expect(postSpy).toHaveBeenCalledTimes(1);
+    expect(postSpy).toHaveBeenCalledWith(
+      "/ip/v1/interview/interview/record/save-from-redis/session-1",
+      undefined,
+    );
+
+    postSpy.mockRestore();
   });
 });

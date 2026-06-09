@@ -53,7 +53,7 @@ public class InterviewRecordController {
      * @param requestParam 包含 sessionId 和评分数据
      * @param currentUser  当前登录用户（由 @CurrentUser 注解自动注入）
      */
-    @PostMapping("/interview/record")
+    @PostMapping({"/interview/record", "/record"})
     public Result<Void> saveInterviewRecord(
             @Valid @RequestBody InterviewRecordSaveReqDTO requestParam,
             @CurrentUser UserContext currentUser) {
@@ -69,7 +69,7 @@ public class InterviewRecordController {
      * @param currentUser  当前登录用户
      * @return 分页结果，包含总条数和当前页数据
      */
-    @GetMapping("/interview/records")
+    @GetMapping({"/interview/records", "/records"})
     public Result<IPage<InterviewRecordRespDTO>> pageInterviewRecords(
             InterviewRecordPageReqDTO requestParam,
             @CurrentUser UserContext currentUser) {
@@ -83,7 +83,7 @@ public class InterviewRecordController {
      * @param sessionId   面试会话ID
      * @param currentUser 当前登录用户（用于校验数据归属，防止越权访问）
      */
-    @GetMapping("/interview/record/{sessionId}")
+    @GetMapping({"/interview/record/{sessionId}", "/record/{sessionId}"})
     public Result<InterviewRecordRespDTO> getInterviewRecordBySessionId(
             @PathVariable String sessionId,
             @CurrentUser UserContext currentUser) {
@@ -98,7 +98,7 @@ public class InterviewRecordController {
      * @param sessionId   面试会话ID
      * @param currentUser 当前登录用户
      */
-    @PostMapping("/interview/record/save-from-redis/{sessionId}")
+    @PostMapping({"/interview/record/save-from-redis/{sessionId}", "/record/save-from-redis/{sessionId}"})
     public Result<Void> saveInterviewRecordFromRedis(
             @PathVariable String sessionId,
             @CurrentUser UserContext currentUser) {
@@ -115,7 +115,7 @@ public class InterviewRecordController {
      * @param currentUser 当前登录用户
      * @return 文件的相对访问路径
      */
-    @PostMapping("/interview/record/{sessionId}/recording")
+    @PostMapping({"/interview/record/{sessionId}/recording", "/record/{sessionId}/recording"})
     public Result<String> uploadRecording(
             @PathVariable String sessionId,
             @RequestParam("file") MultipartFile file,

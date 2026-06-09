@@ -38,6 +38,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 class InterviewRecordControllerPressureTest {
 
@@ -53,6 +54,15 @@ class InterviewRecordControllerPressureTest {
                 .setCustomArgumentResolvers(new MockCurrentUserResolver())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    @Test
+    void shouldMapShortSaveFromRedisCompatibilityPath() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                        "/api/ip/v1/interview/record/save-from-redis/session-short-path"))
+                .andExpect(jsonPath("$.code").value("0"));
+
+        verify(interviewRecordService).saveInterviewRecordFromRedis("session-short-path", 7007L);
     }
 
     @Test
