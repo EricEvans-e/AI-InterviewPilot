@@ -21,6 +21,9 @@
 AI-Meeting/backend-start.out
 AI-Meeting/backend-start.err
 
+# 本地工具与临时运行产物
+.tools/
+
 # 环境配置
 .env
 .env.local

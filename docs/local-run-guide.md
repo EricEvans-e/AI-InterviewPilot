@@ -84,6 +84,7 @@ export LEGACY_XUNFEI_ENABLED="false"
 - `SPRING_AI_OPENAI_API_KEY` 指向同一个 key，用于 Spring AI OpenAI 兼容客户端。
 - `mimo-v2.5` 用于通用/视觉链路；`mimo-v2.5-pro` 只用于纯文本高推理聊天，两者都走 `MIMO_OPENAI_BASE_URL`。
 - 讯飞 legacy 默认关闭，除非明确需要旧链路，否则保持 `LEGACY_XUNFEI_ENABLED=false`。
+- 后端本地启动时会自动加载 `AI-Meeting/.env`；如果你是从 `AI-Meeting/admin` 启动，它也会继续向上查找父目录中的 `.env`。shell 里手动设置的同名环境变量仍然优先。
 
 ---
 
@@ -290,7 +291,7 @@ http://localhost:5173
 1. 进入面试房间后，右上角应显示摄像头/录像浮窗。
 2. 紧凑状态下可以拖动该浮窗；浮窗会被限制在聊天内容区域内，不会被拖出可见范围。
 3. 点击浮窗右上角按钮可切换展开/收起；展开状态保持原有大尺寸覆盖层，不参与拖拽。
-4. AI 返回的面试题如果带有 `{question=...}` 包装，前端会清理为纯题目文本，并在聊天区显示为“当前题目”卡片。
+4. AI 返回的面试题如果带有 `{question=...}`，或者更完整的 `{id=..., topic=..., question=..., purpose=...}` 这类 Java Map 风格包装，前端会提取 `question` 字段，清理为纯题目文本，并在聊天区显示为“当前题目”卡片。
 
 ---
 
@@ -375,12 +376,24 @@ rg -n "tp-[A-Za-z0-9]{20,}" . -S
 
 | 现象 | 处理方式 |
 |------|----------|
-| 后端启动但 AI 无响应 | 确认当前启动后端的终端设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`；数据库 `ai_properties`、`agent_properties` 应保留 `MIMO_API_KEY` 占位符，由后端运行时解析真实 key |
+| 后端启动但 AI 无响应 | 先确认 `AI-Meeting/.env` 或当前启动后端的终端里已经提供 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`；数据库 `ai_properties`、`agent_properties` 应保留 `MIMO_API_KEY` 占位符，由后端运行时解析真实 key |
 | 前端请求 404 | 确认后端在 `8002` 端口运行，前端代理 `VITE_API_TARGET=http://localhost:8002` |
 | WebSocket 连接失败 | 确认通过 `http://localhost:5173` 访问前端，Vite proxy 已开启 `ws: true`，并且登录后再进入录音页面 |
 | ASR 没有最终文本 | 停止录音时必须发送 `stop_transcription`，后端才会关闭音频流并调用 Mimo ASR |
-| TTS 成功但无声音 | 检查后端返回的 `audioBase64` 是否为空，并查看 `MimoAudioService` 日志 |
+| TTS 成功但无声音 | 检查后端返回的 `audioBase64` 是否为空，并查看 `MimoAudioService` 日志；如果出现 `messages must contain an assistant role for TTS model`，说明播报文本没有放在 `assistant` 角色消息中 |
 | 面试页看不到摄像头浮窗 | 确认顶部摄像头按钮处于“关闭摄像头”状态（表示当前已开启）；如果刚更新前端代码，重启 `npm run dev` 并强制刷新浏览器。浮窗定位按聊天内容区域计算，避免被左侧侧边栏和 `overflow-hidden` 裁剪 |
+| 当前题目显示成 `{id=..., question=...}` 原始对象串 | 说明前端题目文本没有经过 `normalizeInterviewQuestionText()` 归一化，检查会话流里是否绕过了这一步 |
 | MySQL 密码不对 | 本地 compose 默认 root 密码是 `122333`；如果通过 `.env` 覆盖，以 `.env` 为准 |
 | 端口冲突 | 修改 `docker-compose.yml` 或 `docker-compose.prod.yml` 中对应端口映射，或停止本机已有服务 |
 | Redis 启动时报 `Bind for 0.0.0.0:6379 failed` | 先执行 `docker stop interviewpilot-redis` 释放 6379，再重新执行 `docker compose up -d mysql mongo redis` |
+---
+
+## Report and Reference Answer Runtime Notes
+
+- Final report persistence now uses a fast first snapshot. The backend does not block report creation on a synchronous AI review-summary call.
+- When report creation or finalize is still in progress, the frontend treats timeout/finalize states as transient and keeps polling instead of failing immediately.
+- Recording playback can appear after the first report payload because `recordingUrl` may be written back later than the base interview record. The frontend now polls for the recording URL for roughly 60 seconds.
+- Reference answers remain manual on the report page. Clicking `生成参考答案` uses a longer request timeout and then polls the saved report if the client-side request times out before the backend finishes.
+- Interview conclusion is also manual on the report page. The first screen shows the fast rule-based summary; clicking `生成 AI 结论` sends a longer AI request and the page updates in place after the saved AI result is available.
+- If `生成 AI 结论` times out in the browser before the backend completes, the frontend continues polling the report until the saved AI conclusion is returned or the retry window is exhausted.
+- If the report still looks incomplete after the polling window, refresh once and then inspect backend logs for finalize completion, recording upload completion, and `/recordings/` exposure.

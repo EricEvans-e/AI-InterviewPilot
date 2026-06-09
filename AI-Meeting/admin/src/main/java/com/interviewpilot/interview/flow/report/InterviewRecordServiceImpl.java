@@ -296,6 +296,113 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         }
     }
 
+    @Override
+    public InterviewRecordRespDTO generateReferenceAnswers(String sessionId, Long userId) {
+        if (StrUtil.isBlank(sessionId)) {
+            throw new ClientException(InterviewErrorCodeEnum.SESSION_ID_EMPTY);
+        }
+        validateUserId(userId);
+
+        LambdaQueryWrapper<InterviewRecordDO> queryWrapper = Wrappers.lambdaQuery(InterviewRecordDO.class)
+                .eq(InterviewRecordDO::getUserId, userId)
+                .eq(InterviewRecordDO::getSessionId, sessionId)
+                .eq(InterviewRecordDO::getDelFlag, 0);
+        InterviewRecordDO record = baseMapper.selectOne(queryWrapper);
+        if (record == null) {
+            saveInterviewRecord(sessionId, userId, new InterviewRecordSaveReqDTO());
+            record = baseMapper.selectOne(queryWrapper);
+        }
+        if (record == null) {
+            return null;
+        }
+
+        Map<String, Object> snapshot = parseSnapshot(record.getSessionSnapshotJson());
+        List<InterviewTurnLog> turns = parseTurnsFromSnapshot(snapshot);
+        if (turns == null || turns.isEmpty()) {
+            turns = runtimeSnapshotService.loadPersistedTurns(sessionId);
+        }
+        turns = interviewReferenceAnswerService.generateMissingReferenceAnswers(
+                sessionId,
+                record.getInterviewDirection(),
+                turns
+        );
+        record.setSessionSnapshotJson(rebuildSnapshotWithTurns(record.getSessionSnapshotJson(), turns));
+        record.setUpdateTime(new Date());
+        baseMapper.updateById(record);
+
+        InterviewRecordRespDTO respDTO = new InterviewRecordRespDTO();
+        BeanUtils.copyProperties(record, respDTO);
+        if (StrUtil.isNotBlank(record.getInterviewSuggestions())) {
+            respDTO.setInterviewSuggestionsMap(parseInterviewSuggestions(record.getInterviewSuggestions()));
+        }
+        enrichReportFields(sessionId, record, respDTO);
+        return respDTO;
+    }
+
+    @Override
+    public InterviewRecordRespDTO generateAiReviewFeedback(String sessionId, Long userId) {
+        if (StrUtil.isBlank(sessionId)) {
+            throw new ClientException(InterviewErrorCodeEnum.SESSION_ID_EMPTY);
+        }
+        validateUserId(userId);
+
+        LambdaQueryWrapper<InterviewRecordDO> queryWrapper = Wrappers.lambdaQuery(InterviewRecordDO.class)
+                .eq(InterviewRecordDO::getUserId, userId)
+                .eq(InterviewRecordDO::getSessionId, sessionId)
+                .eq(InterviewRecordDO::getDelFlag, 0);
+        InterviewRecordDO record = baseMapper.selectOne(queryWrapper);
+        if (record == null) {
+            saveInterviewRecord(sessionId, userId, new InterviewRecordSaveReqDTO());
+            record = baseMapper.selectOne(queryWrapper);
+        }
+        if (record == null) {
+            return null;
+        }
+
+        Map<String, Object> snapshot = new LinkedHashMap<>(parseSnapshot(record.getSessionSnapshotJson()));
+        List<InterviewTurnLog> turns = parseTurnsFromSnapshot(snapshot);
+        if (turns == null || turns.isEmpty()) {
+            turns = runtimeSnapshotService.loadPersistedTurns(sessionId);
+        }
+
+        RadarChartDTO radarChart = parseRadarFromSnapshot(snapshot);
+        if (radarChart == null) {
+            radarChart = interviewQuestionCacheService.getRadarChartData(sessionId);
+        }
+        if (radarChart == null) {
+            radarChart = new RadarChartDTO();
+        }
+        fillRadarDimensionScores(radarChart, record);
+
+        InterviewReviewFeedbackRespDTO aiFeedback = interviewReportAiReviewService.generateReviewFeedback(
+                sessionId,
+                record.getInterviewDirection(),
+                turns,
+                radarChart,
+                record.getInterviewSuggestions()
+        );
+        if (!hasReviewFeedbackContent(aiFeedback)) {
+            throw new ClientException("ai review feedback unavailable, please retry");
+        }
+        aiFeedback.setSource("ai");
+
+        snapshot.put("turns", turns == null ? Collections.emptyList() : turns);
+        snapshot.put("radar", radarChart);
+        snapshot.put("reviewFeedback", aiFeedback);
+        snapshot.put("reviewFeedbackGeneratedAt", new Date());
+        record.setSessionSnapshotJson(JSON.toJSONString(snapshot));
+        record.setUpdateTime(new Date());
+        baseMapper.updateById(record);
+
+        InterviewRecordRespDTO respDTO = new InterviewRecordRespDTO();
+        BeanUtils.copyProperties(record, respDTO);
+        if (StrUtil.isNotBlank(record.getInterviewSuggestions())) {
+            respDTO.setInterviewSuggestionsMap(parseInterviewSuggestions(record.getInterviewSuggestions()));
+        }
+        enrichReportFields(sessionId, record, respDTO);
+        return respDTO;
+    }
+
     private void validateUserId(Long userId) {
         if (userId == null || userId <= 0) {
             throw new ClientException(InterviewErrorCodeEnum.INVALID_USER_ID);
@@ -524,11 +631,6 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
             String interviewSuggestions,
             InterviewRecordDO record) {
         List<InterviewTurnLog> turns = runtimeSnapshotService.loadPersistedTurns(session.getSessionId());
-        turns = interviewReferenceAnswerService.attachReferenceAnswers(
-                session.getSessionId(),
-                interviewDirection,
-                turns
-        );
         RadarChartDTO radarChart = interviewQuestionCacheService.getRadarChartData(session.getSessionId());
 
         // 将 7 维分数写入雷达图 DTO，确保快照包含完整维度数据
@@ -555,9 +657,7 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         snapshot.put("flow", interviewQuestionCacheService.getInterviewFlow(session.getSessionId()));
         snapshot.put("turns", turns);
         snapshot.put("radar", radarChart);
-        snapshot.put("reviewFeedback", buildReviewFeedback(
-                session.getSessionId(),
-                interviewDirection,
+        snapshot.put("reviewFeedback", buildRuleBasedReviewFeedback(
                 turns,
                 radarChart,
                 interviewSuggestions
@@ -589,11 +689,6 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         if (turns == null || turns.isEmpty()) {
             turns = runtimeSnapshotService.loadPersistedTurns(sessionId);
         }
-        turns = interviewReferenceAnswerService.attachReferenceAnswers(
-                sessionId,
-                record == null ? null : record.getInterviewDirection(),
-                turns
-        );
         respDTO.setPlaybackItems(buildPlaybackItems(turns));
         respDTO.setReviewFeedback(resolveReviewFeedback(snapshot, turns, radarChart, record));
     }
@@ -613,6 +708,13 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
             log.warn("Failed to parse session snapshot json", ex);
             return Collections.emptyMap();
         }
+    }
+
+    private String rebuildSnapshotWithTurns(String snapshotJson, List<InterviewTurnLog> turns) {
+        Map<String, Object> snapshot = new LinkedHashMap<>(parseSnapshot(snapshotJson));
+        snapshot.put("turns", turns == null ? Collections.emptyList() : turns);
+        snapshot.put("referenceAnswersGeneratedAt", new Date());
+        return JSON.toJSONString(snapshot);
     }
 
     private RadarChartDTO parseRadarFromSnapshot(Map<String, Object> snapshot) {
@@ -680,30 +782,12 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         }
     }
 
-    private InterviewReviewFeedbackRespDTO buildReviewFeedback(
-            String sessionId,
-            String interviewDirection,
-            List<InterviewTurnLog> turns,
-            RadarChartDTO radarChart,
-            String interviewSuggestions) {
-        InterviewReviewFeedbackRespDTO aiFeedback = interviewReportAiReviewService.generateReviewFeedback(
-                sessionId,
-                interviewDirection,
-                turns,
-                radarChart,
-                interviewSuggestions
-        );
-        if (hasReviewFeedbackContent(aiFeedback)) {
-            return aiFeedback;
-        }
-        return buildRuleBasedReviewFeedback(turns, radarChart, interviewSuggestions);
-    }
-
     private InterviewReviewFeedbackRespDTO buildRuleBasedReviewFeedback(
             List<InterviewTurnLog> turns,
             RadarChartDTO radarChart,
             String interviewSuggestions) {
         InterviewReviewFeedbackRespDTO reviewFeedback = new InterviewReviewFeedbackRespDTO();
+        reviewFeedback.setSource("rule");
         reviewFeedback.setOverallComment(buildOverallComment(radarChart));
         List<String> highlights = buildHighlights(turns, radarChart);
         List<String> improvementTips = buildImprovementTips(turns, radarChart);

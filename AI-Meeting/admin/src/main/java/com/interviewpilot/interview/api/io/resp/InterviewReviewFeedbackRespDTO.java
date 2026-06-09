@@ -10,6 +10,11 @@ import java.util.List;
 @Data
 public class InterviewReviewFeedbackRespDTO {
 
+    /**
+     * feedback source: rule / ai
+     */
+    private String source;
+
     private String overallComment;
 
     private List<String> highlights;

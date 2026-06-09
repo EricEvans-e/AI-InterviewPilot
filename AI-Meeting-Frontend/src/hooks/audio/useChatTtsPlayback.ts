@@ -8,7 +8,17 @@ import { useChatTtsAudioCache } from "@/hooks/audio/useChatTtsAudioCache";
 import { useChatTtsAudioElement } from "@/hooks/audio/useChatTtsAudioElement";
 import { mimoTtsService } from "@/services/mimoTtsService";
 
-export function useChatTtsPlayback(messages: ChatMessage[]) {
+type UseChatTtsPlaybackOptions = {
+  onPlaybackStateChange?: (isActive: boolean) => void;
+};
+
+const autoPlayedMessageKeys = new Set<string>();
+
+export function useChatTtsPlayback(
+  messages: ChatMessage[],
+  options?: UseChatTtsPlaybackOptions,
+) {
+  const onPlaybackStateChange = options?.onPlaybackStateChange;
   const loadingControllerRef = useRef<AbortController | null>(null);
   const autoPlayedMessageIdsRef = useRef(new Set<string>());
   const activeMessageIdRef = useRef<string | null>(null);
@@ -26,6 +36,7 @@ export function useChatTtsPlayback(messages: ChatMessage[]) {
 
   const {
     getCachedObjectUrl,
+    getPreparedAudioKey,
     cacheObjectUrl,
     removeCachedObjectUrl,
     resolvePlayableAudioUrl,
@@ -177,7 +188,7 @@ export function useChatTtsPlayback(messages: ChatMessage[]) {
         stopPlayback();
       }
 
-      void playMessage(message, { userInitiated: true, forceRefresh: true });
+      void playMessage(message, { userInitiated: true });
     },
     [loadingMessageId, playMessage, playingMessageId, stopPlayback],
   );
@@ -189,7 +200,8 @@ export function useChatTtsPlayback(messages: ChatMessage[]) {
         (message) =>
           message.tts?.autoPlay &&
           message.status === CHAT_MESSAGE_STATUS.done &&
-          !autoPlayedMessageIdsRef.current.has(message.id),
+          !autoPlayedMessageIdsRef.current.has(message.id) &&
+          !autoPlayedMessageKeys.has(getPreparedAudioKey(message)),
       );
 
     if (!latestAutoPlayMessage) {
@@ -197,8 +209,9 @@ export function useChatTtsPlayback(messages: ChatMessage[]) {
     }
 
     autoPlayedMessageIdsRef.current.add(latestAutoPlayMessage.id);
+    autoPlayedMessageKeys.add(getPreparedAudioKey(latestAutoPlayMessage));
     void playMessage(latestAutoPlayMessage);
-  }, [messages, playMessage]);
+  }, [getPreparedAudioKey, messages, playMessage]);
 
   useEffect(() => {
     const activeMessageId = activeMessageIdRef.current;
@@ -221,6 +234,10 @@ export function useChatTtsPlayback(messages: ChatMessage[]) {
     },
     [disposeAudioElement, revokePreparedObjectUrls, stopPlayback],
   );
+
+  useEffect(() => {
+    onPlaybackStateChange?.(Boolean(loadingMessageId || playingMessageId));
+  }, [loadingMessageId, onPlaybackStateChange, playingMessageId]);
 
   return {
     loadingMessageId,

@@ -57,8 +57,8 @@ class InterviewRecordFinalizeConcurrencyTest {
         InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
         InterviewReferenceAnswerService referenceAnswerService = mock(InterviewReferenceAnswerService.class);
         InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
-        when(referenceAnswerService.attachReferenceAnswers(any(), any(), any()))
-                .thenAnswer(invocation -> invocation.getArgument(2));
+        when(referenceAnswerService.attachAvailableReferenceAnswers(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
 
         InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
                 cacheService,

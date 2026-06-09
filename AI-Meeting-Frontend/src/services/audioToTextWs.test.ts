@@ -91,4 +91,67 @@ describe("AudioToTextWebSocket message handling", () => {
     expect(url).toContain("/api/ip/v1/mimo/audio-to-text/tester");
     expect(url).not.toContain("/xunfei/");
   });
+
+  it("sends start_transcription before flushing queued audio", () => {
+    const send = vi.fn();
+    const chunk = new Uint8Array([1, 2, 3]).buffer;
+    const socket = {
+      readyState: WebSocket.CONNECTING,
+      send,
+      close: vi.fn(),
+      onopen: null as null | (() => void),
+      onmessage: null,
+      onerror: null,
+      onclose: null,
+    };
+
+    class MockWebSocket {
+      static CONNECTING = WebSocket.CONNECTING;
+      static OPEN = WebSocket.OPEN;
+      static CLOSING = WebSocket.CLOSING;
+      static CLOSED = WebSocket.CLOSED;
+
+      public readyState: number = socket.readyState;
+      public send = socket.send;
+      public close = socket.close;
+      public onopen = socket.onopen;
+      public onmessage = socket.onmessage;
+      public onerror = socket.onerror;
+      public onclose = socket.onclose;
+
+      constructor(_url: string) {}
+    }
+
+    vi.stubGlobal("WebSocket", MockWebSocket as unknown as typeof WebSocket);
+
+    const queuedInstance = new AudioToTextWebSocket("tester");
+    queuedInstance.onSocketOpen = () => {
+      queuedInstance.sendCommand("start_transcription");
+    };
+
+    queuedInstance.connect();
+    queuedInstance.sendAudio(chunk);
+
+    const ws = (queuedInstance as unknown as { ws: MockWebSocket | null }).ws;
+    expect(ws).not.toBeNull();
+
+    if (!ws) {
+      vi.unstubAllGlobals();
+      throw new Error("WebSocket instance was not created");
+    }
+
+    ws.readyState = WebSocket.OPEN;
+    ws.onopen?.();
+
+    expect(send).toHaveBeenNthCalledWith(
+      1,
+      JSON.stringify({ type: "start_transcription" }),
+    );
+    expect(send).toHaveBeenNthCalledWith(
+      2,
+      chunk,
+    );
+
+    vi.unstubAllGlobals();
+  });
 });

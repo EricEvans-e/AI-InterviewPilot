@@ -5,6 +5,7 @@ import { useAudioTranscriptionController } from "@/hooks/audio/useAudioTranscrip
 const transportState = {
   connect: vi.fn(),
   disconnect: vi.fn(),
+  stop: vi.fn(),
   sendAudioChunk: vi.fn(),
   params: null as null | {
     userId: string | null;
@@ -30,6 +31,7 @@ vi.mock("@/hooks/audio/useAudioTranscriptionTransport", () => ({
     return {
       connect: transportState.connect,
       disconnect: transportState.disconnect,
+      stop: transportState.stop,
       sendAudioChunk: transportState.sendAudioChunk,
     };
   },
@@ -57,6 +59,7 @@ describe("useAudioTranscriptionController", () => {
     streamState.params = null;
     streamState.start.mockResolvedValue(undefined);
     streamState.stop.mockResolvedValue(undefined);
+    transportState.stop.mockResolvedValue(undefined);
   });
 
   it("cleans up transport and microphone when startRecording fails", async () => {
@@ -133,13 +136,58 @@ describe("useAudioTranscriptionController", () => {
     );
 
     await act(async () => {
+      await result.current.startRecording();
+    });
+
+    await act(async () => {
       result.current.stopRecording();
       result.current.stopRecording();
     });
 
     await waitFor(() => {
-      expect(transportState.disconnect).toHaveBeenCalledTimes(1);
+      expect(transportState.stop).toHaveBeenCalledTimes(1);
       expect(streamState.stop).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      unmount();
+    });
+  });
+
+  it("keeps the session active until the final stop handshake finishes", async () => {
+    let resolveStop: (() => void) | null = null;
+    transportState.stop.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStop = resolve;
+        }),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useAudioTranscriptionController(currentUser),
+    );
+
+    await act(async () => {
+      await result.current.startRecording();
+    });
+
+    act(() => {
+      result.current.stopRecording();
+    });
+
+    await waitFor(() => {
+      expect(transportState.stop).toHaveBeenCalledTimes(1);
+    });
+
+    expect(result.current.isRecording).toBe(true);
+
+    await act(async () => {
+      resolveStop?.();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isRecording).toBe(false);
     });
 
     await act(async () => {

@@ -149,10 +149,17 @@ Mimo TTS is synchronous. `/tasks` and `/tasks/{taskId}` keep the old task-shaped
 
 ## Frontend Interview UI Notes
 
-- Model question output can arrive as `{question=...}`. Keep `normalizeInterviewQuestionText()` in the session flow before updating current question state, chat messages, or TTS text.
+- Model question output can arrive as `{question=...}` or richer Java map-style text such as `{id=1, topic=..., question=..., purpose=...}`. Keep `normalizeInterviewQuestionText()` in the session flow before updating current question state, chat messages, or TTS text.
 - Auto-play assistant question messages render as a distinct "当前题目" / follow-up card in `ChatBubble`; do not classify feedback, system, or progress messages as interview questions.
 - `InterviewCameraOverlay` is mounted inside `ChatRoom`'s content overlay. Compact overlay coordinates must be calculated against the parent chat content container, not `window.innerWidth`, because the app shell has a sidebar and the content parent uses `overflow-hidden`.
 - The compact camera overlay is draggable and clamped inside the chat content area. Expanded mode keeps the old full overlay layout and should not be draggable.
+
+## Report Runtime Notes
+
+- Base interview report persistence must stay fast. Do not reintroduce synchronous AI review-summary generation into the first report-save path.
+- Report-page timeout and `finalize is processing` states are treated as transient by the frontend and should remain poll-friendly.
+- `recordingUrl` can arrive after the first interview record payload. Frontend report code intentionally polls for delayed recording availability.
+- Reference answers are manual on the report page. Slow AI generation is allowed there, but it should not block the initial report screen.
 
 ## Interview Constraints
 

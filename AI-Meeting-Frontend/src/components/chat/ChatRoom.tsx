@@ -19,6 +19,7 @@ type ChatRoomProps = {
   footer?: React.ReactNode;
   className?: string;
   customComposer?: React.ReactNode;
+  onTtsPlaybackStateChange?: (isActive: boolean) => void;
 };
 
 export default function ChatRoom({
@@ -37,6 +38,7 @@ export default function ChatRoom({
   footer,
   className,
   customComposer,
+  onTtsPlaybackStateChange,
 }: ChatRoomProps) {
   return (
     <div className={cn("flex flex-col h-full relative", className)}>
@@ -47,6 +49,7 @@ export default function ChatRoom({
           messages={messages}
           topContent={topContent}
           assistantAvatarSrc={assistantAvatarSrc}
+          onTtsPlaybackStateChange={onTtsPlaybackStateChange}
         />
         {contentOverlay}
       </div>

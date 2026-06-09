@@ -16,8 +16,9 @@ import { useInterviewPageController } from "@/hooks/interview/useInterviewPageCo
 export default function InterviewPage() {
   const cameraPreviewRef = useRef<CameraPreviewHandle | null>(null);
   const [isSketchpadOpen, setIsSketchpadOpen] = useState(false);
+  const [isQuestionTtsPlaying, setIsQuestionTtsPlaying] = useState(false);
   const { chat, interview, resume, camera } = useInterviewPageController();
-  const { setInput, isReady, isSubmitting, handleSend, input, messages, isTTSSpeaking } = chat;
+  const { setInput, isReady, isSubmitting, handleSend, input, messages } = chat;
   const { setIsPreviewOpen } = resume;
 
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -155,6 +156,7 @@ export default function InterviewPage() {
             showDefaultLeading={false}
           />
         }
+        onTtsPlaybackStateChange={setIsQuestionTtsPlaying}
         contentOverlay={
           <>
             <InterviewCameraOverlay
@@ -168,7 +170,7 @@ export default function InterviewPage() {
               isRecording={isRecording}
             />
             <DigitalHumanAvatar
-              isSpeaking={isTTSSpeaking}
+              isSpeaking={isQuestionTtsPlaying}
               isListening={isReady && !isSubmitting}
               isThinking={isSubmitting}
               text={interview.currentQuestionContent ?? undefined}

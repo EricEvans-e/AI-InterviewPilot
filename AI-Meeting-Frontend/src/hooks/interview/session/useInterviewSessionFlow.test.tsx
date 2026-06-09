@@ -17,6 +17,7 @@ const storageState = {
 const getCurrentQuestionMock = vi.fn();
 const answerInterviewQuestionMock = vi.fn();
 const finishInterviewSessionMock = vi.fn();
+const synthesizeTtsMock = vi.fn();
 
 vi.mock("react-router-dom", async () => {
   const actual =
@@ -47,6 +48,12 @@ vi.mock("@/services/interviewService", () => ({
       answerInterviewQuestionMock(...args),
     finishInterviewSession: (...args: unknown[]) =>
       finishInterviewSessionMock(...args),
+  },
+}));
+
+vi.mock("@/services/mimoTtsService", () => ({
+  mimoTtsService: {
+    synthesize: (...args: unknown[]) => synthesizeTtsMock(...args),
   },
 }));
 
@@ -91,6 +98,10 @@ describe("useInterviewSessionFlow", () => {
       finished: false,
     });
     finishInterviewSessionMock.mockResolvedValue(undefined);
+    synthesizeTtsMock.mockResolvedValue({
+      audioBase64: "QQ==",
+      audioUrl: null,
+    });
   });
 
   it("syncs the route session into storage and loads the current question", async () => {
@@ -106,6 +117,53 @@ describe("useInterviewSessionFlow", () => {
       );
       expect(getCurrentQuestionMock).toHaveBeenCalledWith("route-session");
     });
+  });
+
+  it("does not synthesize question audio directly during session sync", async () => {
+    useParamsMock.mockReturnValue({
+      sessionId: "route-session",
+    });
+
+    const { result } = renderSessionFlow();
+
+    await waitFor(() => {
+      expect(
+        result.current.messages.some(
+          (message) => message.content === "Initial question",
+        ),
+      ).toBe(true);
+    });
+
+    expect(synthesizeTtsMock).not.toHaveBeenCalled();
+  });
+
+  it("normalizes java-map style current-question payloads before rendering", async () => {
+    useParamsMock.mockReturnValue({
+      sessionId: "route-session",
+    });
+    getCurrentQuestionMock.mockResolvedValue({
+      isSuccess: true,
+      questionContent:
+        "{id=1, topic=NLP工程实践, question=请详细介绍一下你在智控天眼项目中如何设计领域继续预训练方案？, purpose=考察候选人是否真正理解领域适配。}",
+      questionNumber: "1",
+      finished: false,
+    });
+
+    const { result } = renderSessionFlow();
+
+    await waitFor(() => {
+      expect(
+        result.current.messages.some(
+          (message) =>
+            message.content ===
+            "请详细介绍一下你在智控天眼项目中如何设计领域继续预训练方案？",
+        ),
+      ).toBe(true);
+    });
+
+    expect(result.current.currentQuestionContent).toBe(
+      "请详细介绍一下你在智控天眼项目中如何设计领域继续预训练方案？",
+    );
   });
 
   it("does not restore a stored session automatically when the route is empty", async () => {

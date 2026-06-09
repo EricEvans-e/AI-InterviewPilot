@@ -40,9 +40,8 @@ public class InterviewReferenceAnswerService {
     private final QuestionBankService questionBankService;
     private final InterviewSessionQuestionMapper sessionQuestionMapper;
 
-    public List<InterviewTurnLog> attachReferenceAnswers(
+    public List<InterviewTurnLog> attachAvailableReferenceAnswers(
             String sessionId,
-            String interviewDirection,
             List<InterviewTurnLog> turns) {
         if (StrUtil.isBlank(sessionId) || turns == null || turns.isEmpty()) {
             return turns == null ? Collections.emptyList() : turns;
@@ -58,7 +57,17 @@ public class InterviewReferenceAnswerService {
                 turn.setReferenceAnswer(clip(preset));
             }
         }
+        return turns;
+    }
 
+    public List<InterviewTurnLog> generateMissingReferenceAnswers(
+            String sessionId,
+            String interviewDirection,
+            List<InterviewTurnLog> turns) {
+        turns = attachAvailableReferenceAnswers(sessionId, turns);
+        if (StrUtil.isBlank(sessionId) || turns == null || turns.isEmpty()) {
+            return turns == null ? Collections.emptyList() : turns;
+        }
         List<InterviewTurnLog> missing = turns.stream()
                 .filter(turn -> turn != null
                         && StrUtil.isNotBlank(turn.getQuestionContent())

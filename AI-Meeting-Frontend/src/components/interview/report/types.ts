@@ -18,6 +18,7 @@ export type QaReview = {
 };
 
 export type ReviewFeedback = {
+  source?: string | null;
   overallComment: string | null;
   highlights: string[];
   improvementTips: string[];

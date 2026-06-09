@@ -52,6 +52,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      allowedHosts: [".trycloudflare.com"],
       proxy: {
         "/api": {
           target: apiTarget,

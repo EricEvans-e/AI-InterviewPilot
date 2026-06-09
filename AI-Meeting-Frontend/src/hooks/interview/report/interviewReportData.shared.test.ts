@@ -406,8 +406,12 @@ describe("fetchInterviewReportQueryData", () => {
     const getRecordSpy = vi
       .spyOn(interviewService, "getInterviewRecordBySessionId")
       .mockRejectedValueOnce(new Error("not ready"))
-      .mockRejectedValueOnce(new Error("still not ready"))
-      .mockRejectedValueOnce(new Error("still processing"))
+      .mockRejectedValueOnce(
+        new AppError(ErrorCode.REQUEST_TIMEOUT, "still not ready"),
+      )
+      .mockRejectedValueOnce(
+        new AppError(ErrorCode.REQUEST_TIMEOUT, "still processing"),
+      )
       .mockResolvedValueOnce(record);
     const saveSpy = vi
       .spyOn(interviewService, "saveInterviewRecord")
@@ -431,6 +435,34 @@ describe("fetchInterviewReportQueryData", () => {
     expect(saveSpy).toHaveBeenCalledTimes(1);
     expect(saveRedisSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("keeps polling after a transient report timeout until the record becomes available", async () => {
+    vi.useFakeTimers();
+    const record = {
+      id: 104,
+      userId: 1,
+      sessionId: "session-104",
+    };
+
+    const getRecordSpy = vi
+      .spyOn(interviewService, "getInterviewRecordBySessionId")
+      .mockRejectedValueOnce(
+        new AppError(ErrorCode.REQUEST_TIMEOUT, "Request timeout"),
+      )
+      .mockResolvedValueOnce(record);
+    const saveSpy = vi.spyOn(interviewService, "saveInterviewRecord");
+    const saveRedisSpy = vi.spyOn(interviewService, "saveInterviewRecordFromRedis");
+
+    const pending = fetchInterviewReportQueryData("session-104");
+    await vi.runAllTimersAsync();
+    const result = await pending;
+
+    expect(result).toEqual({ record });
+    expect(getRecordSpy).toHaveBeenCalledTimes(2);
+    expect(saveSpy).not.toHaveBeenCalled();
+    expect(saveRedisSpy).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 });

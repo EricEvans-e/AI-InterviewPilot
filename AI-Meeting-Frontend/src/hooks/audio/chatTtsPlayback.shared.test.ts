@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  INTERVIEW_QUESTION_TTS_REQUEST,
   isAbortError,
   normalizeBase64Audio,
 } from "@/hooks/audio/chatTtsPlayback.shared";
@@ -16,5 +17,9 @@ describe("chatTtsPlayback.shared", () => {
   it("detects abort-style errors", () => {
     expect(isAbortError(new DOMException("aborted", "AbortError"))).toBe(true);
     expect(isAbortError(new Error("other"))).toBe(false);
+  });
+
+  it("does not carry over the legacy xunfei voice parameter", () => {
+    expect("vcn" in INTERVIEW_QUESTION_TTS_REQUEST).toBe(false);
   });
 });

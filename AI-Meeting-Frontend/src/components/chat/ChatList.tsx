@@ -11,6 +11,7 @@ type ChatListProps = {
   topContent?: React.ReactNode;
   assistantAvatarSrc?: string;
   className?: string;
+  onTtsPlaybackStateChange?: (isActive: boolean) => void;
 };
 
 function ChatList({
@@ -18,10 +19,13 @@ function ChatList({
   topContent,
   assistantAvatarSrc,
   className,
+  onTtsPlaybackStateChange,
 }: ChatListProps) {
   const scrollRef = useAutoScroll(messages);
   const { loadingMessageId, playingMessageId, toggleMessagePlayback } =
-    useChatTtsPlayback(messages);
+    useChatTtsPlayback(messages, {
+      onPlaybackStateChange: onTtsPlaybackStateChange,
+    });
 
   return (
     <ScrollArea className={className} ref={scrollRef}>

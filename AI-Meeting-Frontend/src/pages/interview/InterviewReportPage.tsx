@@ -21,6 +21,12 @@ export default function InterviewReportPage() {
     isRecordLoading,
     recordError,
     record,
+    isGeneratingAiReviewFeedback,
+    canGenerateAiReviewFeedback,
+    generateAiReviewFeedback,
+    isGeneratingReferenceAnswers,
+    canGenerateReferenceAnswers,
+    generateReferenceAnswers,
     resumeScore,
     interviewScore,
     compositeScore,
@@ -63,8 +69,9 @@ export default function InterviewReportPage() {
         )}
 
         <div className="grid items-start gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <motion.div
+              className="min-w-0"
               initial={{ opacity: 0, y: 18, filter: "blur(5px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{
@@ -83,6 +90,7 @@ export default function InterviewReportPage() {
               />
             </motion.div>
             <motion.div
+              className="min-w-0"
               initial={{ opacity: 0, y: 18, filter: "blur(5px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{
@@ -100,6 +108,7 @@ export default function InterviewReportPage() {
             </motion.div>
           </div>
           <motion.div
+            className="min-w-0"
             initial={{ opacity: 0, y: 18, filter: "blur(5px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             transition={{
@@ -113,6 +122,9 @@ export default function InterviewReportPage() {
               reviewFeedback={reviewFeedback}
               isRecordLoading={isRecordLoading}
               recordError={recordError}
+              canGenerate={canGenerateAiReviewFeedback}
+              isGenerating={isGeneratingAiReviewFeedback}
+              onGenerate={generateAiReviewFeedback}
             />
           </motion.div>
         </div>
@@ -129,8 +141,9 @@ export default function InterviewReportPage() {
           />
         </motion.div>
 
-        <div className="grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(320px,0.45fr)_minmax(0,1fr)]">
           <motion.div
+            className="min-w-0"
             initial={{ opacity: 0, y: 20, filter: "blur(5px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             transition={{ duration: 0.4, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
@@ -141,13 +154,21 @@ export default function InterviewReportPage() {
             />
           </motion.div>
           <motion.div
+            className="min-w-0"
             initial={{ opacity: 0, y: 20, filter: "blur(5px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ duration: 0.4, delay: 0.36, ease: [0.22, 1, 0.36, 1] }}
+            transition={{
+              duration: 0.4,
+              delay: 0.36,
+              ease: [0.22, 1, 0.36, 1],
+            }}
           >
             <InterviewReferenceAnswerCard
               qaReviews={qaReviews}
               isLoading={isRecordLoading}
+              canGenerate={canGenerateReferenceAnswers}
+              isGenerating={isGeneratingReferenceAnswers}
+              onGenerate={generateReferenceAnswers}
             />
           </motion.div>
         </div>

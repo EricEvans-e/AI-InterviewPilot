@@ -17,8 +17,9 @@ import { useQuestionBankPageController } from "@/hooks/interview/useQuestionBank
 export default function QuestionBankInterviewPage() {
   const cameraPreviewRef = useRef<CameraPreviewHandle | null>(null);
   const [isSketchpadOpen, setIsSketchpadOpen] = useState(false);
+  const [isQuestionTtsPlaying, setIsQuestionTtsPlaying] = useState(false);
   const { chat, interview, camera } = useQuestionBankPageController();
-  const { setInput, isReady, isSubmitting, handleSend, input, messages, isTTSSpeaking } = chat;
+  const { setInput, isReady, isSubmitting, handleSend, input, messages } = chat;
 
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const recording = useInterviewRecording(cameraStream, {
@@ -125,6 +126,7 @@ export default function QuestionBankInterviewPage() {
             showDefaultLeading={false}
           />
         }
+        onTtsPlaybackStateChange={setIsQuestionTtsPlaying}
         contentOverlay={
           <>
             <InterviewCameraOverlay
@@ -138,7 +140,7 @@ export default function QuestionBankInterviewPage() {
               isRecording={isRecording}
             />
             <DigitalHumanAvatar
-              isSpeaking={isTTSSpeaking}
+              isSpeaking={isQuestionTtsPlaying}
               isListening={isReady && !isSubmitting}
               isThinking={isSubmitting}
               text={interview.currentQuestionContent ?? undefined}

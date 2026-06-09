@@ -197,6 +197,15 @@ AI-InterviewPilot/
 
 更详细的本地启动、验证和排障步骤见 [docs/local-run-guide.md](docs/local-run-guide.md)。生产 Docker Compose 部署见 [docs/deployment-guide.md](docs/deployment-guide.md)。
 
+### Report readiness notes
+
+- The report page is now designed to show base report data first and keep waiting for delayed assets instead of failing fast on the first timeout.
+- Interview recording playback can appear a little later than the first report payload. The frontend now keeps polling for the recording URL for about one minute before giving up.
+- Reference answers are manual on the report page. Clicking `生成参考答案` sends a longer-lived request and, if the request times out on the client side, the frontend continues polling the saved report result before surfacing an error.
+- Final report persistence no longer blocks on synchronous AI review-summary generation. The first saved snapshot uses fast rule-based review content so the page can open earlier.
+- Interview conclusion is also manual on the report page. Clicking `生成 AI 结论` triggers a longer AI request, and the current report view updates in place after the AI result is saved.
+- If the `生成 AI 结论` request times out on the client side, the frontend continues polling the saved report and replaces the initial rule-based summary once the AI conclusion is ready.
+
 ### 环境要求
 
 | 组件 | 版本要求 |
@@ -224,7 +233,7 @@ cd E:\Users\Eric\Desktop\AIMeeting
 
 ### 2. 配置 Mimo API Key
 
-后端本地启动不会自动读取 `.env` 文件。Windows PowerShell 中请在启动后端的同一个终端设置环境变量：
+后端本地启动现在会自动加载 `AI-Meeting/.env`，并在从 `AI-Meeting/admin` 启动时继续向上查找父目录中的 `.env`。如果 shell 里同时设置了同名环境变量，以 shell 环境变量为准。Windows PowerShell 中仍然推荐在启动后端的同一个终端显式设置环境变量：
 
 ```powershell
 $env:MIMO_API_KEY="你的-token-plan-api-key"
@@ -355,6 +364,10 @@ http://localhost:5173
 3. 在面试页面授权麦克风，开始录音后发送语音，停止转写后应收到最终文本。
 4. 面试题播报或 TTS 测试应返回可播放音频；新链路主要读取 `audioBase64`。
 
+补充说明：
+- 面试题如果返回 Java Map 风格包装，如 `{question=...}` 或 `{id=1, topic=..., question=..., purpose=...}`，前端会先归一化为纯题目文本，再写入“当前题目”、聊天消息和 TTS 文本。
+- Mimo TTS 请求体中的实际播报文本必须放在 `assistant` 角色消息里；如果后端日志出现 `messages must contain an assistant role for TTS model`，说明请求体结构被改坏了。
+
 ### 8. 一键 Docker 生产式运行
 
 后端仓库提供 `docker-compose.prod.yml`，会同时构建后端和前端镜像，并通过前端 Nginx 暴露 80 端口：
@@ -424,12 +437,13 @@ rg -n "tp-[A-Za-z0-9]{20,}" . -S
 
 | 现象 | 处理方式 |
 |------|----------|
-| 后端启动但 AI 无响应 | 确认当前启动终端设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`；数据库 `ai_properties`、`agent_properties` 应保留 `MIMO_API_KEY` 占位符，由后端运行时解析真实 key |
+| 后端启动但 AI 无响应 | 先确认 `AI-Meeting/.env` 或当前启动终端里已经提供 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`；数据库 `ai_properties`、`agent_properties` 应保留 `MIMO_API_KEY` 占位符，由后端运行时解析真实 key |
 | 前端请求 404 | 确认后端在 `8002`，前端 `VITE_API_TARGET=http://localhost:8002` |
 | WebSocket 连不上 | 确认前端通过 `5173` 访问，Vite proxy 开启 `ws: true`；登录后再进入录音页面 |
 | ASR 没有最终文本 | 需要发送 `stop_transcription` 结束音频流，后端才会调用 Mimo ASR 返回最终文本 |
-| TTS 成功但没声音 | 检查后端返回的 `audioBase64` 是否为空，查看 `MimoAudioService` 调用日志 |
+| TTS 成功但没声音 | 检查后端返回的 `audioBase64` 是否为空，查看 `MimoAudioService` 调用日志；如果日志里有 `messages must contain an assistant role for TTS model`，说明 TTS 请求体里的播报文本没有放在 `assistant` 角色消息中 |
 | MySQL 密码不对 | 本地 compose 默认 root 密码通常是 `122333`；如果使用 `.env` 覆盖，请以 `.env` 为准 |
+| 当前题目显示成 `{id=..., question=...}` 一整串对象文本 | 说明题目文本没有经过 `normalizeInterviewQuestionText()` 归一化，检查前端会话流是否绕过了这一步 |
 | Redis 报 `Bind for 0.0.0.0:6379 failed` | 说明本机已有 Redis 占用 6379；先执行 `docker stop interviewpilot-redis`，再重试 `docker compose up -d mysql mongo redis` |
 
 ---

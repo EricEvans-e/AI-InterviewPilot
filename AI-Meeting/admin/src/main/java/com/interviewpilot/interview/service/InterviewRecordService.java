@@ -36,6 +36,22 @@ public interface InterviewRecordService extends IService<InterviewRecordDO> {
      * @return 面试记录
      */
     InterviewRecordRespDTO getBySessionId(String sessionId, Long userId);
+
+    /**
+     * 手动生成报告参考答案。该操作可能调用 AI，避免在报告首屏自动执行。
+     * @param sessionId 会话ID
+     * @param userId 当前登录用户ID
+     * @return 更新后的面试报告
+     */
+    InterviewRecordRespDTO generateReferenceAnswers(String sessionId, Long userId);
+
+    /**
+     * 手动生成 AI 面试结论，覆盖报告中的 reviewFeedback。
+     * @param sessionId 会话ID
+     * @param userId 当前登录用户ID
+     * @return 更新后的面试报告
+     */
+    InterviewRecordRespDTO generateAiReviewFeedback(String sessionId, Long userId);
     
     /**
      * 从Redis保存面试记录

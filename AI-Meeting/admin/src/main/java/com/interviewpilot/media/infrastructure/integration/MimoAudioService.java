@@ -204,6 +204,7 @@ public class MimoAudioService {
             messages.add(userMessage);
         }
 
+        // Mimo TTS expects the target spoken text to be placed in an assistant message.
         JSONObject assistantMessage = new JSONObject();
         assistantMessage.put("role", "assistant");
         assistantMessage.put("content", requestParam.getText().trim());

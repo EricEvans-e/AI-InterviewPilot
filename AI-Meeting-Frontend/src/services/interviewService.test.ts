@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppError, ErrorCode } from "@/lib/errors";
 import requestService from "@/lib/request";
 import {
@@ -6,6 +6,10 @@ import {
   interviewService,
   normalizeInterviewAnswer,
 } from "@/services/interviewService";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("normalizeInterviewAnswer", () => {
   it("keeps isFollowUp and followUpNeeded independent", () => {
@@ -86,8 +90,157 @@ describe("interviewService.saveInterviewRecordFromRedis", () => {
     expect(postSpy).toHaveBeenCalledWith(
       "/ip/v1/interview/interview/record/save-from-redis/session-1",
       undefined,
+      expect.objectContaining({ timeout: 60_000 }),
     );
 
     postSpy.mockRestore();
+  });
+
+  it("uses the extended report timeout when finalizing from redis", async () => {
+    const postSpy = vi
+      .spyOn(requestService, "post")
+      .mockResolvedValueOnce(undefined);
+
+    await interviewService.saveInterviewRecordFromRedis("session-timeout");
+
+    expect(postSpy).toHaveBeenCalledWith(
+      "/ip/v1/interview/interview/record/save-from-redis/session-timeout",
+      undefined,
+      expect.objectContaining({ timeout: 60_000 }),
+    );
+  });
+});
+
+describe("interviewService.generateInterviewReferenceAnswers", () => {
+  it("falls back to legacy path when the new route is unavailable", async () => {
+    const record = {
+      id: 1,
+      userId: 1,
+      sessionId: "session-1",
+    };
+
+    const postSpy = vi
+      .spyOn(requestService, "post")
+      .mockRejectedValueOnce(
+        new AppError(ErrorCode.RESOURCE_NOT_FOUND, "not found"),
+      )
+      .mockResolvedValueOnce(record);
+
+    const result =
+      await interviewService.generateInterviewReferenceAnswers("session-1");
+
+    expect(result).toEqual(record);
+    expect(postSpy).toHaveBeenNthCalledWith(
+      1,
+      "/ip/v1/interview/interview/record/session-1/reference-answers",
+      undefined,
+      expect.objectContaining({ timeout: 180_000 }),
+    );
+    expect(postSpy).toHaveBeenNthCalledWith(
+      2,
+      "/ip/v1/interview/record/session-1/reference-answers",
+      undefined,
+      expect.objectContaining({ timeout: 180_000 }),
+    );
+
+    postSpy.mockRestore();
+  });
+
+  it("uses the long ai timeout for manual reference-answer generation", async () => {
+    const record = {
+      id: 2,
+      userId: 1,
+      sessionId: "session-2",
+    };
+    const postSpy = vi
+      .spyOn(requestService, "post")
+      .mockResolvedValueOnce(record);
+
+    await interviewService.generateInterviewReferenceAnswers("session-2");
+
+    expect(postSpy).toHaveBeenCalledWith(
+      "/ip/v1/interview/interview/record/session-2/reference-answers",
+      undefined,
+      expect.objectContaining({ timeout: 180_000 }),
+    );
+  });
+});
+
+describe("interviewService.generateInterviewAiReviewFeedback", () => {
+  it("falls back to legacy path when the new route is unavailable", async () => {
+    const record = {
+      id: 11,
+      userId: 1,
+      sessionId: "session-review-1",
+      reviewFeedback: {
+        overallComment: "AI 总结",
+      },
+    };
+
+    const postSpy = vi
+      .spyOn(requestService, "post")
+      .mockRejectedValueOnce(
+        new AppError(ErrorCode.RESOURCE_NOT_FOUND, "not found"),
+      )
+      .mockResolvedValueOnce(record);
+
+    const result =
+      await interviewService.generateInterviewAiReviewFeedback(
+        "session-review-1",
+      );
+
+    expect(result).toEqual(record);
+    expect(postSpy).toHaveBeenNthCalledWith(
+      1,
+      "/ip/v1/interview/interview/record/session-review-1/review-feedback",
+      undefined,
+      expect.objectContaining({ timeout: 180_000 }),
+    );
+    expect(postSpy).toHaveBeenNthCalledWith(
+      2,
+      "/ip/v1/interview/record/session-review-1/review-feedback",
+      undefined,
+      expect.objectContaining({ timeout: 180_000 }),
+    );
+  });
+
+  it("uses the long ai timeout for manual ai review generation", async () => {
+    const record = {
+      id: 12,
+      userId: 1,
+      sessionId: "session-review-2",
+      reviewFeedback: {
+        overallComment: "AI 总结",
+      },
+    };
+    const postSpy = vi
+      .spyOn(requestService, "post")
+      .mockResolvedValueOnce(record);
+
+    await interviewService.generateInterviewAiReviewFeedback("session-review-2");
+
+    expect(postSpy).toHaveBeenCalledWith(
+      "/ip/v1/interview/interview/record/session-review-2/review-feedback",
+      undefined,
+      expect.objectContaining({ timeout: 180_000 }),
+    );
+  });
+});
+
+describe("interviewService.getInterviewRecordBySessionId", () => {
+  it("uses the extended report timeout while loading the report", async () => {
+    const record = {
+      id: 3,
+      userId: 1,
+      sessionId: "session-3",
+    };
+    const getSpy = vi.spyOn(requestService, "get").mockResolvedValueOnce(record);
+
+    await interviewService.getInterviewRecordBySessionId("session-3");
+
+    expect(getSpy).toHaveBeenCalledWith(
+      "/ip/v1/interview/interview/record/session-3",
+      expect.objectContaining({ timeout: 60_000 }),
+    );
   });
 });

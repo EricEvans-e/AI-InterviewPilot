@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 class InterviewReferenceAnswerServiceTest {
 
     @Test
-    void shouldUsePresetQuestionBankReferenceAnswerBeforeAiGeneration() throws Exception {
+    void shouldAttachPresetReferenceAnswerWithoutAiGeneration() throws Exception {
         BusinessAgentResolver resolver = mock(BusinessAgentResolver.class);
         InterviewAiInvoker invoker = mock(InterviewAiInvoker.class);
         QuestionBankService questionBankService = mock(QuestionBankService.class);
@@ -51,9 +51,8 @@ class InterviewReferenceAnswerServiceTest {
                 sessionQuestionMapper
         );
 
-        List<InterviewTurnLog> turns = service.attachReferenceAnswers(
+        List<InterviewTurnLog> turns = service.attachAvailableReferenceAnswers(
                 "session-bank",
-                "AI/机器学习工程师",
                 List.of(InterviewTurnLog.builder()
                         .questionNumber("1")
                         .questionContent("请说明文本风控系统的算法设计。")
@@ -112,7 +111,7 @@ class InterviewReferenceAnswerServiceTest {
                 sessionQuestionMapper
         );
 
-        List<InterviewTurnLog> turns = service.attachReferenceAnswers(
+        List<InterviewTurnLog> turns = service.generateMissingReferenceAnswers(
                 "session-resume",
                 "AI/机器学习工程师",
                 List.of(InterviewTurnLog.builder()

@@ -24,7 +24,6 @@ export function useInterviewPageController() {
       isReady: sessionFlow.isReady,
       isSubmitting: sessionFlow.isInterviewSubmitting,
       handleSend: sessionFlow.handleSend,
-      isTTSSpeaking: sessionFlow.isTTSSpeaking,
     },
     interview: {
       sessionId: sessionFlow.interviewerSessionId,

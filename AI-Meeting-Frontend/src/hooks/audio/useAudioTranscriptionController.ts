@@ -39,13 +39,14 @@ export function useAudioTranscriptionController(
     undefined,
     createInitialAudioTranscriptionState,
   );
-  const cleanupPromiseRef = useRef<Promise<void> | null>(null);
+  const shutdownPromiseRef = useRef<Promise<void> | null>(null);
   const cleanupRef = useRef<() => Promise<void>>(async () => undefined);
   const activeStartTokenRef = useRef<symbol | null>(null);
 
   const {
     connect: connectTransport,
     disconnect: disconnectTransport,
+    stop: stopTransport,
     sendAudioChunk,
   } = useAudioTranscriptionTransport({
     userId: resolveAudioUserId(currentUser),
@@ -79,25 +80,49 @@ export function useAudioTranscriptionController(
 
   const { start: startStream, stop: stopStream } = stream;
 
-  const cleanup = useCallback(async () => {
-    if (cleanupPromiseRef.current) {
-      await cleanupPromiseRef.current;
-      return;
-    }
+  const runShutdown = useCallback(
+    async (executor: () => Promise<void>) => {
+      if (shutdownPromiseRef.current) {
+        await shutdownPromiseRef.current;
+        return;
+      }
 
-    cleanupPromiseRef.current = (async () => {
-      activeStartTokenRef.current = null;
+      shutdownPromiseRef.current = (async () => {
+        activeStartTokenRef.current = null;
+        try {
+          await executor();
+        } finally {
+          setIsRecording(false);
+        }
+      })();
+
+      try {
+        await shutdownPromiseRef.current;
+      } finally {
+        shutdownPromiseRef.current = null;
+      }
+    },
+    [],
+  );
+
+  const cleanup = useCallback(async () => {
+    await runShutdown(async () => {
       disconnectTransport();
       await stopStream();
-      setIsRecording(false);
-    })();
+    });
+  }, [disconnectTransport, runShutdown, stopStream]);
 
-    try {
-      await cleanupPromiseRef.current;
-    } finally {
-      cleanupPromiseRef.current = null;
-    }
-  }, [disconnectTransport, stopStream]);
+  const finalizeRecording = useCallback(async () => {
+    await runShutdown(async () => {
+      try {
+        await stopStream();
+        await stopTransport();
+      } catch (stopError) {
+        console.error("Finalize recording failed:", stopError);
+        disconnectTransport();
+      }
+    });
+  }, [disconnectTransport, runShutdown, stopStream, stopTransport]);
 
   useEffect(() => {
     cleanupRef.current = cleanup;
@@ -109,11 +134,14 @@ export function useAudioTranscriptionController(
       return;
     }
 
-    if (isRecording) {
-      return;
-    }
-
     try {
+      if (isRecording) {
+        return;
+      }
+      if (shutdownPromiseRef.current) {
+        await shutdownPromiseRef.current;
+      }
+
       const startToken = Symbol("audio-transcription-start");
       activeStartTokenRef.current = startToken;
       setError(null);
@@ -131,11 +159,20 @@ export function useAudioTranscriptionController(
       setError(START_RECORDING_ERROR);
       await cleanup();
     }
-  }, [cleanup, connectTransport, currentUser, isRecording, startStream]);
+  }, [
+    cleanup,
+    connectTransport,
+    currentUser,
+    isRecording,
+    startStream,
+  ]);
 
   const stopRecording = useCallback(() => {
-    void cleanup();
-  }, [cleanup]);
+    if (!isRecording && !shutdownPromiseRef.current) {
+      return;
+    }
+    void finalizeRecording();
+  }, [finalizeRecording, isRecording]);
 
   useEffect(() => {
     return () => {

@@ -2,7 +2,6 @@ import { AppError, ErrorCode } from "@/lib/errors";
 import { mimoTtsService } from "@/services/mimoTtsService";
 
 export const INTERVIEW_QUESTION_TTS_REQUEST = Object.freeze({
-  vcn: "x4_mingge",
   language: "zh",
   speed: 50,
   volume: 50,

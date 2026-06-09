@@ -9,6 +9,9 @@ import type { QaReview } from "@/components/interview/report/types";
 type InterviewReferenceAnswerCardProps = {
   qaReviews: QaReview[];
   isLoading: boolean;
+  canGenerate?: boolean;
+  isGenerating?: boolean;
+  onGenerate?: (() => void | Promise<unknown>) | undefined;
 };
 
 type ReferenceItem = {
@@ -41,6 +44,9 @@ const buildReferenceItems = (qaReviews: QaReview[]): ReferenceItem[] => {
 export default function InterviewReferenceAnswerCard({
   qaReviews,
   isLoading,
+  canGenerate = false,
+  isGenerating = false,
+  onGenerate,
 }: InterviewReferenceAnswerCardProps) {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
 
@@ -55,7 +61,20 @@ export default function InterviewReferenceAnswerCard({
 
   return (
     <Card className="min-w-0 border-slate-100 p-6">
-      <p className="text-sm font-medium text-slate-900">参考答案</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-slate-900">参考答案</p>
+        {canGenerate && onGenerate ? (
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 rounded-full px-3 text-xs"
+            onClick={() => void onGenerate()}
+            disabled={isGenerating}
+          >
+            {isGenerating ? "生成中..." : "生成参考答案"}
+          </Button>
+        ) : null}
+      </div>
 
       {isLoading ? (
         <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
@@ -63,7 +82,12 @@ export default function InterviewReferenceAnswerCard({
         </div>
       ) : referenceItems.length === 0 ? (
         <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
-          暂无参考答案
+          <div>暂无参考答案</div>
+          {canGenerate && onGenerate ? (
+            <div className="mt-2 text-[11px] leading-5 text-slate-400">
+              点击上方按钮后，系统会结合面试问题、候选人回答和评语生成可用于复盘练习的参考回答。
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="mt-4 space-y-3">
@@ -96,7 +120,7 @@ export default function InterviewReferenceAnswerCard({
                     variant="ghost"
                     size="sm"
                     className={cn(
-                      "shrink-0 rounded-full h-7 px-3 text-xs text-blue-700 hover:bg-blue-50 hover:text-blue-800",
+                      "h-7 shrink-0 rounded-full px-3 text-xs text-blue-700 hover:bg-blue-50 hover:text-blue-800",
                       isExpanded &&
                         "border border-blue-200 bg-blue-50 text-blue-800",
                     )}

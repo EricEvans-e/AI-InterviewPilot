@@ -375,6 +375,9 @@ const normalizeReviewFeedback = (value: unknown): ReviewFeedback | null => {
     highlights,
     improvementTips,
     nextActions,
+    ...(pickFirstString(payload.source)
+      ? { source: pickFirstString(payload.source) }
+      : {}),
   };
 };
 
@@ -397,6 +400,7 @@ const extractReviewFeedback = (
       highlights: parsed.highlights.slice(0, 3),
       improvementTips: parsed.improvementTips.slice(0, 3),
       nextActions: parsed.nextActions.slice(0, 3),
+      ...(parsed.source ? { source: parsed.source } : {}),
     };
   }
 
@@ -408,12 +412,12 @@ const extractReviewFeedback = (
   };
 };
 
-const REPORT_FINALIZE_RETRY_DELAY_MS = 1_200;
-const REPORT_FINALIZE_RETRY_ATTEMPTS = 5;
+const REPORT_READY_RETRY_DELAY_MS = 2_000;
+const REPORT_READY_RETRY_ATTEMPTS = 45;
 
-const waitForReportFinalizeRetry = () =>
+const waitForReportReadyRetry = () =>
   new Promise((resolve) => {
-    window.setTimeout(resolve, REPORT_FINALIZE_RETRY_DELAY_MS);
+    window.setTimeout(resolve, REPORT_READY_RETRY_DELAY_MS);
   });
 
 const isFinalizeProcessingError = (error: unknown) => {
@@ -424,19 +428,46 @@ const isFinalizeProcessingError = (error: unknown) => {
   );
 };
 
-const waitForFinalizedRecord = async (sessionId: string) => {
+const isTransientReportAvailabilityError = (error: unknown) => {
+  if (!(error instanceof AppError)) return false;
+  return (
+    error.code === ErrorCode.REQUEST_TIMEOUT ||
+    error.code === ErrorCode.RESOURCE_NOT_FOUND ||
+    isFinalizeProcessingError(error)
+  );
+};
+
+const waitForAvailableRecord = async (sessionId: string) => {
   let lastError: unknown = null;
 
-  for (let attempt = 0; attempt < REPORT_FINALIZE_RETRY_ATTEMPTS; attempt += 1) {
-    await waitForReportFinalizeRetry();
+  for (let attempt = 0; attempt < REPORT_READY_RETRY_ATTEMPTS; attempt += 1) {
+    await waitForReportReadyRetry();
     try {
-      return await interviewService.getInterviewRecordBySessionId(sessionId);
+      const record = await interviewService.getInterviewRecordBySessionId(
+        sessionId,
+      );
+      if (record) {
+        return record;
+      }
+      lastError = new AppError(
+        ErrorCode.RESOURCE_NOT_FOUND,
+        "Interview report is still processing",
+      );
     } catch (error) {
+      if (!isTransientReportAvailabilityError(error)) {
+        throw error;
+      }
       lastError = error;
     }
   }
 
-  throw lastError;
+  throw (
+    lastError ??
+    new AppError(
+      ErrorCode.REQUEST_TIMEOUT,
+      "Interview report is still processing",
+    )
+  );
 };
 
 export async function fetchInterviewReportQueryData(
@@ -445,30 +476,48 @@ export async function fetchInterviewReportQueryData(
   try {
     const record =
       await interviewService.getInterviewRecordBySessionId(sessionId);
-    return { record };
-  } catch {
-    try {
-      await interviewService.saveInterviewRecord({ sessionId });
-    } catch (manualSaveError) {
-      console.warn(
-        "[useInterviewReportData] manual save failed, fallback save-from-redis",
-        manualSaveError,
-      );
-      try {
-        await interviewService.saveInterviewRecordFromRedis(sessionId);
-      } catch (saveFromRedisError) {
-        if (!isFinalizeProcessingError(saveFromRedisError)) {
-          throw saveFromRedisError;
-        }
-        const record = await waitForFinalizedRecord(sessionId);
-        return { record };
-      }
+    if (record) {
+      return { record };
     }
+  } catch (error) {
+    if (isTransientReportAvailabilityError(error)) {
+      return { record: await waitForAvailableRecord(sessionId) };
+    }
+  }
 
+  try {
+    await interviewService.saveInterviewRecord({ sessionId });
+  } catch (manualSaveError) {
+    if (isTransientReportAvailabilityError(manualSaveError)) {
+      return { record: await waitForAvailableRecord(sessionId) };
+    }
+    console.warn(
+      "[useInterviewReportData] manual save failed, fallback save-from-redis",
+      manualSaveError,
+    );
+    try {
+      await interviewService.saveInterviewRecordFromRedis(sessionId);
+    } catch (saveFromRedisError) {
+      if (!isTransientReportAvailabilityError(saveFromRedisError)) {
+        throw saveFromRedisError;
+      }
+      return { record: await waitForAvailableRecord(sessionId) };
+    }
+  }
+
+  try {
     const record =
       await interviewService.getInterviewRecordBySessionId(sessionId);
-    return { record };
+    if (record) {
+      return { record };
+    }
+  } catch (error) {
+    if (!isTransientReportAvailabilityError(error)) {
+      throw error;
+    }
   }
+
+  return { record: await waitForAvailableRecord(sessionId) };
 }
 
 export function buildInterviewReportViewModel(

@@ -15,7 +15,7 @@
 
 ## 环境变量
 
-生产或本地运行时在 `.env` / shell 环境中配置：
+生产或本地运行时在 `.env` / shell 环境中配置。后端本地启动时会自动加载 `AI-Meeting/.env`，从 `AI-Meeting/admin` 启动时也会继续向上查找父目录中的 `.env`；shell 中显式设置的环境变量优先级更高：
 
 ```env
 MIMO_API_KEY=tp-your-token-plan-api-key
@@ -74,7 +74,12 @@ InterviewSessionFacade
 {question=请具体描述一下 TF-IDF 与语义匹配在你的系统中如何协同工作？}
 ```
 
-前端会在 `normalizeInterviewQuestionText()` 中清理这种 `{question=...}` 包装，再写入当前题目状态、聊天消息和 TTS 文本。修改面试题解析、同步下一题或消息流时，不要绕过该归一化步骤。
+也可能返回更完整的 Java Map 风格字符串：
+```text
+{id=1, topic=文本风控, question=请具体描述一下 TF-IDF 与语义匹配在你的系统中如何协同工作？, purpose=考察候选人对多源文本校验链路的理解}
+```
+
+前端会在 `normalizeInterviewQuestionText()` 中优先提取 `question=...` 字段，把这类包装统一清理成纯题目文本，再写入当前题目状态、聊天消息和 TTS 文本。修改面试题解析、同步下一题或消息流时，不要绕过该归一化步骤。
 
 ## 数据库配置
 
@@ -133,6 +138,8 @@ POST /api/ip/v1/mimo/tts/synthesize
 
 Mimo TTS 是同步合成接口。`POST /tasks` 和 `GET /tasks/{taskId}` 保留 task 形态只是为了兼容旧前端；新代码应优先使用 `/synthesize`，并直接读取 `audioBase64`。`/api/ip/v1/xunfei/tts/**` 暂时作为旧前端兼容别名保留，内部已经走 Mimo TTS。
 
+按当前 Mimo TTS v2.5 协议约束，真正要播报的文本必须放在 `assistant` 角色消息中；`user` 角色更适合放风格说明或控制指令。如果后端日志出现 `messages must contain an assistant role for TTS model`，优先检查 `MimoAudioService.buildTtsRequestBody()` 生成的消息数组结构。
+
 ## 前端配置页面
 
 教师后台 `/teacher/ai-config` 默认只新建 `openai` 类型的 Mimo 兼容模型。管理员后台 `/admin/agent-config` 可为出题、评分、追问、神态分析等场景切换 active agent，其中神态分析等视觉场景应使用 `mimo-v2.5`。
@@ -155,8 +162,22 @@ OpenAI 兼容地址保留 `/v1`，代码会自动拼接 `/chat/completions`。`m
 
 ### ASR / TTS 没有响应
 
-检查 `MIMO_ASR_MODEL=mimo-v2.5-asr`、`MIMO_TTS_MODEL=mimo-v2.5-tts`，确认后端日志里没有 `Mimo API key is missing`。ASR 还要确认前端发送了 `stop_transcription`，否则后端不会关闭音频流并发起最终转写。
+检查 `MIMO_ASR_MODEL=mimo-v2.5-asr`、`MIMO_TTS_MODEL=mimo-v2.5-tts`，确认后端日志里没有 `Mimo API key is missing`。ASR 还要确认前端发送了 `stop_transcription`，否则后端不会关闭音频流并发起最终转写。TTS 如果返回 400 且提示 `messages must contain an assistant role for TTS model`，说明播报文本没有放在 `assistant` 角色消息中。
 
 ### 模型选择器不显示 Mimo
 
 检查 `ai_properties` 表中记录满足 `is_enabled = 1` 且 `del_flag = 0`。前端通过 `GET /api/ip/v1/ai-properties/options` 拉取模型列表。
+## Report generation behavior
+
+- Interview question generation, follow-up questions, and normal interview chat still default to `mimo-v2.5`.
+- `mimo-v2.5-pro` should remain reserved for pure-text high-reasoning chat paths. Do not bind it to visual flows such as demeanor/image analysis.
+- Final report persistence no longer waits for a synchronous AI review-summary call. The first saved report snapshot uses fast rule-based review content so the report page can open earlier.
+- Manual reference-answer generation still uses AI, but it is no longer part of the first report-load critical path.
+- Manual interview-conclusion generation now follows the same pattern: the first report load shows rule-based `reviewFeedback`, and the report page exposes a separate `生成 AI 结论` action for the slower AI summary path.
+
+## Delayed asset behavior
+
+- Report fetch now treats timeout/finalize-processing states as transient and continues polling before surfacing a hard error.
+- Recording playback can appear after the base report because the saved `recordingUrl` may arrive later than the main interview record.
+- The report-page `生成参考答案` action uses a longer client timeout and then polls the saved report if the backend finishes after the original HTTP request times out on the client side.
+- The report-page `生成 AI 结论` action also uses a long timeout. If the backend finishes after the client-side timeout, the frontend keeps polling the saved report and swaps the current rule-based summary to the AI-generated conclusion in place.

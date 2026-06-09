@@ -22,6 +22,7 @@ export class AudioToTextWebSocket {
   public onTranscription?: (text: string) => void;
   public onFinal?: (text: string) => void;
   public onError?: (error: string) => void;
+  public onSocketOpen?: () => void;
   public onConnected?: () => void;
   public onDisconnected?: () => void;
 
@@ -67,6 +68,7 @@ export class AudioToTextWebSocket {
 
     this.ws.onopen = () => {
       this.hasOpened = true;
+      this.onSocketOpen?.();
       this.flushPendingBinaryQueue();
       this.startPing();
     };

@@ -3,6 +3,7 @@ import { AppError, ErrorCode } from "@/lib/errors";
 import type { AxiosRequestConfig } from "axios";
 
 const INTERVIEW_LONG_TIMEOUT_MS = 180000;
+const INTERVIEW_REPORT_TIMEOUT_MS = 60000;
 
 export interface UploadResumeParams {
   agentId: number;
@@ -95,6 +96,7 @@ export interface InterviewRecordResult {
 }
 
 export interface InterviewReviewFeedbackResult {
+  source?: string | null;
   overallComment?: string | null;
   highlights?: string[] | null;
   improvementTips?: string[] | null;
@@ -662,14 +664,15 @@ const shouldFallbackToLegacyPath = (error: unknown) => {
 const getWithPathFallback = async <T>(
   primaryPath: string,
   legacyPath: string,
+  config?: AxiosRequestConfig,
 ) => {
   try {
-    return await service.get<T>(primaryPath);
+    return await service.get<T>(primaryPath, config);
   } catch (error) {
     if (!shouldFallbackToLegacyPath(error)) {
       throw error;
     }
-    return service.get<T>(legacyPath);
+    return service.get<T>(legacyPath, config);
   }
 };
 
@@ -692,14 +695,15 @@ const postWithPathFallback = async <T, D = unknown>(
   primaryPath: string,
   legacyPath: string,
   data?: D,
+  config?: AxiosRequestConfig<D>,
 ) => {
   try {
-    return await service.post<T, D>(primaryPath, data);
+    return await service.post<T, D>(primaryPath, data, config);
   } catch (error) {
     if (!shouldFallbackToLegacyPath(error)) {
       throw error;
     }
-    return service.post<T, D>(legacyPath, data);
+    return service.post<T, D>(legacyPath, data, config);
   }
 };
 
@@ -970,6 +974,10 @@ export const interviewService = {
     return postWithPathFallback<void>(
       `/ip/v1/interview/interview/record/save-from-redis/${encodeURIComponent(sessionId)}`,
       `/ip/v1/interview/record/save-from-redis/${encodeURIComponent(sessionId)}`,
+      undefined,
+      {
+        timeout: INTERVIEW_REPORT_TIMEOUT_MS,
+      },
     );
   },
   saveInterviewRecord: async (params: { sessionId: string; recordingUrl?: string }) => {
@@ -977,6 +985,9 @@ export const interviewService = {
       "/ip/v1/interview/interview/record",
       "/ip/v1/interview/record",
       params,
+      {
+        timeout: INTERVIEW_REPORT_TIMEOUT_MS,
+      },
     );
   },
   pageInterviewRecords: async (params: PageInterviewRecordsParams) => {
@@ -998,6 +1009,29 @@ export const interviewService = {
     return getWithPathFallback<InterviewRecordResult>(
       `/ip/v1/interview/interview/record/${encodeURIComponent(sessionId)}`,
       `/ip/v1/interview/record/${encodeURIComponent(sessionId)}`,
+      {
+        timeout: INTERVIEW_REPORT_TIMEOUT_MS,
+      },
+    );
+  },
+  generateInterviewReferenceAnswers: async (sessionId: string) => {
+    return postWithPathFallback<InterviewRecordResult>(
+      `/ip/v1/interview/interview/record/${encodeURIComponent(sessionId)}/reference-answers`,
+      `/ip/v1/interview/record/${encodeURIComponent(sessionId)}/reference-answers`,
+      undefined,
+      {
+        timeout: INTERVIEW_LONG_TIMEOUT_MS,
+      },
+    );
+  },
+  generateInterviewAiReviewFeedback: async (sessionId: string) => {
+    return postWithPathFallback<InterviewRecordResult>(
+      `/ip/v1/interview/interview/record/${encodeURIComponent(sessionId)}/review-feedback`,
+      `/ip/v1/interview/record/${encodeURIComponent(sessionId)}/review-feedback`,
+      undefined,
+      {
+        timeout: INTERVIEW_LONG_TIMEOUT_MS,
+      },
     );
   },
   uploadRecording: async (params: {

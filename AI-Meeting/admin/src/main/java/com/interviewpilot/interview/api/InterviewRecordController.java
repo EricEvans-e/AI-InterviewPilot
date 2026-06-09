@@ -91,6 +91,28 @@ public class InterviewRecordController {
     }
 
     /**
+     * 手动生成面试报告参考答案。
+     * 报告首屏不自动调用 AI，用户点击“生成参考答案”时才触发该接口。
+     */
+    @PostMapping({"/interview/record/{sessionId}/reference-answers", "/record/{sessionId}/reference-answers"})
+    public Result<InterviewRecordRespDTO> generateReferenceAnswers(
+            @PathVariable String sessionId,
+            @CurrentUser UserContext currentUser) {
+        return Results.success(interviewRecordService.generateReferenceAnswers(sessionId, currentUser.getUserId()));
+    }
+
+    /**
+     * 手动生成面试结论。
+     * 报告首屏默认返回快速规则摘要，用户点击后再触发 AI 总结并回写报告。
+     */
+    @PostMapping({"/interview/record/{sessionId}/review-feedback", "/record/{sessionId}/review-feedback"})
+    public Result<InterviewRecordRespDTO> generateAiReviewFeedback(
+            @PathVariable String sessionId,
+            @CurrentUser UserContext currentUser) {
+        return Results.success(interviewRecordService.generateAiReviewFeedback(sessionId, currentUser.getUserId()));
+    }
+
+    /**
      * 从 Redis 快照同步面试记录到数据库
      * 面试过程中的运行时数据存储在 Redis，此接口将其落盘持久化
      * 通常在面试结束或用户主动保存时调用

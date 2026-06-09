@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -60,8 +61,8 @@ class InterviewRecordServiceImplTest {
         InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
         InterviewReferenceAnswerService referenceAnswerService = mock(InterviewReferenceAnswerService.class);
         InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
-        when(referenceAnswerService.attachReferenceAnswers(any(), any(), any()))
-                .thenAnswer(invocation -> invocation.getArgument(2));
+        when(referenceAnswerService.attachAvailableReferenceAnswers(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
         InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
                 cacheService,
                 ownershipService,
@@ -132,18 +133,6 @@ class InterviewRecordServiceImplTest {
                         .feedback("Answer structure is clear and supported by a concrete project example.")
                         .build()
         ));
-        InterviewReviewFeedbackRespDTO aiReview = new InterviewReviewFeedbackRespDTO();
-        aiReview.setOverallComment("AI总体评价：答题结构清晰，但还需要补充量化指标。");
-        aiReview.setHighlights(List.of("能结合项目说明核心思路。"));
-        aiReview.setImprovementTips(List.of("补充指标、异常处理和工程落地细节。"));
-        aiReview.setNextActions(List.of("下一次回答按背景-方案-指标-复盘组织。"));
-        when(reportAiReviewService.generateReviewFeedback(
-                eq("interview-session-1"),
-                eq("backend"),
-                any(),
-                any(),
-                eq("Structured answer")
-        )).thenReturn(aiReview);
         DimensionScoreResult dimensionScore = new DimensionScoreResult();
         dimensionScore.setContentScore(92);
         dimensionScore.setLogicScore(83);
@@ -173,6 +162,7 @@ class InterviewRecordServiceImplTest {
         inOrder.verify(mapper).selectOne(any());
         inOrder.verify(mapper).updateById(any(InterviewRecordDO.class));
         verify(ownershipService, times(3)).requireOwnedSession("interview-session-1", 1001L);
+        verify(reportAiReviewService, never()).generateReviewFeedback(any(), any(), any(), any(), any());
         ArgumentCaptor<InterviewRecordDO> recordCaptor = ArgumentCaptor.forClass(InterviewRecordDO.class);
         verify(mapper).updateById(recordCaptor.capture());
 
@@ -185,7 +175,6 @@ class InterviewRecordServiceImplTest {
         assertEquals(86, record.getResumeScore());
         assertTrue(record.getSessionSnapshotJson().contains("\"sessionStatus\":\"FINISHED\""));
         assertTrue(record.getSessionSnapshotJson().contains("\"reviewFeedback\""));
-        assertTrue(record.getSessionSnapshotJson().contains("AI总体评价：答题结构清晰"));
         assertTrue(record.getSessionSnapshotJson().contains("\"demeanorScore\":82"));
         assertTrue(record.getSessionSnapshotJson().contains("\"demeanorDetails\""));
         assertTrue(record.getSessionSnapshotJson().contains("\"panicLevel\":20"));
@@ -194,10 +183,8 @@ class InterviewRecordServiceImplTest {
         InterviewRecordRespDTO report = service.getBySessionId("interview-session-1", 1001L);
         assertNotNull(report);
         assertNotNull(report.getReviewFeedback());
-        assertEquals("AI总体评价：答题结构清晰，但还需要补充量化指标。",
-                report.getReviewFeedback().getOverallComment());
-        assertEquals(List.of("下一次回答按背景-方案-指标-复盘组织。"),
-                report.getReviewFeedback().getNextActions());
+        assertNotNull(report.getReviewFeedback().getOverallComment());
+        assertTrue(report.getReviewFeedback().getNextActions().contains("Structured answer"));
         assertNotNull(report.getRadarChart());
         assertEquals(92, report.getRadarChart().getContentScore());
         assertEquals(70, report.getRadarChart().getEtiquetteScore());
@@ -219,8 +206,8 @@ class InterviewRecordServiceImplTest {
         InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
         InterviewReferenceAnswerService referenceAnswerService = mock(InterviewReferenceAnswerService.class);
         InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
-        when(referenceAnswerService.attachReferenceAnswers(any(), any(), any()))
-                .thenAnswer(invocation -> invocation.getArgument(2));
+        when(referenceAnswerService.attachAvailableReferenceAnswers(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
         InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
                 cacheService,
                 ownershipService,
@@ -284,5 +271,182 @@ class InterviewRecordServiceImplTest {
         assertEquals(List.of("补充量化指标", "复盘关键技术取舍",
                         "回答没有覆盖题目要求，需要补充算法路径、评价指标和工程挑战."),
                 report.getReviewFeedback().getNextActions());
+        verify(referenceAnswerService, never()).attachAvailableReferenceAnswers(any(), any());
+        verify(referenceAnswerService, never()).generateMissingReferenceAnswers(any(), any(), any());
+    }
+
+    @Test
+    void shouldGenerateReferenceAnswersOnlyWhenRequested() {
+        InterviewQuestionCacheService cacheService = mock(InterviewQuestionCacheService.class);
+        InterviewSessionOwnershipService ownershipService = mock(InterviewSessionOwnershipService.class);
+        InterviewSessionService sessionService = mock(InterviewSessionService.class);
+        InterviewQuestionService questionService = mock(InterviewQuestionService.class);
+        InterviewFinalizeLockService finalizeLockService = mock(InterviewFinalizeLockService.class);
+        InterviewSessionRuntimeSnapshotService runtimeSnapshotService = mock(InterviewSessionRuntimeSnapshotService.class);
+        InterviewSessionRuntimeRehydrateService runtimeRehydrateService = mock(InterviewSessionRuntimeRehydrateService.class);
+        DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
+        WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
+        InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
+        InterviewReferenceAnswerService referenceAnswerService = mock(InterviewReferenceAnswerService.class);
+        InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
+        when(referenceAnswerService.attachAvailableReferenceAnswers(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+        when(referenceAnswerService.generateMissingReferenceAnswers(any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    List<InterviewTurnLog> turns = invocation.getArgument(2, List.class);
+                    turns.get(0).setReferenceAnswer("参考回答：先说明方案，再说明指标和取舍。");
+                    return turns;
+                });
+        InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
+                cacheService,
+                ownershipService,
+                sessionService,
+                questionService,
+                finalizeLockService,
+                runtimeSnapshotService,
+                runtimeRehydrateService,
+                dimensionScoreStrategy,
+                weightedRadarComputationStrategy,
+                reportAiReviewService,
+                referenceAnswerService
+        );
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
+
+        InterviewRecordDO record = new InterviewRecordDO();
+        record.setId(3L);
+        record.setUserId(1003L);
+        record.setSessionId("session-reference-manual");
+        record.setInterviewDirection("AI/机器学习工程师");
+        record.setSessionSnapshotJson("""
+                {
+                  "sessionId":"session-reference-manual",
+                  "turns":[
+                    {
+                      "questionNumber":"1",
+                      "questionContent":"请说明 TF-IDF 与语义匹配如何协同。",
+                      "answerContent":"我用了 TF-IDF 和语义模型。",
+                      "score":70,
+                      "feedback":"需要补充融合细节。"
+                    }
+                  ]
+                }
+                """);
+        when(mapper.selectOne(any())).thenReturn(record);
+        when(mapper.updateById(any(InterviewRecordDO.class))).thenReturn(1);
+
+        InterviewRecordRespDTO report = service.generateReferenceAnswers("session-reference-manual", 1003L);
+
+        assertNotNull(report);
+        assertEquals("参考回答：先说明方案，再说明指标和取舍。",
+                report.getPlaybackItems().get(0).getReferenceAnswer());
+        verify(referenceAnswerService).generateMissingReferenceAnswers(
+                eq("session-reference-manual"),
+                eq("AI/机器学习工程师"),
+                any()
+        );
+        verify(mapper).updateById(any(InterviewRecordDO.class));
+    }
+
+    @Test
+    void shouldGenerateAiReviewFeedbackOnlyWhenRequested() {
+        InterviewQuestionCacheService cacheService = mock(InterviewQuestionCacheService.class);
+        InterviewSessionOwnershipService ownershipService = mock(InterviewSessionOwnershipService.class);
+        InterviewSessionService sessionService = mock(InterviewSessionService.class);
+        InterviewQuestionService questionService = mock(InterviewQuestionService.class);
+        InterviewFinalizeLockService finalizeLockService = mock(InterviewFinalizeLockService.class);
+        InterviewSessionRuntimeSnapshotService runtimeSnapshotService = mock(InterviewSessionRuntimeSnapshotService.class);
+        InterviewSessionRuntimeRehydrateService runtimeRehydrateService = mock(InterviewSessionRuntimeRehydrateService.class);
+        DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
+        WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
+        InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
+        InterviewReferenceAnswerService referenceAnswerService = mock(InterviewReferenceAnswerService.class);
+        InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
+        when(referenceAnswerService.attachAvailableReferenceAnswers(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+
+        InterviewReviewFeedbackRespDTO aiFeedback = new InterviewReviewFeedbackRespDTO();
+        aiFeedback.setOverallComment("AI 总结：回答覆盖了系统主链路，但量化指标解释仍不充分。");
+        aiFeedback.setHighlights(List.of("能够说明系统流程和核心模块。"));
+        aiFeedback.setImprovementTips(List.of("补充评估指标、异常处理和性能权衡。"));
+        aiFeedback.setNextActions(List.of("下次按背景-方案-指标-结果组织回答。"));
+        when(reportAiReviewService.generateReviewFeedback(any(), any(), any(), any(), any()))
+                .thenReturn(aiFeedback);
+
+        InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
+                cacheService,
+                ownershipService,
+                sessionService,
+                questionService,
+                finalizeLockService,
+                runtimeSnapshotService,
+                runtimeRehydrateService,
+                dimensionScoreStrategy,
+                weightedRadarComputationStrategy,
+                reportAiReviewService,
+                referenceAnswerService
+        );
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
+
+        InterviewRecordDO record = new InterviewRecordDO();
+        record.setId(4L);
+        record.setUserId(1004L);
+        record.setSessionId("session-manual-review");
+        record.setInterviewDirection("NLP 算法工程师");
+        record.setInterviewSuggestions("补充量化指标; 说明技术取舍");
+        record.setResumeScore(85);
+        record.setInterviewScore(43);
+        record.setContentScore(0);
+        record.setLogicScore(0);
+        record.setProfessionalScore(0);
+        record.setExpressionScore(0);
+        record.setAdaptabilityScore(0);
+        record.setTimeControlScore(70);
+        record.setEtiquetteScore(0);
+        record.setCompositeScore(43);
+        record.setSessionSnapshotJson("""
+                {
+                  "sessionId":"session-manual-review",
+                  "radar":{
+                    "resumeScore":85,
+                    "interviewPerformance":0,
+                    "demeanorEvaluation":0,
+                    "professionalSkills":26,
+                    "potentialIndex":43
+                  },
+                  "turns":[
+                    {
+                      "questionNumber":"1",
+                      "questionContent":"请说明文本风控系统的实现路径。",
+                      "answerContent":"你好",
+                      "score":0,
+                      "feedback":"回答没有覆盖题目要求，需要补充算法路径和评估指标。"
+                    }
+                  ]
+                }
+                """);
+        when(mapper.selectOne(any())).thenReturn(record);
+        when(mapper.updateById(any(InterviewRecordDO.class))).thenReturn(1);
+
+        InterviewRecordRespDTO report = service.generateAiReviewFeedback("session-manual-review", 1004L);
+
+        assertNotNull(report);
+        assertNotNull(report.getReviewFeedback());
+        assertEquals("AI 总结：回答覆盖了系统主链路，但量化指标解释仍不充分。",
+                report.getReviewFeedback().getOverallComment());
+        assertEquals(List.of("能够说明系统流程和核心模块。"),
+                report.getReviewFeedback().getHighlights());
+        assertEquals(List.of("补充评估指标、异常处理和性能权衡。"),
+                report.getReviewFeedback().getImprovementTips());
+        assertEquals(List.of("下次按背景-方案-指标-结果组织回答。"),
+                report.getReviewFeedback().getNextActions());
+        verify(reportAiReviewService).generateReviewFeedback(
+                eq("session-manual-review"),
+                eq("NLP 算法工程师"),
+                any(),
+                any(),
+                eq("补充量化指标; 说明技术取舍")
+        );
+        verify(mapper).updateById(any(InterviewRecordDO.class));
     }
 }

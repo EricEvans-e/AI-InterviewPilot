@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/constants";
@@ -19,7 +19,6 @@ import { useInterviewRouteRecovery } from "@/hooks/interview/session/useIntervie
 import { useInterviewSessionStorage } from "@/hooks/interview/session/useInterviewSessionStorage";
 import { generateRequestId } from "@/hooks/interview/shared/interviewUtils";
 import { interviewService } from "@/services/interviewService";
-import { mimoTtsService } from "@/services/mimoTtsService";
 
 export function useInterviewSessionFlow(user: InterviewFlowUser) {
   const navigate = useNavigate();
@@ -29,8 +28,6 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
   const [isInterviewSubmitting, setIsInterviewSubmitting] = useState(false);
   const [interviewError, setInterviewError] = useState<string | null>(null);
   const [isEndingInterview, setIsEndingInterview] = useState(false);
-  const [isTTSSpeaking, setIsTTSSpeaking] = useState(false);
-  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const {
     interviewerSessionId: storedInterviewerSessionId,
@@ -97,60 +94,6 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
     setInterviewError(null);
   }, []);
 
-  const playQuestionTTS = useCallback((text: string) => {
-    // Stop any currently playing audio
-    if (activeAudioRef.current) {
-      activeAudioRef.current.pause();
-      activeAudioRef.current = null;
-    }
-
-    // Fire and forget — do not block the UI flow
-    (async () => {
-      try {
-        const task = await mimoTtsService.synthesize({ text });
-
-        let audioSrc: string;
-        if (task.audioBase64) {
-          const byteString = atob(task.audioBase64);
-          const ab = new ArrayBuffer(byteString.length);
-          const ia = new Uint8Array(ab);
-          for (let i = 0; i < byteString.length; i++) {
-            ia[i] = byteString.charCodeAt(i);
-          }
-          audioSrc = URL.createObjectURL(new Blob([ab], { type: "audio/mpeg" }));
-        } else if (task.audioUrl) {
-          audioSrc = task.audioUrl;
-        } else {
-          return;
-        }
-
-        const audio = new Audio(audioSrc);
-        activeAudioRef.current = audio;
-
-        audio.onplay = () => setIsTTSSpeaking(true);
-        audio.onended = () => {
-          setIsTTSSpeaking(false);
-          activeAudioRef.current = null;
-          if (task.audioBase64) {
-            URL.revokeObjectURL(audioSrc);
-          }
-        };
-        audio.onerror = () => {
-          setIsTTSSpeaking(false);
-          activeAudioRef.current = null;
-          if (task.audioBase64) {
-            URL.revokeObjectURL(audioSrc);
-          }
-        };
-
-        await audio.play();
-      } catch (err) {
-        console.error("TTS playback failed:", err);
-        setIsTTSSpeaking(false);
-      }
-    })();
-  }, []);
-
   const syncNextQuestion = useCallback(
     async (sessionId: string, options?: { appendMessage?: boolean }) => {
       const response = await interviewService.getCurrentQuestion(sessionId);
@@ -170,8 +113,7 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
         return;
       }
 
-      // Clear welcome message when loading the first question
-      // This prevents showing "请先上传简历" for question-bank sessions
+      // Clear welcome message when loading the first question.
       clearWelcomeMessage();
 
       await appendNextQuestionMessage(
@@ -181,10 +123,8 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
         progressPatch.currentFollowUpCount,
         options,
       );
-
-      playQuestionTTS(progressPatch.currentQuestionContent);
     },
-    [appendNextQuestionMessage, applyProgressPatch, clearWelcomeMessage, playQuestionTTS],
+    [appendNextQuestionMessage, applyProgressPatch, clearWelcomeMessage],
   );
 
   useInterviewRouteRecovery({
@@ -205,11 +145,6 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
   });
 
   const resetInterviewFlow = useCallback(() => {
-    if (activeAudioRef.current) {
-      activeAudioRef.current.pause();
-      activeAudioRef.current = null;
-    }
-    setIsTTSSpeaking(false);
     setInterviewerSessionId(null);
     resetProgressState();
     resetMessageStream();
@@ -295,8 +230,6 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
           progressPatch.isCurrentQuestionFollowUp,
           progressPatch.currentFollowUpCount,
         );
-
-        playQuestionTTS(progressPatch.currentQuestionContent);
       }
 
       if (progressPatch.isInterviewFinished) {
@@ -326,7 +259,6 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
     isInterviewSubmitting,
     isReady,
     pauseBetweenMessages,
-    playQuestionTTS,
     startThinkingIndicator,
     stopThinkingIndicator,
   ]);
@@ -338,16 +270,9 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
       }
       setIsEndingInterview(true);
 
-      // Stop any TTS audio playing
-      if (activeAudioRef.current) {
-        activeAudioRef.current.pause();
-        activeAudioRef.current = null;
-      }
-      setIsTTSSpeaking(false);
-
       const reportSessionId = interviewerSessionId;
       try {
-        // Upload recording if provided — await so recordingUrl is saved before report page loads
+        // Upload recording if provided - await so recordingUrl is saved before report page loads.
         if (options?.recordingBlob && reportSessionId) {
           try {
             const recordingUrl = await interviewService.uploadRecording({
@@ -409,7 +334,6 @@ export function useInterviewSessionFlow(user: InterviewFlowUser) {
     isInterviewSubmitting,
     interviewError,
     isEndingInterview,
-    isTTSSpeaking,
     currentQuestionNumber,
     currentQuestionContent,
     isCurrentQuestionFollowUp,
