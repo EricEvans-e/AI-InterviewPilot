@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,7 @@ export default function TeacherInterviewRecordsPage() {
     isFetching,
     setPage,
     submitReview,
+    deleteRecord,
   } = useInterviewRecords();
 
   const [selectedRecord, setSelectedRecord] = useState<InterviewRecordDTO | null>(null);
@@ -52,6 +53,29 @@ export default function TeacherInterviewRecordsPage() {
       });
     },
     [submitReview],
+  );
+
+  const handleDeleteRecord = useCallback(
+    (record: InterviewRecordDTO) => {
+      const sessionId = record.sessionId;
+      if (!sessionId) {
+        window.alert("该记录缺少会话ID，无法删除");
+        return;
+      }
+      if (!window.confirm(`确定删除面试记录「${sessionId}」吗？删除后数据库中的会话数据、报告数据和录像文件也会清理。`)) {
+        return;
+      }
+      deleteRecord.mutate(sessionId, {
+        onSuccess: () => {
+          setSelectedRecord((prev) => (prev?.id === record.id ? null : prev));
+          window.alert("删除成功");
+        },
+        onError: () => {
+          window.alert("删除失败，请重试");
+        },
+      });
+    },
+    [deleteRecord],
   );
 
   const formatTime = (time?: string) => {
@@ -171,18 +195,33 @@ export default function TeacherInterviewRecordsPage() {
                               {formatTime(record.createTime)}
                             </td>
                             <td className="px-4 py-3">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 gap-1 text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSelect(record);
-                                }}
-                              >
-                                <ClipboardList className="h-3.5 w-3.5" />
-                                查看
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 gap-1 text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect(record);
+                                  }}
+                                >
+                                  <ClipboardList className="h-3.5 w-3.5" />
+                                  查看
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 gap-1 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                                  disabled={deleteRecord.isPending}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteRecord(record);
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  删除
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         );

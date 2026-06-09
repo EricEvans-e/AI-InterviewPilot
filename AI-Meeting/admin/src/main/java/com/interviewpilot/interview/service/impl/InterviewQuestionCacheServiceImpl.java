@@ -14,6 +14,7 @@ import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewRadarService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.service.InterviewScoreService;
+import com.interviewpilot.interview.service.cache.InterviewCacheKeys;
 import com.interviewpilot.interview.service.model.InterviewFlowState;
 import com.interviewpilot.interview.service.model.InterviewTurnLog;
 import com.interviewpilot.questionbank.dao.entity.QuestionDO;
@@ -435,7 +436,39 @@ public class InterviewQuestionCacheServiceImpl implements InterviewQuestionCache
             log.error("Interview cache service message", sessionId, e.getMessage(), e);
         }
     }
-    
+
+    @Override
+    public void clearSessionRuntime(String sessionId) {
+        if (StrUtil.isBlank(sessionId)) {
+            return;
+        }
+        try {
+            stringRedisTemplate.delete(List.of(
+                    InterviewCacheKeys.questions(sessionId),
+                    InterviewCacheKeys.suggestions(sessionId),
+                    InterviewCacheKeys.resumeScore(sessionId),
+                    InterviewCacheKeys.resumeContext(sessionId),
+                    InterviewCacheKeys.demeanorScore(sessionId),
+                    InterviewCacheKeys.direction(sessionId),
+                    InterviewCacheKeys.flow(sessionId),
+                    InterviewCacheKeys.followUpQuestions(sessionId),
+                    InterviewCacheKeys.answerRequest(sessionId),
+                    InterviewCacheKeys.turns(sessionId),
+                    InterviewCacheKeys.turnRequest(sessionId),
+                    InterviewCacheKeys.sessionScore(sessionId),
+                    InterviewCacheKeys.sessionScoreSum(sessionId),
+                    InterviewCacheKeys.sessionScoreCount(sessionId),
+                    InterviewCacheKeys.demeanorPanic(sessionId),
+                    InterviewCacheKeys.demeanorSeriousness(sessionId),
+                    InterviewCacheKeys.demeanorEmoticon(sessionId),
+                    InterviewCacheKeys.demeanorComposite(sessionId)
+            ));
+            log.info("Cleared interview runtime cache, sessionId={}", sessionId);
+        } catch (Exception e) {
+            log.error("Failed to clear interview runtime cache, sessionId={}", sessionId, e);
+        }
+    }
+
     /**
      * 从数据库加载面试题到缓存。
      * 优先解析 questionsJson，解析失败时回退到 questions 列表。

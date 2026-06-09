@@ -16,6 +16,8 @@ public interface InterviewSessionRepository extends MongoRepository<InterviewSes
 
     Optional<InterviewSession> findBySessionIdAndDelFlag(String sessionId, Integer delFlag);
 
+    void deleteBySessionId(String sessionId);
+
     List<InterviewSession> findByUserIdAndStatusInAndDelFlagOrderByUpdateTimeDesc(
             Long userId,
             Collection<String> statusList,

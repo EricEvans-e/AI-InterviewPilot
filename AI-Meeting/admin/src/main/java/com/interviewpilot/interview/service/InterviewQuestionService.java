@@ -49,6 +49,12 @@ public interface InterviewQuestionService {
     boolean deleteInterviewQuestion(String id);
 
     /**
+     * Physically delete generated interview question data by session id.
+     * @param sessionId interview session id
+     */
+    void deleteBySessionId(String sessionId);
+
+    /**
      * 统计用户面试题数量
      */
     Integer countByUserName(String userName);

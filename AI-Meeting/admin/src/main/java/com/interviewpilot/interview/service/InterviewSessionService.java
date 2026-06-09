@@ -33,4 +33,10 @@ public interface InterviewSessionService {
     void finishSession(String sessionId, Long userId);
 
     void abandonActiveSessions(Long userId);
+
+    /**
+     * Physically delete one interview session by session id.
+     * @param sessionId interview session id
+     */
+    void deleteBySessionId(String sessionId);
 }

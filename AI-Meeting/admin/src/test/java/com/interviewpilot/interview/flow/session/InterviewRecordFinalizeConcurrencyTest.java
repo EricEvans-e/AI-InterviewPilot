@@ -1,5 +1,6 @@
 package com.interviewpilot.interview.flow.report;
 
+import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.interview.application.InterviewSessionOwnershipService;
 import com.interviewpilot.interview.application.finalize.InterviewFinalizeLockService;
@@ -17,6 +18,7 @@ import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.service.InterviewSessionService;
 import com.interviewpilot.interview.service.model.InterviewSessionStatus;
 import com.interviewpilot.interview.testing.PressureTestReportUtil;
+import com.interviewpilot.teacher.dao.mapper.TeacherReviewMapper;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RLock;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -71,7 +73,9 @@ class InterviewRecordFinalizeConcurrencyTest {
                 dimensionScoreStrategy,
                 weightedRadarComputationStrategy,
                 reportAiReviewService,
-                referenceAnswerService
+                referenceAnswerService,
+                storageProperties(),
+                mock(TeacherReviewMapper.class)
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
@@ -176,5 +180,13 @@ class InterviewRecordFinalizeConcurrencyTest {
     }
 
     private record TaskResult(boolean success, long latencyMs) {
+    }
+
+    private ApplicationStorageProperties storageProperties() {
+        ApplicationStorageProperties properties = new ApplicationStorageProperties();
+        String tmpDir = System.getProperty("java.io.tmpdir");
+        properties.setBaseDir(tmpDir);
+        properties.setRecordingDir(tmpDir);
+        return properties;
     }
 }

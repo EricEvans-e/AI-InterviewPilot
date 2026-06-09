@@ -120,6 +120,20 @@ public class InterviewSessionRuntimeSnapshotService {
         return coldSnapshotRepository.findBySessionId(sessionId);
     }
 
+    public void deleteBySessionId(String sessionId) {
+        if (StrUtil.isBlank(sessionId)) {
+            return;
+        }
+        try {
+            hotSnapshotRepository.deleteBySessionId(sessionId);
+            coldSnapshotRepository.deleteBySessionId(sessionId);
+            turnArchiveRepository.deleteBySessionId(sessionId);
+            log.info("Deleted interview runtime snapshots, sessionId={}", sessionId);
+        } catch (Exception ex) {
+            log.warn("Failed to delete interview runtime snapshots, sessionId={}", sessionId, ex);
+        }
+    }
+
     public void refreshAfterQuestionExtraction(String sessionId) {
         hotRefreshCoordinator.submit(InterviewSessionRuntimeHotRefreshRequest.questionReady(sessionId));
     }

@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.common.enums.InterviewErrorCodeEnum;
 import com.interviewpilot.interview.application.finalize.InterviewFinalizeLockService;
@@ -36,6 +37,8 @@ import com.interviewpilot.interview.service.InterviewSessionService;
 import com.interviewpilot.interview.service.model.InterviewRuntimeLoadMode;
 import com.interviewpilot.interview.service.model.InterviewSessionStatus;
 import com.interviewpilot.interview.service.model.InterviewTurnLog;
+import com.interviewpilot.teacher.dao.entity.TeacherReviewDO;
+import com.interviewpilot.teacher.dao.mapper.TeacherReviewMapper;
 import io.micrometer.core.instrument.Metrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +46,7 @@ import org.redisson.api.RLock;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
@@ -52,6 +56,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.stream.Collectors;
 
 /**
@@ -75,6 +81,8 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
     private final WeightedRadarComputationStrategy weightedRadarComputationStrategy;
     private final InterviewReportAiReviewService interviewReportAiReviewService;
     private final InterviewReferenceAnswerService interviewReferenceAnswerService;
+    private final ApplicationStorageProperties storageProperties;
+    private final TeacherReviewMapper teacherReviewMapper;
 
     @Override
     public void saveInterviewRecord(String sessionId, Long userId, InterviewRecordSaveReqDTO requestParam) {
@@ -1165,6 +1173,35 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
     }
 
     @Override
+    @Transactional
+    public void deleteRecordBySessionIdForTeacher(String sessionId) {
+        if (StrUtil.isBlank(sessionId)) {
+            throw new ClientException(InterviewErrorCodeEnum.SESSION_ID_EMPTY);
+        }
+
+        LambdaQueryWrapper<InterviewRecordDO> queryWrapper = Wrappers.lambdaQuery(InterviewRecordDO.class)
+                .eq(InterviewRecordDO::getSessionId, sessionId);
+        InterviewRecordDO record = baseMapper.selectOne(queryWrapper);
+        String recordingUrl = record == null ? null : record.getRecordingUrl();
+
+        baseMapper.delete(queryWrapper);
+        deleteTeacherReviews(sessionId);
+        interviewQuestionService.deleteBySessionId(sessionId);
+        interviewSessionService.deleteBySessionId(sessionId);
+        runtimeSnapshotService.deleteBySessionId(sessionId);
+        interviewQuestionCacheService.clearSessionRuntime(sessionId);
+        deleteLocalRecording(recordingUrl);
+
+        log.info("Deleted interview record and session data, sessionId={}", sessionId);
+    }
+
+    private void deleteTeacherReviews(String sessionId) {
+        LambdaQueryWrapper<TeacherReviewDO> reviewQueryWrapper = Wrappers.lambdaQuery(TeacherReviewDO.class)
+                .eq(TeacherReviewDO::getSessionId, sessionId);
+        teacherReviewMapper.delete(reviewQueryWrapper);
+    }
+
+    @Override
     public InterviewRecordRespDTO getReportBySessionId(String sessionId) {
         if (StrUtil.isBlank(sessionId)) {
             throw new ClientException(InterviewErrorCodeEnum.SESSION_ID_EMPTY);
@@ -1185,5 +1222,25 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         }
         enrichReportFields(sessionId, record, respDTO);
         return respDTO;
+    }
+
+    private void deleteLocalRecording(String recordingUrl) {
+        if (StrUtil.isBlank(recordingUrl) || !recordingUrl.startsWith("/recordings/")) {
+            return;
+        }
+        try {
+            String filename = recordingUrl.substring("/recordings/".length());
+            if (StrUtil.isBlank(filename) || filename.contains("/") || filename.contains("\\")) {
+                return;
+            }
+            Path recordingDir = storageProperties.getRecordingPath();
+            Path target = recordingDir.resolve(filename).normalize();
+            if (!target.startsWith(recordingDir.toAbsolutePath().normalize())) {
+                return;
+            }
+            Files.deleteIfExists(target);
+        } catch (Exception ex) {
+            log.warn("Failed to delete local interview recording, recordingUrl={}", recordingUrl, ex);
+        }
     }
 }

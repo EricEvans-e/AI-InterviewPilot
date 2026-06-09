@@ -126,6 +126,15 @@ public class InterviewQuestionServiceImpl implements InterviewQuestionService {
     }
 
     @Override
+    public void deleteBySessionId(String sessionId) {
+        if (StrUtil.isBlank(sessionId)) {
+            return;
+        }
+        interviewQuestionRepository.deleteBySessionId(sessionId);
+        log.info("Deleted interview question data, sessionId={}", sessionId);
+    }
+
+    @Override
     public Integer countByUserName(String userName) {
         return interviewQuestionRepository.countByUserNameAndDelFlag(userName, 0);
     }

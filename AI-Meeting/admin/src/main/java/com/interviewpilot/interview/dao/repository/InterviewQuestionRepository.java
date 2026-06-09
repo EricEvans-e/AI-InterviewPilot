@@ -19,6 +19,8 @@ public interface InterviewQuestionRepository extends MongoRepository<InterviewQu
      * 根据会话ID查询面试题
      */
     Optional<InterviewQuestion> findBySessionIdAndDelFlag(String sessionId, Integer delFlag);
+
+    void deleteBySessionId(String sessionId);
     
     /**
      * 根据用户名查询面试题列表

@@ -117,6 +117,12 @@ public interface InterviewQuestionCacheService {
      * @param sessionId 会话ID
      */
     void clearSessionSuggestions(String sessionId);
+
+    /**
+     * Clear every Redis runtime key owned by one interview session.
+     * @param sessionId interview session id
+     */
+    void clearSessionRuntime(String sessionId);
     
     /**
      * 获取会话当前总分

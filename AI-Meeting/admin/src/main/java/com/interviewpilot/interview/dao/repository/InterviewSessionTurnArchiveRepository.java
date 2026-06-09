@@ -20,4 +20,6 @@ public interface InterviewSessionTurnArchiveRepository extends MongoRepository<I
     Optional<InterviewSessionTurnArchive> findFirstBySessionIdOrderBySeqDesc(String sessionId);
 
     Optional<InterviewSessionTurnArchive> findBySessionIdAndRequestId(String sessionId, String requestId);
+
+    void deleteBySessionId(String sessionId);
 }

@@ -28,6 +28,14 @@ export function useInterviewRecords() {
     },
   });
 
+  const deleteRecordMutation = useMutation({
+    mutationFn: (sessionId: string) => teacherService.deleteInterviewRecord(sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [RECORDS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [REPORTS_QUERY_KEY] });
+    },
+  });
+
   const setPage = useCallback((page: number) => {
     setPageNum(page);
   }, []);
@@ -42,5 +50,6 @@ export function useInterviewRecords() {
     setPage,
     refetch,
     submitReview: submitReviewMutation,
+    deleteRecord: deleteRecordMutation,
   };
 }

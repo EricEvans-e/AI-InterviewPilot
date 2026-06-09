@@ -203,6 +203,12 @@ export const teacherService = {
     );
   },
 
+  deleteInterviewRecord(sessionId: string): Promise<void> {
+    return service.delete<void>(
+      `/ip/v1/teacher/sessions/${encodeURIComponent(sessionId)}/record`,
+    );
+  },
+
   // ── AI Properties ──
   getEnabledAiProperties(): Promise<AiPropertiesDTO[]> {
     return service.get<AiPropertiesDTO[]>("/ip/v1/ai-properties/enabled");

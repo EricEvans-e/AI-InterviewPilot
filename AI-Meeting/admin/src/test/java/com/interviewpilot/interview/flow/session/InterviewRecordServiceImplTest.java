@@ -7,6 +7,7 @@ import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeS
 import com.interviewpilot.interview.application.strategy.DimensionScoreResult;
 import com.interviewpilot.interview.application.strategy.DimensionScoreStrategy;
 import com.interviewpilot.interview.application.strategy.WeightedRadarComputationStrategy;
+import com.interviewpilot.common.config.storage.ApplicationStorageProperties;
 import com.interviewpilot.interview.api.io.req.DemeanorScoreDTO;
 import com.interviewpilot.interview.api.io.resp.InterviewRecordRespDTO;
 import com.interviewpilot.interview.api.io.resp.InterviewReviewFeedbackRespDTO;
@@ -21,6 +22,7 @@ import com.interviewpilot.interview.service.InterviewQuestionService;
 import com.interviewpilot.interview.service.InterviewSessionService;
 import com.interviewpilot.interview.service.model.InterviewTurnLog;
 import com.interviewpilot.interview.service.model.InterviewSessionStatus;
+import com.interviewpilot.teacher.dao.mapper.TeacherReviewMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -74,7 +76,9 @@ class InterviewRecordServiceImplTest {
                 dimensionScoreStrategy,
                 weightedRadarComputationStrategy,
                 reportAiReviewService,
-                referenceAnswerService
+                referenceAnswerService,
+                storageProperties(),
+                mock(TeacherReviewMapper.class)
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
@@ -219,7 +223,9 @@ class InterviewRecordServiceImplTest {
                 dimensionScoreStrategy,
                 weightedRadarComputationStrategy,
                 reportAiReviewService,
-                referenceAnswerService
+                referenceAnswerService,
+                storageProperties(),
+                mock(TeacherReviewMapper.class)
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
@@ -309,7 +315,9 @@ class InterviewRecordServiceImplTest {
                 dimensionScoreStrategy,
                 weightedRadarComputationStrategy,
                 reportAiReviewService,
-                referenceAnswerService
+                referenceAnswerService,
+                storageProperties(),
+                mock(TeacherReviewMapper.class)
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
@@ -384,7 +392,9 @@ class InterviewRecordServiceImplTest {
                 dimensionScoreStrategy,
                 weightedRadarComputationStrategy,
                 reportAiReviewService,
-                referenceAnswerService
+                referenceAnswerService,
+                storageProperties(),
+                mock(TeacherReviewMapper.class)
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
@@ -448,5 +458,64 @@ class InterviewRecordServiceImplTest {
                 eq("补充量化指标; 说明技术取舍")
         );
         verify(mapper).updateById(any(InterviewRecordDO.class));
+    }
+
+    @Test
+    void shouldDeleteInterviewRecordAndSessionScopedDataForTeacher() {
+        InterviewQuestionCacheService cacheService = mock(InterviewQuestionCacheService.class);
+        InterviewSessionOwnershipService ownershipService = mock(InterviewSessionOwnershipService.class);
+        InterviewSessionService sessionService = mock(InterviewSessionService.class);
+        InterviewQuestionService questionService = mock(InterviewQuestionService.class);
+        InterviewFinalizeLockService finalizeLockService = mock(InterviewFinalizeLockService.class);
+        InterviewSessionRuntimeSnapshotService runtimeSnapshotService = mock(InterviewSessionRuntimeSnapshotService.class);
+        InterviewSessionRuntimeRehydrateService runtimeRehydrateService = mock(InterviewSessionRuntimeRehydrateService.class);
+        DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
+        WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
+        InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
+        InterviewReferenceAnswerService referenceAnswerService = mock(InterviewReferenceAnswerService.class);
+        InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
+        TeacherReviewMapper teacherReviewMapper = mock(TeacherReviewMapper.class);
+
+        InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
+                cacheService,
+                ownershipService,
+                sessionService,
+                questionService,
+                finalizeLockService,
+                runtimeSnapshotService,
+                runtimeRehydrateService,
+                dimensionScoreStrategy,
+                weightedRadarComputationStrategy,
+                reportAiReviewService,
+                referenceAnswerService,
+                storageProperties(),
+                teacherReviewMapper
+        );
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
+
+        InterviewRecordDO record = new InterviewRecordDO();
+        record.setId(5L);
+        record.setSessionId("session-delete-teacher");
+        record.setUserId(1005L);
+        record.setRecordingUrl("/recordings/session-delete-teacher.webm");
+        when(mapper.selectOne(any())).thenReturn(record);
+        when(mapper.delete(any())).thenReturn(1);
+
+        service.deleteRecordBySessionIdForTeacher("session-delete-teacher");
+
+        verify(mapper).delete(any());
+        verify(questionService).deleteBySessionId("session-delete-teacher");
+        verify(sessionService).deleteBySessionId("session-delete-teacher");
+        verify(runtimeSnapshotService).deleteBySessionId("session-delete-teacher");
+        verify(cacheService).clearSessionRuntime("session-delete-teacher");
+        verify(teacherReviewMapper).delete(any());
+    }
+
+    private ApplicationStorageProperties storageProperties() {
+        ApplicationStorageProperties properties = new ApplicationStorageProperties();
+        String tmpDir = System.getProperty("java.io.tmpdir");
+        properties.setBaseDir(tmpDir);
+        properties.setRecordingDir(tmpDir);
+        return properties;
     }
 }

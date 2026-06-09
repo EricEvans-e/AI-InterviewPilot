@@ -3,6 +3,7 @@ package com.interviewpilot.interview.service.impl;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.interviewpilot.agent.application.BusinessAgentResolver;
@@ -270,6 +271,17 @@ public class InterviewSessionServiceImpl implements InterviewSessionService {
             session.setEndTime(new Date());
         }
         interviewSessionRepository.saveAll(sessions);
+    }
+
+    @Override
+    public void deleteBySessionId(String sessionId) {
+        if (StrUtil.isBlank(sessionId)) {
+            return;
+        }
+        sessionQuestionMapper.delete(Wrappers.lambdaQuery(InterviewSessionQuestionDO.class)
+                .eq(InterviewSessionQuestionDO::getSessionId, sessionId));
+        interviewSessionRepository.deleteBySessionId(sessionId);
+        log.info("Deleted interview session, sessionId={}", sessionId);
     }
 
     private org.springframework.data.domain.Page<InterviewSession> queryPage(

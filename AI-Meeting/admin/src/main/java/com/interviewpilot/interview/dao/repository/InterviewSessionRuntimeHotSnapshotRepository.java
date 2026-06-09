@@ -16,4 +16,6 @@ public interface InterviewSessionRuntimeHotSnapshotRepository extends MongoRepos
         InterviewSessionRuntimeHotSnapshotRepositoryCustom {
 
     Optional<InterviewSessionRuntimeHotSnapshot> findBySessionId(String sessionId);
+
+    void deleteBySessionId(String sessionId);
 }

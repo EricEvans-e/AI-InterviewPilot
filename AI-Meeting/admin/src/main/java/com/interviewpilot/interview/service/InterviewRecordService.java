@@ -85,6 +85,15 @@ public interface InterviewRecordService extends IService<InterviewRecordDO> {
     IPage<InterviewRecordDO> pageAllRecords(Integer pageNum, Integer pageSize);
 
     /**
+     * Delete one interview record and all session-scoped data for teacher/admin cleanup.
+     * This removes the persisted record, session snapshots, generated questions, caches,
+     * question-bank links, and the local recording file when it is stored locally.
+     *
+     * @param sessionId interview session id
+     */
+    void deleteRecordBySessionIdForTeacher(String sessionId);
+
+    /**
      * 根据会话ID获取完整报告（教师使用，不校验用户所有权）
      * @param sessionId 会话ID
      * @return 完整面试报告

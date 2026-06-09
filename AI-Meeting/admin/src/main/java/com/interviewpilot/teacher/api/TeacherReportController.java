@@ -84,6 +84,15 @@ public class TeacherReportController {
     }
 
     /**
+     * 删除指定会话的面试记录及其会话数据。
+     */
+    @DeleteMapping("/sessions/{sessionId}/record")
+    public Result<Void> deleteInterviewRecord(@PathVariable String sessionId) {
+        interviewRecordService.deleteRecordBySessionIdForTeacher(sessionId);
+        return Results.success();
+    }
+
+    /**
      * 教师查看指定会话的完整面试报告
      */
     @GetMapping("/sessions/{sessionId}/report")
