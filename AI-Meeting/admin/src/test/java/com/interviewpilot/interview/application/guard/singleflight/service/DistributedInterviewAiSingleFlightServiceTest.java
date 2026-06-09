@@ -137,6 +137,36 @@ class DistributedInterviewAiSingleFlightServiceTest {
         verify(localService, never()).execute(anyString(), any());
     }
 
+    @Test
+    void shouldFallbackToLocalWhenHybridDistributedPathThrowsLinkageError() {
+        InterviewAiSingleFlightConfiguration configuration = newConfig();
+        configuration.setMode("hybrid");
+        InterviewAiSingleFlightService localService = mock(InterviewAiSingleFlightService.class);
+        FlightCoordinatorRepository repository = mock(FlightCoordinatorRepository.class);
+        FlightNotificationService notificationService = mock(FlightNotificationService.class);
+
+        when(repository.acquireOrJoin(anyString(), anyString(), anyString(), anyString(), any()))
+                .thenReturn(FlightAcquireResult.builder().action(FlightAction.FOLLOWER_WAIT).build());
+        when(notificationService.waitForTerminalEvent(anyString(), anyLong()))
+                .thenThrow(new NoSuchMethodError("'boolean org.redisson.connection.ServiceManager.isResp3()'"));
+        when(localService.execute(anyString(), any())).thenReturn("local-after-linkage-error");
+
+        DistributedInterviewAiSingleFlightService service = new DistributedInterviewAiSingleFlightService(
+                configuration,
+                localService,
+                repository,
+                notificationService,
+                mock(FlightHeartbeatManager.class),
+                mock(FlightResultSerializer.class),
+                mock(FlightReplayLocalCache.class)
+        );
+
+        String result = service.execute(InterviewAiGuardStage.INTERVIEW_EVALUATION, "interview-evaluation|s1|review", () -> "remote");
+
+        assertEquals("local-after-linkage-error", result);
+        verify(localService).execute(anyString(), any());
+    }
+
     private InterviewAiSingleFlightConfiguration newConfig() {
         InterviewAiSingleFlightConfiguration configuration = new InterviewAiSingleFlightConfiguration();
         configuration.setEnable(true);

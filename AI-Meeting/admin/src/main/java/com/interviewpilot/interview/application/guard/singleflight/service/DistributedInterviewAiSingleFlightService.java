@@ -53,12 +53,13 @@ public class DistributedInterviewAiSingleFlightService {
         }
         try {
             return executeDistributed(stage, requestKey, supplier);
-        } catch (RuntimeException ex) {
+        } catch (Throwable ex) {
             if (mode == FlightMode.HYBRID) {
-                log.warn("Distributed single-flight fallback to local mode, stage={}, key={}, reason={}", stage, requestKey, ex.getMessage());
+                log.warn("Distributed single-flight fallback to local mode, stage={}, key={}, reason={}",
+                        stage, requestKey, ex.toString());
                 return localSingleFlightService.execute(requestKey, supplier);
             }
-            throw ex;
+            throw rethrow(ex);
         }
     }
 
