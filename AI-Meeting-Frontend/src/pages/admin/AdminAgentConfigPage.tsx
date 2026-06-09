@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 const PROVIDER_LABELS: Record<string, string> = {
   xingchen: "Legacy Xunfei",
   openai: "Mimo OpenAI",
-  anthropic: "Mimo Anthropic",
+  anthropic: "Legacy Anthropic",
 };
 
 const PROVIDER_COLORS: Record<string, string> = {

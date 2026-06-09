@@ -50,6 +50,37 @@ class InterviewResponseParserTest {
     }
 
     @Test
+    void shouldExtractStructuredResultFromMimoReasoningWhenContentIsEmpty() {
+        String response = """
+                {
+                  "id": "mimo-report-test",
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "role": "assistant",
+                        "content": "",
+                        "reasoning_content": "Analysis... final JSON: {\\"overallComment\\":\\"回答没有覆盖题目要求。\\",\\"highlights\\":[\\"简历匹配度较高\\"],\\"improvementTips\\":[\\"补充算法路径\\"],\\"nextActions\\":[\\"按背景-方法-指标复盘\\"]}"
+                      }
+                    }
+                  ]
+                }
+                """;
+
+        Map<String, Object> result = parser.extractStructuredResult(
+                response,
+                "overallComment",
+                "highlights",
+                "improvementTips",
+                "nextActions"
+        );
+
+        assertNotNull(result);
+        assertEquals("回答没有覆盖题目要求。", parser.asString(result.get("overallComment")));
+        assertEquals("补充算法路径", parser.asStringList(result.get("improvementTips")).get(0));
+    }
+
+    @Test
     void shouldParseDecimalScoreStringWithRounding() {
         Map<String, Object> result = Map.of("score", "79.6");
 

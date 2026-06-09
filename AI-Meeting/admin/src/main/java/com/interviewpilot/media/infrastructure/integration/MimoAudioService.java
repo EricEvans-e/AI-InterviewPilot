@@ -3,6 +3,7 @@ package com.interviewpilot.media.infrastructure.integration;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.interviewpilot.common.config.mimo.MimoCredentialResolver;
 import com.interviewpilot.common.config.mimo.MimoProperties;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.common.convention.exception.ServiceException;
@@ -45,6 +46,7 @@ public class MimoAudioService {
             .build();
 
     private final MimoProperties properties;
+    private final MimoCredentialResolver credentialResolver;
 
     @Resource(name = "queryExecutor")
     private ExecutorService queryExecutor;
@@ -234,7 +236,7 @@ public class MimoAudioService {
     }
 
     public void validateCredentials() {
-        if (StrUtil.isBlank(properties.getApiKey())) {
+        if (StrUtil.isBlank(resolveApiKey())) {
             throw new ServiceException("Mimo API key is missing: configure MIMO_API_KEY or mimo.api-key");
         }
     }
@@ -252,13 +254,14 @@ public class MimoAudioService {
     }
 
     private JSONObject postChatCompletions(JSONObject body) {
+        String apiKey = resolveApiKey();
         String baseUrl = StrUtil.blankToDefault(properties.getOpenaiBaseUrl(), MimoProperties.DEFAULT_OPENAI_BASE_URL);
         String url = trimTrailingSlash(baseUrl) + "/chat/completions";
         Request request = new Request.Builder()
                 .url(url)
                 .post(RequestBody.create(body.toJSONString(), JSON_MEDIA_TYPE))
-                .addHeader("api-key", properties.getApiKey().trim())
-                .addHeader("Authorization", "Bearer " + properties.getApiKey().trim())
+                .addHeader("api-key", apiKey)
+                .addHeader("Authorization", "Bearer " + apiKey)
                 .addHeader("Content-Type", "application/json")
                 .build();
 
@@ -277,6 +280,10 @@ public class MimoAudioService {
         } catch (Exception ex) {
             throw new ServiceException("Failed to call Mimo audio API: " + ex.getMessage());
         }
+    }
+
+    private String resolveApiKey() {
+        return credentialResolver.resolveSecret(properties.getApiKey());
     }
 
     private AudioPayload normalizeAsrPayload(byte[] audioBytes, String mimeType) {

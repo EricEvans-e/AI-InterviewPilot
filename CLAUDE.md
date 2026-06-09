@@ -65,7 +65,7 @@ The project is Mimo-first. Do not treat Xunfei as the default provider.
 Default endpoints:
 
 - OpenAI-compatible: `https://token-plan-cn.xiaomimimo.com/v1`
-- Anthropic-compatible: `https://token-plan-cn.xiaomimimo.com/anthropic`
+- Anthropic-compatible Mimo endpoint exists, but this project should prefer the OpenAI-compatible endpoint by default.
 
 Default models:
 
@@ -82,7 +82,6 @@ SPRING_AI_OPENAI_API_KEY=tp-your-token-plan-api-key
 SPRING_AI_OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
 SPRING_AI_OPENAI_MODEL=mimo-v2.5
 MIMO_OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
-MIMO_ANTHROPIC_BASE_URL=https://token-plan-cn.xiaomimimo.com/anthropic
 ```
 
 Never commit a real API key.
@@ -90,7 +89,7 @@ Never commit a real API key.
 Runtime components:
 
 - `UniversalAiChatHandler`: OpenAI-compatible calls, default Mimo `/v1/chat/completions`
-- `AnthropicChatHandler`: Anthropic-compatible calls, Mimo `/anthropic/messages`, supports thinking output
+- `AnthropicChatHandler`: legacy-compatible Anthropic-style calls. Keep it available, but do not make it the default Mimo route.
 - `MimoAudioService`: ASR and TTS via Mimo chat-completions models. ASR receives buffered WebSocket audio and returns a final transcript; TTS returns `choices[0].message.audio.data`
 - `InterviewAiInvoker`: interview-specific routing through `agent_properties.ai_provider`
 
@@ -147,6 +146,13 @@ Current TTS paths:
 `/api/ip/v1/xunfei/tts/**` remains a backend compatibility alias, but new frontend code should use Mimo paths.
 
 Mimo TTS is synchronous. `/tasks` and `/tasks/{taskId}` keep the old task-shaped API surface for compatibility; new code should prefer `/synthesize` and read `audioBase64`.
+
+## Frontend Interview UI Notes
+
+- Model question output can arrive as `{question=...}`. Keep `normalizeInterviewQuestionText()` in the session flow before updating current question state, chat messages, or TTS text.
+- Auto-play assistant question messages render as a distinct "当前题目" / follow-up card in `ChatBubble`; do not classify feedback, system, or progress messages as interview questions.
+- `InterviewCameraOverlay` is mounted inside `ChatRoom`'s content overlay. Compact overlay coordinates must be calculated against the parent chat content container, not `window.innerWidth`, because the app shell has a sidebar and the content parent uses `overflow-hidden`.
+- The compact camera overlay is draggable and clamped inside the chat content area. Expanded mode keeps the old full overlay layout and should not be draggable.
 
 ## Interview Constraints
 

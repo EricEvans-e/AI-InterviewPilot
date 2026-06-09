@@ -41,6 +41,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @ServerEndpoint(value = "/api/ip/v1/mimo/audio-to-text/{userId}")
 public class AudioTranscriptionWebSocketHandler {
 
+    private static final int WEBSOCKET_MESSAGE_BUFFER_BYTES = 64 * 1024;
+
     private static volatile MimoAudioService mimoAudioService;
     private static volatile WebSocketAuthService webSocketAuthService;
     private static volatile ScheduledExecutorService heartbeatExecutor;
@@ -67,6 +69,8 @@ public class AudioTranscriptionWebSocketHandler {
 
     @OnOpen
     public void onOpen(Session session, @PathParam("userId") String userId) {
+        configureSessionBuffers(session);
+
         if (!isAuthorizedUser(session, userId)) {
             log.warn("WebSocket auth failed, userId={}, sessionId={}", userId, session.getId());
             closeSession(session, "Unauthorized websocket connection");
@@ -80,6 +84,14 @@ public class AudioTranscriptionWebSocketHandler {
 
         sendMessage(session, createResponse("connected", "WebSocket connected", userId));
         startHeartbeat(session);
+    }
+
+    void configureSessionBuffers(Session session) {
+        if (session == null) {
+            return;
+        }
+        session.setMaxBinaryMessageBufferSize(WEBSOCKET_MESSAGE_BUFFER_BYTES);
+        session.setMaxTextMessageBufferSize(WEBSOCKET_MESSAGE_BUFFER_BYTES);
     }
 
     private boolean isAuthorizedUser(Session session, String pathUserId) {

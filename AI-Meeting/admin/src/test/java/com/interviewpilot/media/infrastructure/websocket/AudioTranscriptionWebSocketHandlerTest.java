@@ -10,8 +10,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import jakarta.websocket.Session;
 
 class AudioTranscriptionWebSocketHandlerTest {
+
+    @Test
+    void onOpen_ShouldAllowTypicalAudioChunksLargerThanDefaultWebSocketBuffer() {
+        AudioTranscriptionWebSocketHandler handler = new AudioTranscriptionWebSocketHandler();
+        Session session = mock(Session.class);
+        when(session.getId()).thenReturn("session-buffer");
+
+        handler.configureSessionBuffers(session);
+
+        verify(session).setMaxBinaryMessageBufferSize(64 * 1024);
+        verify(session).setMaxTextMessageBufferSize(64 * 1024);
+    }
 
     @Test
     void createResponse_ShouldExposeSegmentMetadataWhileKeepingFullSnapshot() throws Exception {

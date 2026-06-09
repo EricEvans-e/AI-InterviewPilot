@@ -18,7 +18,7 @@ type DemeanorDetails = {
 
 type EtiquetteData = {
   etiquetteScore: number | null;
-  demeanorScore: number | null;
+  demeanorPerformanceScore: number | null;
   demeanorDetails: DemeanorDetails | null;
 };
 
@@ -45,7 +45,11 @@ const parseJsonRecord = (value: unknown): Record<string, unknown> | null => {
 
 const extractEtiquetteData = (record: InterviewRecordResult | null): EtiquetteData => {
   if (!record) {
-    return { etiquetteScore: null, demeanorScore: null, demeanorDetails: null };
+    return {
+      etiquetteScore: null,
+      demeanorPerformanceScore: null,
+      demeanorDetails: null,
+    };
   }
 
   const radarObj =
@@ -57,8 +61,6 @@ const extractEtiquetteData = (record: InterviewRecordResult | null): EtiquetteDa
     toNumber(radarObj?.etiquetteScore) ?? toNumber((record as unknown as Record<string, unknown>)?.etiquetteScore);
 
   const snapshot = parseJsonRecord(record.sessionSnapshotJson);
-  const demeanorScore =
-    toNumber(snapshot?.demeanorScore) ?? toNumber(radarObj?.demeanorEvaluation);
 
   const rawDetails = snapshot?.demeanorDetails;
   let demeanorDetails: DemeanorDetails | null = null;
@@ -72,13 +74,18 @@ const extractEtiquetteData = (record: InterviewRecordResult | null): EtiquetteDa
     };
   }
 
-  return { etiquetteScore, demeanorScore, demeanorDetails };
+  const demeanorPerformanceScore =
+    toNumber(demeanorDetails?.compositeScore) ??
+    toNumber(snapshot?.demeanorScore) ??
+    toNumber(radarObj?.demeanorEvaluation);
+
+  return { etiquetteScore, demeanorPerformanceScore, demeanorDetails };
 };
 
 const DEMEANOR_METRICS = [
-  { key: "panicLevel" as const, label: "慌乱度", description: "表现沉稳程度，越低越好" },
-  { key: "seriousnessLevel" as const, label: "严肃程度", description: "面试态度认真度" },
-  { key: "emoticonHandling" as const, label: "表情管理", description: "面部表情自然度" },
+  { key: "panicLevel" as const, label: "慌乱度", description: "可见紧张程度，分数越低越好" },
+  { key: "seriousnessLevel" as const, label: "严肃程度", description: "面试态度的专注和认真程度" },
+  { key: "emoticonHandling" as const, label: "表情管理", description: "面部表情的自然和稳定程度" },
 ] as const;
 
 const formatScore = (value: number | null | undefined) =>
@@ -92,7 +99,7 @@ export default function InterviewEtiquetteCard({
 
   const hasAnyData =
     data.etiquetteScore !== null ||
-    data.demeanorScore !== null ||
+    data.demeanorPerformanceScore !== null ||
     data.demeanorDetails !== null;
 
   return (
@@ -109,7 +116,6 @@ export default function InterviewEtiquetteCard({
         </div>
       ) : (
         <div className="mt-4 space-y-4">
-          {/* Top-level scores */}
           <div className="grid grid-cols-2 gap-3">
             {data.etiquetteScore !== null && (
               <motion.div
@@ -122,26 +128,25 @@ export default function InterviewEtiquetteCard({
                 <p className="mt-1 text-2xl font-semibold text-pink-700">
                   {formatScore(data.etiquetteScore)}
                 </p>
-                <p className="text-[10px] text-pink-400">/ 10</p>
+                <p className="text-[10px] text-pink-400">/ 100</p>
               </motion.div>
             )}
-            {data.demeanorScore !== null && (
+            {data.demeanorPerformanceScore !== null && (
               <motion.div
                 className="rounded-lg bg-indigo-50 p-3"
                 initial={{ opacity: 0, y: 10, filter: "blur(3px)" }}
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 transition={{ duration: 0.28, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
               >
-                <p className="text-xs text-indigo-600">神态综合得分</p>
+                <p className="text-xs text-indigo-600">神态表现得分</p>
                 <p className="mt-1 text-2xl font-semibold text-indigo-700">
-                  {formatScore(data.demeanorScore)}
+                  {formatScore(data.demeanorPerformanceScore)}
                 </p>
                 <p className="text-[10px] text-indigo-400">/ 100</p>
               </motion.div>
             )}
           </div>
 
-          {/* Detailed demeanor metrics */}
           {data.demeanorDetails && (
             <div className="space-y-3">
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
@@ -206,7 +211,7 @@ export default function InterviewEtiquetteCard({
                 >
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-slate-700">
-                      神态综合评分
+                      神态表现评分
                     </span>
                     <span className="font-semibold text-slate-900">
                       {formatScore(data.demeanorDetails.compositeScore)}

@@ -1,6 +1,7 @@
 import { INTERVIEW_DEFAULTS } from "@/lib/constants";
 import type { ChatMessage, ChatMessageStatus } from "@/lib/chat";
 import type { AnswerInterviewQuestionResult } from "@/services/interviewService";
+import { normalizeInterviewQuestionText } from "@/hooks/interview/session/interviewQuestionFormatting";
 
 export type InterviewFlowUser = {
   id?: number | null;
@@ -78,7 +79,9 @@ export const buildInterviewProgressPatch = (
 ): InterviewProgressPatch => {
   const isInterviewFinished = Boolean(response.finished);
   const nextQuestion =
-    response.nextQuestion?.trim() || response.questionContent?.trim() || null;
+    normalizeInterviewQuestionText(response.nextQuestion) ||
+    normalizeInterviewQuestionText(response.questionContent) ||
+    null;
 
   return {
     currentQuestionNumber:

@@ -6,8 +6,8 @@
 
 | 用途 | 协议 | 默认端点 | 默认模型 |
 | --- | --- | --- | --- |
-| 通用聊天 / 面试链路 | OpenAI 兼容 | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5` |
-| 高推理聊天 | Anthropic 兼容 | `https://token-plan-cn.xiaomimimo.com/anthropic` | `mimo-v2.5-pro` |
+| 通用聊天 / 面试链路 / 视觉链路 | OpenAI 兼容 | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5` |
+| 高推理纯文本聊天 | OpenAI 兼容 | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5-pro` |
 | 语音识别 ASR | OpenAI 兼容 chat completions | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5-asr` |
 | 语音合成 TTS | OpenAI 兼容 chat completions | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5-tts` |
 
@@ -20,7 +20,6 @@
 ```env
 MIMO_API_KEY=tp-your-token-plan-api-key
 MIMO_OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
-MIMO_ANTHROPIC_BASE_URL=https://token-plan-cn.xiaomimimo.com/anthropic
 MIMO_CHAT_MODEL=mimo-v2.5
 MIMO_PRO_MODEL=mimo-v2.5-pro
 MIMO_ASR_MODEL=mimo-v2.5-asr
@@ -53,18 +52,33 @@ InterviewSessionFacade
   -> agent_properties scene binding
 ```
 
-当前推荐两种 provider：
+当前推荐的 provider：
 
 | Provider | 字段值 | Handler | 说明 |
 | --- | --- | --- | --- |
-| Mimo OpenAI 兼容 | `openai` | `UniversalAiChatHandler` | 面试默认链路，使用 `/v1/chat/completions` |
-| Mimo Anthropic 兼容 | `anthropic` | `AnthropicChatHandler` | 通用聊天高推理链路，支持 thinking |
+| Mimo OpenAI 兼容 | `openai` | `UniversalAiChatHandler` | 聊天、面试、ASR、TTS 默认链路，使用 `/v1/chat/completions` |
 
-`xingchen` / 讯飞工作流仍作为 legacy 兼容保留，但默认初始化 SQL 和前端配置已经切换到 Mimo。
+`mimo-v2.5` 可用于通用聊天和需要视觉能力的链路；`mimo-v2.5-pro` 只用于纯文本高推理聊天，不要配置到图片/神态分析等视觉场景。`anthropic` handler 和 `xingchen` / 讯飞工作流仍作为 legacy 兼容保留，但默认初始化 SQL 和前端配置已经切换到 Mimo OpenAI 兼容路径。
+
+## 面试题输出格式
+
+面试题链路的理想返回值是纯题目文本，例如：
+
+```text
+请具体描述一下 TF-IDF 与语义匹配在你的系统中如何协同工作？
+```
+
+实际模型偶尔会返回 Java Map 风格包装：
+
+```text
+{question=请具体描述一下 TF-IDF 与语义匹配在你的系统中如何协同工作？}
+```
+
+前端会在 `normalizeInterviewQuestionText()` 中清理这种 `{question=...}` 包装，再写入当前题目状态、聊天消息和 TTS 文本。修改面试题解析、同步下一题或消息流时，不要绕过该归一化步骤。
 
 ## 数据库配置
 
-`ai_properties` 用于通用聊天和教师后台 AI 题目生成。默认初始化记录位于 `AI-Meeting/admin/src/main/resources/sql/ai_properties.sql`，使用占位符 `MIMO_API_KEY`，部署时请在数据库或环境变量中替换为真实 key。
+`ai_properties` 用于通用聊天和教师后台 AI 题目生成。默认初始化记录位于 `AI-Meeting/admin/src/main/resources/sql/ai_properties.sql`，使用占位符 `MIMO_API_KEY`。推荐保持数据库占位符不变，真实 key 只通过后端启动环境变量提供。
 
 示例：
 
@@ -92,8 +106,8 @@ INSERT INTO ai_properties (
 
 | 字段 | 用途 |
 | --- | --- |
-| `api_key` | Mimo API Key |
-| `api_secret` | 模型名，例如 `mimo-v2.5` |
+| `api_key` | `MIMO_API_KEY` 占位符，运行时从环境变量解析 |
+| `api_secret` | 模型名，例如 `mimo-v2.5`；视觉相关场景不要使用 `mimo-v2.5-pro` |
 | `api_flow_id` | OpenAI 兼容基础地址，例如 `https://token-plan-cn.xiaomimimo.com/v1` |
 | `ai_provider` | 固定为 `openai` |
 | `scene_code` | 面试业务场景编码 |
@@ -121,24 +135,23 @@ Mimo TTS 是同步合成接口。`POST /tasks` 和 `GET /tasks/{taskId}` 保留 
 
 ## 前端配置页面
 
-教师后台 `/teacher/ai-config` 只展示 `openai` 和 `anthropic` 两类 Mimo 兼容模型。管理员后台 `/admin/agent-config` 可为出题、评分、追问、神态分析等场景切换 active agent。
+教师后台 `/teacher/ai-config` 默认只新建 `openai` 类型的 Mimo 兼容模型。管理员后台 `/admin/agent-config` 可为出题、评分、追问、神态分析等场景切换 active agent，其中神态分析等视觉场景应使用 `mimo-v2.5`。
 
 ## 常见问题
 
 ### 401 Unauthorized
 
-检查 `MIMO_API_KEY` 或数据库里的 `api_key` 是否为有效 `tp-` 开头 key。不要把 OpenAI `sk-` key 填到 Mimo 端点。
+检查启动后端的终端是否设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`，以及数据库里的 `api_key` 是否保持为 `MIMO_API_KEY` 占位符。不要把 OpenAI `sk-` key 填到 Mimo 端点。
 
 ### 404 Not Found
 
-检查端点是否使用中国区 Token Plan 地址：
+检查端点是否使用中国区 Token Plan OpenAI 兼容地址：
 
 ```text
 https://token-plan-cn.xiaomimimo.com/v1
-https://token-plan-cn.xiaomimimo.com/anthropic
 ```
 
-OpenAI 兼容地址保留 `/v1`，代码会自动拼接 `/chat/completions`。Anthropic 兼容地址不要手动追加 `/messages`，代码会自动拼接。
+OpenAI 兼容地址保留 `/v1`，代码会自动拼接 `/chat/completions`。`mimo-v2.5-pro` 也走这个地址；不要把 Pro 配成 `/anthropic`，否则聊天会返回 404 或 500。
 
 ### ASR / TTS 没有响应
 

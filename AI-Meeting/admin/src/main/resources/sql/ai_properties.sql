@@ -9,6 +9,6 @@ INSERT INTO ai_properties (
 (1, 'Mimo V2.5', 'openai', 'MIMO_API_KEY', null, 'https://token-plan-cn.xiaomimimo.com/v1', 'mimo-v2.5',
  8192, 0.70, 'You are the InterviewPilot assistant. Provide accurate and useful answers.', 1,
  0, null, NOW(), NOW(), 0, null, null),
-(2, 'Mimo V2.5 Pro', 'anthropic', 'MIMO_API_KEY', null, 'https://token-plan-cn.xiaomimimo.com/anthropic', 'mimo-v2.5-pro',
+(2, 'Mimo V2.5 Pro', 'openai', 'MIMO_API_KEY', null, 'https://token-plan-cn.xiaomimimo.com/v1', 'mimo-v2.5-pro',
  8192, 0.70, 'You are the InterviewPilot assistant. Provide accurate and useful answers.', 1,
  1, 4096, NOW(), NOW(), 0, null, null);

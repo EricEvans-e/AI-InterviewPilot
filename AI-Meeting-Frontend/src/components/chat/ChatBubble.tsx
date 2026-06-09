@@ -51,6 +51,8 @@ export default function ChatBubble({
   const isSystem = !isUser && messageVariant === CHAT_MESSAGE_VARIANT.system;
   const isProgress =
     !isUser && messageVariant === CHAT_MESSAGE_VARIANT.progress;
+  const isInterviewQuestion =
+    !isUser && Boolean(tts?.autoPlay) && !isFeedback && !isSystem && !isProgress;
   const hasReasoning = !isUser && Boolean(reasoning);
   const shouldRenderMessage = isProgress || Boolean(content) || !reasoning;
   const shouldRenderTtsControl =
@@ -118,14 +120,23 @@ export default function ChatBubble({
                   isFeedback && "border-emerald-300 bg-emerald-50 shadow-sm",
                   isFollowUp && "border-amber-200 bg-amber-50/80 shadow-sm",
                   isSystem && "border-sky-200 bg-sky-50/80 text-slate-700",
+                  isInterviewQuestion &&
+                    "rounded-xl border-slate-200 bg-white shadow-sm ring-1 ring-slate-100",
                 )}
               >
+                {isInterviewQuestion ? (
+                  <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-slate-500">
+                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-slate-700 shadow-sm">
+                      {isFollowUp ? "追问问题" : "当前题目"}
+                    </span>
+                  </div>
+                ) : null}
                 {isFeedback ? (
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
                     Score Feedback
                   </p>
                 ) : null}
-                {isFollowUp ? (
+                {isFollowUp && !isInterviewQuestion ? (
                   <p className="mb-2 text-[11px] font-semibold tracking-wide text-amber-700">
                     追问问题
                   </p>

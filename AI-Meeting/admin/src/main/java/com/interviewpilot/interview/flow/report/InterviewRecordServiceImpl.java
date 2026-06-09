@@ -73,6 +73,7 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
     private final InterviewSessionRuntimeRehydrateService runtimeRehydrateService;
     private final DimensionScoreStrategy dimensionScoreStrategy;
     private final WeightedRadarComputationStrategy weightedRadarComputationStrategy;
+    private final InterviewReportAiReviewService interviewReportAiReviewService;
 
     @Override
     public void saveInterviewRecord(String sessionId, Long userId, InterviewRecordSaveReqDTO requestParam) {
@@ -114,16 +115,6 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         Date startTime = record.getStartTime() != null ? record.getStartTime() : sessionStartTime;
         Integer durationSeconds = calculateDurationSeconds(startTime, now);
         String status = resolveInterviewStatus(session.getStatus(), totalScore);
-        String snapshotJson = buildSessionSnapshotJson(
-                session,
-                resumeScore,
-                totalScore,
-                questionCount,
-                interviewDirection,
-                status,
-                suggestions,
-                record
-        );
 
         record.setInterviewScore(totalScore);
         record.setResumeScore(resumeScore);
@@ -140,6 +131,16 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
 
         // 7 维评分：基于 AI 分数 + 神态评分 + 时间控制计算
         computeAndFillDimensionScores(sessionId, session, totalScore, durationSeconds, record);
+        String snapshotJson = buildSessionSnapshotJson(
+                session,
+                resumeScore,
+                totalScore,
+                questionCount,
+                interviewDirection,
+                status,
+                suggestions,
+                record
+        );
 
         record.setStartTime(startTime);
         // 只在会话已结束时写 endTime，避免中间态记录被误标记为“已结束”。
@@ -543,10 +544,18 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         snapshot.put("interviewType", session.getInterviewType());
         snapshot.put("interviewStatus", interviewStatus);
         snapshot.put("interviewSuggestions", interviewSuggestions);
+        snapshot.put("demeanorScore", interviewQuestionCacheService.getSessionDemeanorScore(session.getSessionId()));
+        snapshot.put("demeanorDetails", interviewQuestionCacheService.getSessionDemeanorScoreDetails(session.getSessionId()));
         snapshot.put("flow", interviewQuestionCacheService.getInterviewFlow(session.getSessionId()));
         snapshot.put("turns", turns);
         snapshot.put("radar", radarChart);
-        snapshot.put("reviewFeedback", buildReviewFeedback(turns, radarChart, interviewSuggestions));
+        snapshot.put("reviewFeedback", buildReviewFeedback(
+                session.getSessionId(),
+                interviewDirection,
+                turns,
+                radarChart,
+                interviewSuggestions
+        ));
         snapshot.put("snapshotAt", new Date());
         return JSON.toJSONString(snapshot);
     }
@@ -566,6 +575,7 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         if (radarChart == null) {
             radarChart = new RadarChartDTO();
         }
+        fillRadarDimensionScores(radarChart, record);
         respDTO.setRadarChart(radarChart);
         respDTO.setRadarDimensions(buildRadarDimensions(radarChart));
 
@@ -636,12 +646,11 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
             RadarChartDTO radarChart,
             InterviewRecordDO record) {
         String interviewSuggestions = record == null ? null : record.getInterviewSuggestions();
-        InterviewReviewFeedbackRespDTO rebuilt = buildReviewFeedback(turns, radarChart, interviewSuggestions);
-        if (hasReviewFeedbackContent(rebuilt)) {
-            return rebuilt;
-        }
         InterviewReviewFeedbackRespDTO parsed = parseReviewFeedbackFromSnapshot(snapshot);
-        return parsed != null ? parsed : rebuilt;
+        if (hasReviewFeedbackContent(parsed)) {
+            return parsed;
+        }
+        return buildRuleBasedReviewFeedback(turns, radarChart, interviewSuggestions);
     }
 
     private InterviewReviewFeedbackRespDTO parseReviewFeedbackFromSnapshot(Map<String, Object> snapshot) {
@@ -661,6 +670,25 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
     }
 
     private InterviewReviewFeedbackRespDTO buildReviewFeedback(
+            String sessionId,
+            String interviewDirection,
+            List<InterviewTurnLog> turns,
+            RadarChartDTO radarChart,
+            String interviewSuggestions) {
+        InterviewReviewFeedbackRespDTO aiFeedback = interviewReportAiReviewService.generateReviewFeedback(
+                sessionId,
+                interviewDirection,
+                turns,
+                radarChart,
+                interviewSuggestions
+        );
+        if (hasReviewFeedbackContent(aiFeedback)) {
+            return aiFeedback;
+        }
+        return buildRuleBasedReviewFeedback(turns, radarChart, interviewSuggestions);
+    }
+
+    private InterviewReviewFeedbackRespDTO buildRuleBasedReviewFeedback(
             List<InterviewTurnLog> turns,
             RadarChartDTO radarChart,
             String interviewSuggestions) {
@@ -688,13 +716,13 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         int finalScore = radarChart == null ? 0 : clampScore(radarChart.getPotentialIndex());
         String baseComment;
         if (finalScore >= 85) {
-            baseComment = "Overall performance is strong and already competitive for interviews.";
+            baseComment = "整体表现优秀，已经具备较强的面试竞争力。";
         } else if (finalScore >= 70) {
-            baseComment = "Overall performance is solid, with clear strengths and room for further polishing.";
+            baseComment = "整体表现较稳，已有清晰优势，但仍需要继续打磨回答深度和表达稳定性。";
         } else if (finalScore >= 60) {
-            baseComment = "Overall performance meets the baseline, but answer structure and role-fit still need improvement.";
+            baseComment = "整体表现达到基础要求，但回答结构、岗位匹配表达和关键细节仍需加强。";
         } else {
-            baseComment = "Overall performance is below expectation; prioritize role-fit, depth of answers, and communication stability.";
+            baseComment = "整体表现低于预期，需要优先提升岗位匹配度、回答深度和现场表达稳定性。";
         }
 
         String strongest = resolveDimensionLabel(findStrongestDimensionKey(radarChart));
@@ -702,7 +730,7 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         if (StrUtil.isBlank(strongest) || StrUtil.isBlank(weakest) || strongest.equals(weakest)) {
             return baseComment;
         }
-        return baseComment + " Current strength is " + strongest + ", and prioritize improving " + weakest + ".";
+        return baseComment + " 当前相对优势是" + strongest + "，下一步建议优先补强" + weakest + "。";
     }
 
     private List<String> buildHighlights(List<InterviewTurnLog> turns, RadarChartDTO radarChart) {
@@ -713,16 +741,16 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
 
         LinkedHashSet<String> generated = new LinkedHashSet<>();
         if (radarChart != null && clampScore(radarChart.getResumeScore()) >= 75) {
-            generated.add("Your resume is well aligned to the target role, with clear highlights in core experience.");
+            generated.add("简历与目标岗位匹配度较高，核心经历具备可展开的亮点。");
         }
         if (radarChart != null && clampScore(radarChart.getInterviewPerformance()) >= 75) {
-            generated.add("Your answer structure is complete and remains focused on the question.");
+            generated.add("回答能够围绕题目展开，整体结构相对完整。");
         }
         if (radarChart != null && clampScore(radarChart.getDemeanorEvaluation()) >= 75) {
-            generated.add("Your demeanor and expression are stable, and your on-site delivery feels natural.");
+            generated.add("神态表现较稳定，镜头前的表达自然度较好。");
         }
         if (radarChart != null && clampScore(radarChart.getProfessionalSkills()) >= 75) {
-            generated.add("Your professional skills are communicated clearly with concrete technical understanding.");
+            generated.add("专业能力表达较清晰，能够体现一定的技术理解。");
         }
         return limitList(generated, 3);
     }
@@ -751,13 +779,13 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         }
         switch (dimensionKey) {
             case "resume_score" ->
-                    generated.add("Refine resume highlights for the target role and add concrete project outcomes and business impact.");
+                    generated.add("围绕目标岗位重写简历亮点，补充可量化项目结果和业务影响。");
             case "interview_performance" ->
-                    generated.add("Answer more directly, and use a clear structure with case, action, and result.");
+                    generated.add("回答时先直接回应问题，再按背景、行动、结果组织案例。");
             case "demeanor_evaluation" ->
-                    generated.add("Practice pace control, pauses, and steadier expression in front of the camera.");
+                    generated.add("加强镜头前的语速、停顿和表情稳定性练习。");
             case "professional_skills" ->
-                    generated.add("Explain technical decisions in more detail, including trade-offs, challenges, and outcomes.");
+                    generated.add("展开技术决策细节，说明方案取舍、实现挑战、评价指标和最终效果。");
             default -> {
             }
         }
@@ -879,7 +907,7 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         return switch (dimensionKey) {
             case "resume_score" -> "简历匹配度";
             case "interview_performance" -> "答题表现";
-            case "demeanor_evaluation" -> "神态表达";
+            case "demeanor_evaluation" -> "神态表现";
             case "professional_skills" -> "专业能力呈现";
             case "potential_index" -> "综合潜力";
             default -> null;

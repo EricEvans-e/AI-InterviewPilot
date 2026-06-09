@@ -58,7 +58,6 @@ Windows PowerShell 中，在启动后端的同一个终端执行：
 $env:MIMO_API_KEY="你的-token-plan-api-key"
 $env:SPRING_AI_OPENAI_API_KEY=$env:MIMO_API_KEY
 $env:MIMO_OPENAI_BASE_URL="https://token-plan-cn.xiaomimimo.com/v1"
-$env:MIMO_ANTHROPIC_BASE_URL="https://token-plan-cn.xiaomimimo.com/anthropic"
 $env:MIMO_CHAT_MODEL="mimo-v2.5"
 $env:MIMO_PRO_MODEL="mimo-v2.5-pro"
 $env:MIMO_ASR_MODEL="mimo-v2.5-asr"
@@ -72,7 +71,6 @@ Linux / macOS 中执行：
 export MIMO_API_KEY="你的-token-plan-api-key"
 export SPRING_AI_OPENAI_API_KEY="$MIMO_API_KEY"
 export MIMO_OPENAI_BASE_URL="https://token-plan-cn.xiaomimimo.com/v1"
-export MIMO_ANTHROPIC_BASE_URL="https://token-plan-cn.xiaomimimo.com/anthropic"
 export MIMO_CHAT_MODEL="mimo-v2.5"
 export MIMO_PRO_MODEL="mimo-v2.5-pro"
 export MIMO_ASR_MODEL="mimo-v2.5-asr"
@@ -84,6 +82,7 @@ export LEGACY_XUNFEI_ENABLED="false"
 
 - `MIMO_API_KEY` 是项目统一读取的 Mimo key。
 - `SPRING_AI_OPENAI_API_KEY` 指向同一个 key，用于 Spring AI OpenAI 兼容客户端。
+- `mimo-v2.5` 用于通用/视觉链路；`mimo-v2.5-pro` 只用于纯文本高推理聊天，两者都走 `MIMO_OPENAI_BASE_URL`。
 - 讯飞 legacy 默认关闭，除非明确需要旧链路，否则保持 `LEGACY_XUNFEI_ENABLED=false`。
 
 ---
@@ -132,9 +131,9 @@ docker compose ps
 
 ---
 
-## 六、替换数据库中的 Mimo Key 占位符
+## 六、校正数据库中的 Mimo 配置
 
-如果数据库已经初始化过，SQL 中的 `MIMO_API_KEY` 占位符可能已经写入 `ai_properties` 和 `agent_properties`。需要在本机数据库里替换成真实 key。
+如果数据库已经初始化过，SQL 中的 `MIMO_API_KEY` 占位符可能已经写入 `ai_properties` 和 `agent_properties`。这是预期行为：真实 key 只放在后端启动环境变量中，不写入数据库。
 
 进入 MySQL：
 
@@ -142,28 +141,30 @@ docker compose ps
 docker exec -it ip-mysql mysql -uroot -p122333 mainshi_agent
 ```
 
-进入 MySQL 后执行：
+进入 MySQL 后可执行一次配置校正：
 
 ```sql
 UPDATE ai_properties
-SET api_key = '你的-token-plan-api-key'
-WHERE api_key = 'MIMO_API_KEY';
+SET api_key = 'MIMO_API_KEY'
+WHERE api_key <> 'MIMO_API_KEY';
 
 UPDATE agent_properties
-SET api_key = '你的-token-plan-api-key'
-WHERE api_key = 'MIMO_API_KEY';
+SET api_key = 'MIMO_API_KEY',
+    api_flow_id = 'https://token-plan-cn.xiaomimimo.com/v1',
+    ai_provider = 'openai'
+WHERE del_flag = 0;
 ```
 
-检查是否还有占位符：
+检查是否还有非占位符 key：
 
 ```sql
-SELECT COUNT(*) AS remaining_ai_placeholders
+SELECT COUNT(*) AS remaining_ai_non_placeholders
 FROM ai_properties
-WHERE api_key = 'MIMO_API_KEY';
+WHERE api_key <> 'MIMO_API_KEY';
 
-SELECT COUNT(*) AS remaining_agent_placeholders
+SELECT COUNT(*) AS remaining_agent_non_placeholders
 FROM agent_properties
-WHERE api_key = 'MIMO_API_KEY';
+WHERE api_key <> 'MIMO_API_KEY';
 ```
 
 两个结果都为 `0` 后退出：
@@ -172,7 +173,7 @@ WHERE api_key = 'MIMO_API_KEY';
 exit;
 ```
 
-如果你是首次启动前就已经把初始化 SQL 或后台配置改成真实 key，可以跳过本节。
+只要启动后端的终端设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`，后端会在运行时解析数据库占位符。
 
 ---
 
@@ -284,6 +285,13 @@ http://localhost:5173
 2. 输入一段中文文本。
 3. 预期结果：后端返回可播放音频，新链路主要读取 `audioBase64`。
 
+### 10.5 面试页前端交互
+
+1. 进入面试房间后，右上角应显示摄像头/录像浮窗。
+2. 紧凑状态下可以拖动该浮窗；浮窗会被限制在聊天内容区域内，不会被拖出可见范围。
+3. 点击浮窗右上角按钮可切换展开/收起；展开状态保持原有大尺寸覆盖层，不参与拖拽。
+4. AI 返回的面试题如果带有 `{question=...}` 包装，前端会清理为纯题目文本，并在聊天区显示为“当前题目”卡片。
+
 ---
 
 ## 十一、生产式 Docker Compose 运行
@@ -367,11 +375,12 @@ rg -n "tp-[A-Za-z0-9]{20,}" . -S
 
 | 现象 | 处理方式 |
 |------|----------|
-| 后端启动但 AI 无响应 | 确认当前启动后端的终端设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`，并确认数据库 `ai_properties`、`agent_properties` 中不再是 `MIMO_API_KEY` 占位符 |
+| 后端启动但 AI 无响应 | 确认当前启动后端的终端设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`；数据库 `ai_properties`、`agent_properties` 应保留 `MIMO_API_KEY` 占位符，由后端运行时解析真实 key |
 | 前端请求 404 | 确认后端在 `8002` 端口运行，前端代理 `VITE_API_TARGET=http://localhost:8002` |
 | WebSocket 连接失败 | 确认通过 `http://localhost:5173` 访问前端，Vite proxy 已开启 `ws: true`，并且登录后再进入录音页面 |
 | ASR 没有最终文本 | 停止录音时必须发送 `stop_transcription`，后端才会关闭音频流并调用 Mimo ASR |
 | TTS 成功但无声音 | 检查后端返回的 `audioBase64` 是否为空，并查看 `MimoAudioService` 日志 |
+| 面试页看不到摄像头浮窗 | 确认顶部摄像头按钮处于“关闭摄像头”状态（表示当前已开启）；如果刚更新前端代码，重启 `npm run dev` 并强制刷新浏览器。浮窗定位按聊天内容区域计算，避免被左侧侧边栏和 `overflow-hidden` 裁剪 |
 | MySQL 密码不对 | 本地 compose 默认 root 密码是 `122333`；如果通过 `.env` 覆盖，以 `.env` 为准 |
 | 端口冲突 | 修改 `docker-compose.yml` 或 `docker-compose.prod.yml` 中对应端口映射，或停止本机已有服务 |
 | Redis 启动时报 `Bind for 0.0.0.0:6379 failed` | 先执行 `docker stop interviewpilot-redis` 释放 6379，再重新执行 `docker compose up -d mysql mongo redis` |

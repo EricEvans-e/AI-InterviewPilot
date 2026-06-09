@@ -188,7 +188,7 @@ const buildRadarPointsFromDto = (
   const metrics: Array<[string, unknown]> = [
     ["简历评估", radar.resumeScore],
     ["面试表现", radar.interviewPerformance ?? radar.interviewScore],
-    ["仪态表达", radar.demeanorEvaluation],
+    ["神态表现", radar.demeanorEvaluation],
     ["专业技能", radar.professionalSkills],
     ["发展潜力", radar.potentialIndex ?? radar.totalScore],
   ];

@@ -689,12 +689,7 @@ public class InterviewQuestionCacheServiceImpl implements InterviewQuestionCache
             return interviewScoreService.getSessionDemeanorScoreDetails(sessionId);
         } catch (Exception e) {
             log.error("Failed to get demeanor detail scores, sessionId: {}", sessionId, e);
-            DemeanorScoreDTO defaultScore = new DemeanorScoreDTO();
-            defaultScore.setPanicLevel(0);
-            defaultScore.setSeriousnessLevel(0);
-            defaultScore.setEmoticonHandling(0);
-            defaultScore.setCompositeScore(0);
-            return defaultScore;
+            return new DemeanorScoreDTO();
         }
     }
 

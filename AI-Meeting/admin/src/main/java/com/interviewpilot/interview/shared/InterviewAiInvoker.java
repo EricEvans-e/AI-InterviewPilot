@@ -85,6 +85,23 @@ public class InterviewAiInvoker {
         return guardedCall(stage, singleFlightKey, () -> doChat(prompt, sessionId, agentProperties, fileUrl, parameters));
     }
 
+    public String callAiSyncWithImage(
+            String prompt,
+            String sessionId,
+            AgentPropertiesDO agentProperties,
+            byte[] imageBytes,
+            String imageMimeType,
+            String stage,
+            String singleFlightKey) throws Exception {
+        return guardedCall(stage, singleFlightKey, () -> doChatWithImage(
+                prompt,
+                sessionId,
+                agentProperties,
+                imageBytes,
+                imageMimeType
+        ));
+    }
+
     public String callAiSyncWithParameters(
             String sessionId,
             AgentPropertiesDO agentProperties,
@@ -165,6 +182,32 @@ public class InterviewAiInvoker {
         }
         throw new ClientException("unsupported interview AI provider: "
                 + StrUtil.blankToDefault(aiProvider, PROVIDER_OPENAI));
+    }
+
+    private String doChatWithImage(
+            String input,
+            String sessionId,
+            AgentPropertiesDO agentProperties,
+            byte[] imageBytes,
+            String imageMimeType) {
+        String aiProvider = agentProperties.getAiProvider();
+        if (!PROVIDER_OPENAI.equalsIgnoreCase(aiProvider)) {
+            throw new ClientException("vision chat requires openai-compatible provider");
+        }
+
+        String prompt = AnthropicPromptBuilder.build(input, null);
+        log.info("[InterviewAiInvoker] Mimo vision 调用 sessionId={}, prompt前100字={}, imageBytes={}",
+                sessionId,
+                prompt.length() > 100 ? prompt.substring(0, 100) : prompt,
+                imageBytes == null ? 0 : imageBytes.length);
+
+        AiPropertiesDO aiProps = new AiPropertiesDO();
+        aiProps.setApiKey(agentProperties.getApiKey());
+        aiProps.setModelName(agentProperties.getApiSecret());
+        aiProps.setApiUrl(agentProperties.getApiFlowId());
+        aiProps.setMaxTokens(8192);
+
+        return universalAiChatHandler.callSyncWithImage(aiProps, prompt, imageBytes, imageMimeType);
     }
 
     private String doChatXunfei(

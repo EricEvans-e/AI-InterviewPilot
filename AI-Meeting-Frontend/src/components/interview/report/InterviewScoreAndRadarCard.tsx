@@ -16,17 +16,20 @@ type InterviewScoreAndRadarCardProps = {
 };
 
 const DIMENSION_CONFIG = [
-  { key: "contentScore" as const, label: "内容质量", max: 30, color: "bg-blue-500" },
-  { key: "logicScore" as const, label: "逻辑结构", max: 15, color: "bg-green-500" },
-  { key: "professionalScore" as const, label: "专业匹配", max: 15, color: "bg-purple-500" },
-  { key: "expressionScore" as const, label: "语言表达", max: 15, color: "bg-amber-500" },
-  { key: "adaptabilityScore" as const, label: "临场应变", max: 10, color: "bg-red-500" },
-  { key: "timeControlScore" as const, label: "时间控制", max: 5, color: "bg-cyan-500" },
-  { key: "etiquetteScore" as const, label: "礼仪仪态", max: 10, color: "bg-pink-500" },
+  { key: "contentScore" as const, label: "内容质量", color: "bg-blue-500" },
+  { key: "logicScore" as const, label: "逻辑结构", color: "bg-green-500" },
+  { key: "professionalScore" as const, label: "专业匹配", color: "bg-purple-500" },
+  { key: "expressionScore" as const, label: "语言表达", color: "bg-amber-500" },
+  { key: "adaptabilityScore" as const, label: "临场应变", color: "bg-red-500" },
+  { key: "timeControlScore" as const, label: "时间控制", color: "bg-cyan-500" },
+  { key: "etiquetteScore" as const, label: "礼仪仪态", color: "bg-pink-500" },
 ] as const;
 
 const formatScore = (value: number | null) =>
   value === null ? "--" : String(value);
+
+const clampPercent = (value: number | null) =>
+  value === null ? 0 : Math.max(0, Math.min(100, value));
 
 export default function InterviewScoreAndRadarCard({
   resumeScore,
@@ -130,13 +133,12 @@ export default function InterviewScoreAndRadarCard({
           <div>
             <p className="text-sm font-medium text-slate-900">七维评分详情</p>
             <p className="text-xs text-slate-500 mt-1">
-              各维度得分与满分对比，帮助定位优势与薄弱环节。
+              各维度均按 100 分制展示，帮助定位优势与薄弱环节。
             </p>
             <div className="mt-4 space-y-3">
               {DIMENSION_CONFIG.map((dim, index) => {
                 const score = dimensionScores[dim.key];
-                const percentage =
-                  score !== null ? Math.min(100, (score / dim.max) * 100) : 0;
+                const percentage = clampPercent(score);
 
                 return (
                   <motion.div
@@ -154,7 +156,7 @@ export default function InterviewScoreAndRadarCard({
                       <span>{dim.label}</span>
                       <span>
                         {score !== null ? score : "--"}{" "}
-                        <span className="text-slate-400">/ {dim.max}</span>
+                        <span className="text-slate-400">/ 100</span>
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100">

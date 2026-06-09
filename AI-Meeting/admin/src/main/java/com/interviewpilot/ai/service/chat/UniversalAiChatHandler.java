@@ -3,7 +3,10 @@ package com.interviewpilot.ai.service.chat;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import java.time.Duration;
+import java.util.Base64;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import reactor.netty.http.client.HttpClient;
@@ -11,9 +14,11 @@ import com.interviewpilot.ai.api.io.resp.AiChatStreamRespDTO;
 import com.interviewpilot.ai.api.io.resp.AiMessageHistoryRespDTO;
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
 import com.interviewpilot.ai.enums.AiPropritiesType;
+import com.interviewpilot.common.config.mimo.MimoCredentialResolver;
 import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.toolkit.ai.AIContentAccumulator;
 import io.micrometer.observation.ObservationRegistry;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -29,6 +34,7 @@ import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.DefaultResponseErrorHandler;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -45,7 +51,10 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class UniversalAiChatHandler implements AiChatHandler {
+
+    private final MimoCredentialResolver credentialResolver;
 
     @Override
     public String getType() {
@@ -137,7 +146,7 @@ public class UniversalAiChatHandler implements AiChatHandler {
 
     private ChatClient createChatClient(AiPropertiesDO aiProperties) {
         String baseUrl = aiProperties.getApiUrl();
-        String apiKey = aiProperties.getApiKey();
+        String apiKey = credentialResolver.resolveSecret(aiProperties.getApiKey());
 
         if (StrUtil.isBlank(baseUrl)) {
             baseUrl = AiPropritiesType.getByType(aiProperties.getAiType()).getDefaultBaseUrl();
@@ -248,7 +257,7 @@ public class UniversalAiChatHandler implements AiChatHandler {
                     .chatResponse();
 
             if (chatResponse != null && chatResponse.getResult() != null) {
-                String result = chatResponse.getResult().getOutput().getText();
+                String result = extractGenerationText(chatResponse.getResult());
                 log.info("[UniversalAiChatHandler] callSync success, resultPreview={}",
                         result != null && result.length() > 100 ? result.substring(0, 100) : result);
                 return result;
@@ -259,5 +268,170 @@ public class UniversalAiChatHandler implements AiChatHandler {
                     aiProperties.getApiUrl(), aiProperties.getModelName(), e.getMessage(), e);
             throw e;
         }
+    }
+
+    public String callSyncWithImage(
+            AiPropertiesDO aiProperties,
+            String userMessage,
+            byte[] imageBytes,
+            String imageMimeType) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new ClientException("image payload is required for vision chat");
+        }
+
+        String baseUrl = resolveBaseUrl(aiProperties);
+        String apiKey = credentialResolver.resolveSecret(aiProperties.getApiKey());
+        if (StrUtil.isBlank(apiKey)) {
+            throw new ClientException("AI API Key 未配置");
+        }
+
+        String requestUrl = trimTrailingSlash(baseUrl) + "/chat/completions";
+        JSONObject request = new JSONObject();
+        request.put("model", aiProperties.getModelName());
+        if (aiProperties.getMaxTokens() != null) {
+            request.put("max_tokens", aiProperties.getMaxTokens());
+        }
+
+        JSONArray messages = new JSONArray();
+        if (StrUtil.isNotBlank(aiProperties.getSystemPrompt())) {
+            JSONObject systemMessage = new JSONObject();
+            systemMessage.put("role", "system");
+            systemMessage.put("content", aiProperties.getSystemPrompt());
+            messages.add(systemMessage);
+        }
+
+        JSONObject userMessageJson = new JSONObject();
+        userMessageJson.put("role", "user");
+        JSONArray content = new JSONArray();
+
+        JSONObject textPart = new JSONObject();
+        textPart.put("type", "text");
+        textPart.put("text", userMessage);
+        content.add(textPart);
+
+        JSONObject imageUrl = new JSONObject();
+        imageUrl.put(
+                "url",
+                "data:" + normalizeImageMimeType(imageMimeType) + ";base64,"
+                        + Base64.getEncoder().encodeToString(imageBytes)
+        );
+
+        JSONObject imagePart = new JSONObject();
+        imagePart.put("type", "image_url");
+        imagePart.put("image_url", imageUrl);
+        content.add(imagePart);
+
+        userMessageJson.put("content", content);
+        messages.add(userMessageJson);
+        request.put("messages", messages);
+
+        log.info("[UniversalAiChatHandler] vision callSync start, url={}, model={}, imageBytes={}, inputPreview={}",
+                requestUrl,
+                aiProperties.getModelName(),
+                imageBytes.length,
+                userMessage != null && userMessage.length() > 100 ? userMessage.substring(0, 100) : userMessage);
+
+        try {
+            String responseBody = RestClient.builder()
+                    .requestFactory(restRequestFactory())
+                    .defaultHeader("Authorization", "Bearer " + apiKey)
+                    .defaultHeader("Content-Type", "application/json")
+                    .build()
+                    .post()
+                    .uri(requestUrl)
+                    .body(request.toJSONString())
+                    .retrieve()
+                    .body(String.class);
+
+            String result = extractChatContent(StrUtil.isBlank(responseBody) ? null : JSON.parseObject(responseBody));
+            log.info("[UniversalAiChatHandler] vision callSync success, resultPreview={}",
+                    result != null && result.length() > 100 ? result.substring(0, 100) : result);
+            return result;
+        } catch (RestClientException e) {
+            log.error("[UniversalAiChatHandler] vision callSync failed, url={}, model={}, error={}",
+                    requestUrl, aiProperties.getModelName(), e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private String resolveBaseUrl(AiPropertiesDO aiProperties) {
+        String baseUrl = aiProperties.getApiUrl();
+        if (StrUtil.isBlank(baseUrl)) {
+            baseUrl = AiPropritiesType.getByType(aiProperties.getAiType()).getDefaultBaseUrl();
+        }
+        return baseUrl;
+    }
+
+    private SimpleClientHttpRequestFactory restRequestFactory() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout((int) Duration.ofSeconds(30).toMillis());
+        requestFactory.setReadTimeout((int) Duration.ofMinutes(3).toMillis());
+        return requestFactory;
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
+    }
+
+    private String normalizeImageMimeType(String imageMimeType) {
+        return StrUtil.blankToDefault(imageMimeType, "image/jpeg");
+    }
+
+    private String extractChatContent(JSONObject response) {
+        if (response == null) {
+            return null;
+        }
+        JSONArray choices = response.getJSONArray("choices");
+        if (choices == null || choices.isEmpty()) {
+            return null;
+        }
+        JSONObject firstChoice = choices.getJSONObject(0);
+        if (firstChoice == null) {
+            return null;
+        }
+        JSONObject message = firstChoice.getJSONObject("message");
+        return extractMessageText(message);
+    }
+
+    private String extractGenerationText(Generation generation) {
+        if (generation == null || generation.getOutput() == null) {
+            return null;
+        }
+        AssistantMessage output = generation.getOutput();
+        String text = output.getText();
+        if (StrUtil.isNotBlank(text)) {
+            return text;
+        }
+        try {
+            java.lang.reflect.Method getReasoningContent = output.getClass().getMethod("getReasoningContent");
+            Object reasoningVal = getReasoningContent.invoke(output);
+            if (reasoningVal != null && StrUtil.isNotBlank(reasoningVal.toString())) {
+                return reasoningVal.toString();
+            }
+        } catch (Exception ignored) {
+        }
+        Object reasoningObj = output.getMetadata().get("reasoningContent");
+        if (reasoningObj == null) {
+            reasoningObj = output.getMetadata().get("reasoning_content");
+        }
+        return reasoningObj == null ? null : reasoningObj.toString();
+    }
+
+    private String extractMessageText(JSONObject message) {
+        if (message == null) {
+            return null;
+        }
+        String content = message.getString("content");
+        if (StrUtil.isNotBlank(content)) {
+            return content;
+        }
+        return message.getString("reasoning_content");
     }
 }

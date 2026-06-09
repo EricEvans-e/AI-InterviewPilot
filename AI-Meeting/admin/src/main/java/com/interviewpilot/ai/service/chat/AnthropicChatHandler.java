@@ -3,17 +3,17 @@ package com.interviewpilot.ai.service.chat;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
-import java.nio.charset.StandardCharsets;
 import com.alibaba.fastjson2.JSONObject;
 import com.interviewpilot.ai.api.io.resp.AiChatStreamRespDTO;
 import com.interviewpilot.ai.api.io.resp.AiMessageHistoryRespDTO;
 import com.interviewpilot.ai.dao.entity.AiPropertiesDO;
 import com.interviewpilot.ai.enums.AiPropritiesType;
+import com.interviewpilot.common.config.mimo.MimoCredentialResolver;
 import com.interviewpilot.common.convention.exception.ClientException;
+import com.interviewpilot.common.convention.exception.ServiceException;
 import com.interviewpilot.toolkit.ai.AIContentAccumulator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -24,7 +24,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Anthropic 兼容 AI 聊天处理器
@@ -32,7 +31,10 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class AnthropicChatHandler implements AiChatHandler {
+
+    private final MimoCredentialResolver credentialResolver;
 
     @Override
     public String getType() {
@@ -45,7 +47,7 @@ public class AnthropicChatHandler implements AiChatHandler {
                              FluxSink<String> sink, AIContentAccumulator accumulator) throws Exception {
 
         String baseUrl = aiProperties.getApiUrl();
-        String apiKey = aiProperties.getApiKey();
+        String apiKey = credentialResolver.resolveSecret(aiProperties.getApiKey());
 
         if (StrUtil.isBlank(baseUrl)) {
             baseUrl = AiPropritiesType.ANTHROPIC.getDefaultBaseUrl();
@@ -73,6 +75,15 @@ public class AnthropicChatHandler implements AiChatHandler {
                 .bodyValue(requestBody.toJSONString())
                 .exchangeToFlux(response -> {
                     log.debug("Anthropic response status: {}, contentType: {}", response.statusCode(), response.headers().contentType());
+                    if (response.statusCode().isError()) {
+                        return response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMapMany(responseBody -> Flux.error(new ServiceException(
+                                        "Mimo Anthropic request failed, HTTP status: "
+                                                + response.statusCode().value()
+                                                + summarizeErrorBody(responseBody)
+                                )));
+                    }
                     return response.bodyToFlux(org.springframework.core.io.buffer.DataBuffer.class)
                             .map(dataBuffer -> {
                                 byte[] bytes = new byte[dataBuffer.readableByteCount()];
@@ -119,7 +130,7 @@ public class AnthropicChatHandler implements AiChatHandler {
      */
     public String callSync(AiPropertiesDO aiProperties, String userMessage) {
         String baseUrl = aiProperties.getApiUrl();
-        String apiKey = aiProperties.getApiKey();
+        String apiKey = credentialResolver.resolveSecret(aiProperties.getApiKey());
 
         if (StrUtil.isBlank(baseUrl)) {
             baseUrl = AiPropritiesType.ANTHROPIC.getDefaultBaseUrl();
@@ -215,6 +226,14 @@ public class AnthropicChatHandler implements AiChatHandler {
         }
 
         return body;
+    }
+
+    private String summarizeErrorBody(String responseBody) {
+        String body = StrUtil.trimToEmpty(responseBody);
+        if (StrUtil.isBlank(body)) {
+            return "";
+        }
+        return ", body=" + (body.length() > 300 ? body.substring(0, 300) : body);
     }
 
     /**

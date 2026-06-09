@@ -18,6 +18,8 @@
 # 日志
 /logs/
 *.log
+AI-Meeting/backend-start.out
+AI-Meeting/backend-start.err
 
 # 环境配置
 .env

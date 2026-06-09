@@ -14,6 +14,8 @@ public final class InterviewAiGuardStage {
     public static final String INTERVIEW_EXTRACTION = "interview-extraction";
     /** 神态分析阶段（AI 分析用户摄像头截图） */
     public static final String INTERVIEW_DEMEANOR = "interview-demeanor";
+    /** 报告总结阶段（AI 生成整场面试分析与建议） */
+    public static final String INTERVIEW_REPORT_REVIEW = "interview-report-review";
 
     private InterviewAiGuardStage() {
     }

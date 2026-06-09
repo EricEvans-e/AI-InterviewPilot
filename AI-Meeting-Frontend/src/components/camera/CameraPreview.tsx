@@ -16,6 +16,7 @@ type CameraPreviewProps = {
   videoConstraints?: MediaTrackConstraints;
   muted?: boolean;
   onError?: (error: MediaError) => void;
+  onStreamChange?: (stream: MediaStream | null) => void;
 };
 
 const CameraPreview = forwardRef<CameraPreviewHandle, CameraPreviewProps>(
@@ -26,6 +27,7 @@ const CameraPreview = forwardRef<CameraPreviewHandle, CameraPreviewProps>(
       videoConstraints,
       muted = true,
       onError,
+      onStreamChange,
     }: CameraPreviewProps,
     ref,
   ) {
@@ -76,6 +78,7 @@ const CameraPreview = forwardRef<CameraPreviewHandle, CameraPreviewProps>(
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
+          onStreamChange?.(null);
         }
         if (videoRef.current) {
           videoRef.current.srcObject = null;
@@ -103,6 +106,7 @@ const CameraPreview = forwardRef<CameraPreviewHandle, CameraPreviewProps>(
             return;
           }
           streamRef.current = stream;
+          onStreamChange?.(stream);
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
             const play = videoRef.current.play?.();
@@ -122,7 +126,7 @@ const CameraPreview = forwardRef<CameraPreviewHandle, CameraPreviewProps>(
         cancelled = true;
         stopStream();
       };
-    }, [isOpen, videoConstraints, onError]);
+    }, [isOpen, videoConstraints, onError, onStreamChange]);
 
     return (
       <video

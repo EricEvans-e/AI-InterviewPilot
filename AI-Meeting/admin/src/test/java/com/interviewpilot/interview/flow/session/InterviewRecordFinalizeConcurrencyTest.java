@@ -54,6 +54,7 @@ class InterviewRecordFinalizeConcurrencyTest {
         InterviewSessionRuntimeRehydrateService runtimeRehydrateService = mock(InterviewSessionRuntimeRehydrateService.class);
         DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
         WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
+        InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
         InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
 
         InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
@@ -65,7 +66,8 @@ class InterviewRecordFinalizeConcurrencyTest {
                 runtimeSnapshotService,
                 runtimeRehydrateService,
                 dimensionScoreStrategy,
-                weightedRadarComputationStrategy
+                weightedRadarComputationStrategy,
+                reportAiReviewService
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 

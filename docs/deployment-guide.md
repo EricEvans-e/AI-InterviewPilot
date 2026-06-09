@@ -105,7 +105,6 @@ REDIS_PASSWORD=
 # 小米 Mimo Token Plan（项目默认，覆盖聊天、面试、ASR、TTS）
 MIMO_API_KEY=tp-your-token-plan-api-key
 MIMO_OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
-MIMO_ANTHROPIC_BASE_URL=https://token-plan-cn.xiaomimimo.com/anthropic
 MIMO_CHAT_MODEL=mimo-v2.5
 MIMO_PRO_MODEL=mimo-v2.5-pro
 MIMO_ASR_MODEL=mimo-v2.5-asr

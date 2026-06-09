@@ -139,11 +139,18 @@ public class InterviewScoreServiceImpl implements InterviewScoreService {
                 compositeScore
         );
 
-        detail.setPanicLevel(demeanorNormalizationStrategy.normalize(panicLevel, tenScaleDetected));
-        detail.setSeriousnessLevel(demeanorNormalizationStrategy.normalize(seriousnessLevel, tenScaleDetected));
-        detail.setEmoticonHandling(demeanorNormalizationStrategy.normalize(emoticonHandling, tenScaleDetected));
-        detail.setCompositeScore(demeanorNormalizationStrategy.normalize(compositeScore, tenScaleDetected));
+        detail.setPanicLevel(normalizeNullable(panicLevel, tenScaleDetected));
+        detail.setSeriousnessLevel(normalizeNullable(seriousnessLevel, tenScaleDetected));
+        detail.setEmoticonHandling(normalizeNullable(emoticonHandling, tenScaleDetected));
+        detail.setCompositeScore(normalizeNullable(compositeScore, tenScaleDetected));
         return detail;
+    }
+
+    private Integer normalizeNullable(Integer score, boolean tenScaleDetected) {
+        if (score == null) {
+            return null;
+        }
+        return demeanorNormalizationStrategy.normalize(score, tenScaleDetected);
     }
 
     private Integer parseInteger(String value) {

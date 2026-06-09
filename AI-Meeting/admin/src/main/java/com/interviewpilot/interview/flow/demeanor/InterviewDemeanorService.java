@@ -24,6 +24,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.redisson.api.RLock;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.Map;
 
 @Service
@@ -40,7 +41,6 @@ public class InterviewDemeanorService {
     private static final String KEY_EMOTICON_HANDLING = "emoticonHandling";
     private static final String KEY_COMPOSITE_SCORE = "compositeScore";
     private static final String PROVIDER_OPENAI = "openai";
-    private static final String PROVIDER_ANTHROPIC = "anthropic";
     private static final String PROVIDER_XINGCHEN = "xingchen";
 
     private final ObjectProvider<XunfeiWorkflowClient> xunfeiWorkflowClientProvider;
@@ -73,12 +73,11 @@ public class InterviewDemeanorService {
 
             String provider = StrUtil.blankToDefault(agentProperties.getAiProvider(), PROVIDER_OPENAI);
             boolean isLegacyXingchen = PROVIDER_XINGCHEN.equalsIgnoreCase(provider);
-            boolean isMimoCompatible = PROVIDER_OPENAI.equalsIgnoreCase(provider)
-                    || PROVIDER_ANTHROPIC.equalsIgnoreCase(provider);
+            boolean isMimoCompatible = PROVIDER_OPENAI.equalsIgnoreCase(provider);
 
             if (isMimoCompatible) {
                 // Anthropic 没有文件上传 API，跳过图片上传，使用纯文本 prompt
-                log.info("Mimo-compatible provider detected, skipping legacy image upload for demeanor, provider={}",
+                log.info("OpenAI-compatible vision provider detected for demeanor, provider={}",
                         provider);
             } else if (isLegacyXingchen) {
                 // Upload image first and get a workflow-readable URL.
@@ -106,23 +105,56 @@ public class InterviewDemeanorService {
                         InterviewErrorCodeEnum.AGENT_CONFIG_NOT_FOUND);
             }
 
-            String promptBuilder = "Evaluate this photo and return integer scores (0-100) for panicLevel, seriousnessLevel, emoticonHandling and compositeScore.";
-
-            // 3) 调用神态工作流并解析结构化分值，最后统一归一化后落缓存。
-            String aiResponseStr = interviewAiInvoker.callAiSyncWithFile(
-                    promptBuilder,
-                    reqDTO.getSessionId() != null ? reqDTO.getSessionId() : "demeanor_" + System.currentTimeMillis(),
-                    agentProperties,
-                    imageUrl,
-                    InterviewAiGuardStage.INTERVIEW_DEMEANOR,
-                    interviewAiInvoker.buildSingleFlightKey(InterviewAiGuardStage.INTERVIEW_DEMEANOR, reqDTO.getSessionId(), imageUrl)
-            );
+            String promptBuilder = """
+                    You are evaluating a live interview camera frame.
+                    Return only compact JSON with integer scores from 0 to 100:
+                    {"panicLevel":0,"seriousnessLevel":0,"emoticonHandling":0,"compositeScore":0}
+                    panicLevel means visible nervousness and should be lower for calmer candidates.
+                    seriousnessLevel means attentive and professional interview attitude.
+                    emoticonHandling means natural facial expression control.
+                    compositeScore should reward calmness, attentiveness, and natural expression.
+                    """;
+            // Invoke the demeanor workflow and normalize the structured scores before caching.
+            String safeSessionId = reqDTO.getSessionId() != null
+                    ? reqDTO.getSessionId()
+                    : "demeanor_" + System.currentTimeMillis();
+            String aiResponseStr;
+            if (isMimoCompatible) {
+                byte[] imageBytes = readImageBytes(reqDTO);
+                String imageHash = DigestUtil.sha256Hex(imageBytes).substring(0, 16);
+                aiResponseStr = interviewAiInvoker.callAiSyncWithImage(
+                        promptBuilder,
+                        safeSessionId,
+                        agentProperties,
+                        imageBytes,
+                        reqDTO.getUserPhoto().getContentType(),
+                        InterviewAiGuardStage.INTERVIEW_DEMEANOR,
+                        interviewAiInvoker.buildSingleFlightKey(
+                                InterviewAiGuardStage.INTERVIEW_DEMEANOR,
+                                reqDTO.getSessionId(),
+                                imageHash
+                        )
+                );
+            } else {
+                aiResponseStr = interviewAiInvoker.callAiSyncWithFile(
+                        promptBuilder,
+                        safeSessionId,
+                        agentProperties,
+                        imageUrl,
+                        InterviewAiGuardStage.INTERVIEW_DEMEANOR,
+                        interviewAiInvoker.buildSingleFlightKey(
+                                InterviewAiGuardStage.INTERVIEW_DEMEANOR,
+                                reqDTO.getSessionId(),
+                                imageUrl
+                        )
+                );
+            }
 
             log.info("Demeanor response received, sessionId={}, payloadLength={}, payloadHash={}",
                     reqDTO.getSessionId(),
                     aiResponseStr == null ? 0 : aiResponseStr.length(),
                     digestForLog(aiResponseStr));
-            sessionId = reqDTO.getSessionId();
+            sessionId = safeSessionId;
             String workflowErrorMessage = interviewResponseParser.extractWorkflowErrorMessage(aiResponseStr);
             if (StrUtil.isNotBlank(workflowErrorMessage)) {
                 log.error("Demeanor workflow failed, sessionId={}, {}", sessionId, workflowErrorMessage);
@@ -209,6 +241,17 @@ public class InterviewDemeanorService {
         AgentPropertiesDO agentProperties = businessAgentResolver.resolveRequired(BusinessAgentScene.INTERVIEW_DEMEANOR);
         reqDTO.setAgentId(agentProperties.getId());
         return agentProperties;
+    }
+
+    private byte[] readImageBytes(DemeanorEvaluationReqDTO reqDTO) {
+        if (reqDTO.getUserPhoto() == null || reqDTO.getUserPhoto().isEmpty()) {
+            throw new ClientException(InterviewErrorCodeEnum.DEMEANOR_USER_PHOTO_NOT_FOUND);
+        }
+        try {
+            return reqDTO.getUserPhoto().getBytes();
+        } catch (IOException e) {
+            throw new ClientException(InterviewErrorCodeEnum.DEMEANOR_FILE_UPLOAD_FAILED);
+        }
     }
 
     private XunfeiWorkflowClient legacyXunfeiWorkflowClient() {

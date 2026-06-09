@@ -19,6 +19,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,11 +46,12 @@ class InterviewDemeanorServiceTest {
         AgentPropertiesDO agent = mimoAgent();
         when(businessAgentResolver.resolveRequired(BusinessAgentScene.INTERVIEW_DEMEANOR)).thenReturn(agent);
         when(lockService.acquire("session-mimo", InterviewAiGuardStage.INTERVIEW_DEMEANOR)).thenReturn(lock);
-        when(interviewAiInvoker.callAiSyncWithFile(
-                argThat(prompt -> prompt != null && prompt.contains("panicLevel")),
+        when(interviewAiInvoker.callAiSyncWithImage(
+                argThat((String prompt) -> prompt != null && prompt.contains("panicLevel")),
                 eq("session-mimo"),
                 eq(agent),
-                eq(null),
+                argThat((byte[] bytes) -> Arrays.equals(bytes, "fake-image".getBytes(StandardCharsets.UTF_8))),
+                eq("image/jpeg"),
                 eq(InterviewAiGuardStage.INTERVIEW_DEMEANOR),
                 any()
         )).thenReturn("""

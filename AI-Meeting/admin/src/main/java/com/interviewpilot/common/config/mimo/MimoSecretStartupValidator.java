@@ -12,10 +12,11 @@ import org.springframework.stereotype.Component;
 public class MimoSecretStartupValidator {
 
     private final MimoProperties properties;
+    private final MimoCredentialResolver credentialResolver;
 
     @PostConstruct
     public void validate() {
-        if (StrUtil.isBlank(properties.getApiKey())) {
+        if (StrUtil.isBlank(credentialResolver.resolveSecret(properties.getApiKey()))) {
             throw new IllegalStateException("Mimo API key is required: mimo.api-key or MIMO_API_KEY");
         }
     }

@@ -72,7 +72,7 @@
 | 功能模块 | 说明 |
 |---------|------|
 | **用户管理** | 学生、教师、管理员账号管理与权限分配 |
-| **AI 模型配置** | 运行时切换和管理 Mimo OpenAI/Anthropic 兼容模型 |
+| **AI 模型配置** | 运行时切换和管理 Mimo OpenAI 兼容模型 |
 | **智能体场景绑定** | 配置面试各环节使用的 AI 智能体（出题官 / 评分官 / 追问官等） |
 | **数据看板** | 注册人数、活跃人数、训练次数、平均得分、院校热度等核心指标 |
 
@@ -80,7 +80,7 @@
 
 - **分布式 Single-flight**：基于 Redis Lua + 状态机实现多实例场景下 AI 调用去重，避免重复扣费
 - **长会话状态治理**：基于 MongoDB 热冷分层快照 + Redis 懒加载构建可恢复运行态体系，支持面试中断恢复
-- **Mimo 统一接入**：基于 Spring AI + 策略路由统一接入 Mimo OpenAI/Anthropic 兼容模型
+- **Mimo 统一接入**：基于 Spring AI + 策略路由统一接入 Mimo OpenAI 兼容模型；`mimo-v2.5` 用于通用/视觉链路，`mimo-v2.5-pro` 仅用于纯文本高推理聊天
 - **Mimo ASR 音频缓冲转写**：基于 WebSocket 接收麦克风 PCM 音频，后端封装为 WAV 后调用 Mimo ASR，并通过 `transcription` / `final` 事件回推文本
 - **LiteFlow 规则链**：基于 LiteFlow 规则引擎驱动追问裁决与面试流程推进
 
@@ -230,7 +230,6 @@ cd E:\Users\Eric\Desktop\AIMeeting
 $env:MIMO_API_KEY="你的-token-plan-api-key"
 $env:SPRING_AI_OPENAI_API_KEY=$env:MIMO_API_KEY
 $env:MIMO_OPENAI_BASE_URL="https://token-plan-cn.xiaomimimo.com/v1"
-$env:MIMO_ANTHROPIC_BASE_URL="https://token-plan-cn.xiaomimimo.com/anthropic"
 $env:MIMO_CHAT_MODEL="mimo-v2.5"
 $env:MIMO_PRO_MODEL="mimo-v2.5-pro"
 $env:MIMO_ASR_MODEL="mimo-v2.5-asr"
@@ -244,7 +243,6 @@ Linux / macOS：
 export MIMO_API_KEY="你的-token-plan-api-key"
 export SPRING_AI_OPENAI_API_KEY="$MIMO_API_KEY"
 export MIMO_OPENAI_BASE_URL="https://token-plan-cn.xiaomimimo.com/v1"
-export MIMO_ANTHROPIC_BASE_URL="https://token-plan-cn.xiaomimimo.com/anthropic"
 export MIMO_CHAT_MODEL="mimo-v2.5"
 export MIMO_PRO_MODEL="mimo-v2.5-pro"
 export MIMO_ASR_MODEL="mimo-v2.5-asr"
@@ -274,25 +272,27 @@ docker-compose up -d mysql mongo redis
 docker-compose ps
 ```
 
-如果 MySQL 已经初始化过，并且初始化 SQL 里的 `MIMO_API_KEY` 占位符已经写进数据库，需要把数据库里的模型配置替换成你的真实 key：
+如果 MySQL 已经初始化过，确认数据库里的模型配置仍使用 `MIMO_API_KEY` 占位符，不要把真实 key 写入数据库。后端运行时会从当前进程环境变量解析真实 key。
 
 ```powershell
 docker exec -it ip-mysql mysql -uroot -p122333 mainshi_agent
 ```
 
-进入 MySQL 后执行：
+进入 MySQL 后可执行一次配置校正：
 
 ```sql
 UPDATE ai_properties
-SET api_key = '你的-token-plan-api-key'
-WHERE api_key = 'MIMO_API_KEY';
+SET api_key = 'MIMO_API_KEY'
+WHERE api_key <> 'MIMO_API_KEY';
 
 UPDATE agent_properties
-SET api_key = '你的-token-plan-api-key'
-WHERE api_key = 'MIMO_API_KEY';
+SET api_key = 'MIMO_API_KEY',
+    api_flow_id = 'https://token-plan-cn.xiaomimimo.com/v1',
+    ai_provider = 'openai'
+WHERE del_flag = 0;
 ```
 
-如果你在首次启动数据库前已经改过初始化 SQL 或使用管理后台录入真实 key，可以跳过这一步。
+只要后端启动终端里设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`，占位符会在运行时自动解析。
 
 ### 4. 启动后端服务
 
@@ -424,7 +424,7 @@ rg -n "tp-[A-Za-z0-9]{20,}" . -S
 
 | 现象 | 处理方式 |
 |------|----------|
-| 后端启动但 AI 无响应 | 确认当前启动终端设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`，并确认数据库 `ai_properties`、`agent_properties` 不是 `MIMO_API_KEY` 占位符 |
+| 后端启动但 AI 无响应 | 确认当前启动终端设置了 `MIMO_API_KEY` / `SPRING_AI_OPENAI_API_KEY`；数据库 `ai_properties`、`agent_properties` 应保留 `MIMO_API_KEY` 占位符，由后端运行时解析真实 key |
 | 前端请求 404 | 确认后端在 `8002`，前端 `VITE_API_TARGET=http://localhost:8002` |
 | WebSocket 连不上 | 确认前端通过 `5173` 访问，Vite proxy 开启 `ws: true`；登录后再进入录音页面 |
 | ASR 没有最终文本 | 需要发送 `stop_transcription` 结束音频流，后端才会调用 Mimo ASR 返回最终文本 |

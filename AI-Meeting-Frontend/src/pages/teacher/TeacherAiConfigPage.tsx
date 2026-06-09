@@ -20,7 +20,6 @@ import type {
 
 const AI_TYPE_OPTIONS = [
   { value: "openai", label: "Mimo OpenAI Compatible" },
-  { value: "anthropic", label: "Mimo Anthropic Compatible" },
 ];
 
 const PAGE_SIZE = 10;
@@ -69,9 +68,9 @@ export default function TeacherAiConfigPage() {
   function defaultForm(): AiPropertiesCreateDTO {
     return {
       aiName: "",
-      aiType: "",
+      aiType: "openai",
       apiKey: "",
-      apiUrl: "",
+      apiUrl: "https://token-plan-cn.xiaomimimo.com/v1",
       modelName: "",
       maxTokens: 4096,
       temperature: 0.7,

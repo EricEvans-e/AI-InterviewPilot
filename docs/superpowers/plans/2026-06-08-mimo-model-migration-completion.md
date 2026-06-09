@@ -1,10 +1,12 @@
 # Mimo Model Migration Completion Implementation Plan
 
+> Superseded on 2026-06-09: current runtime policy prefers Mimo OpenAI-compatible `/v1` for normal chat, pro pure-text chat, interview AI, ASR, and TTS. Keep Anthropic-compatible code as legacy compatibility only. See `docs/ai-model-configuration.md` for the current model matrix.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Finish replacing default model/API usage with Xiaomi Mimo, including chat, Agent chat, interview AI, ASR, and TTS, while keeping Xunfei only as explicitly enabled legacy compatibility.
 
-**Architecture:** Mimo uses the OpenAI-compatible endpoint for normal chat/ASR/TTS and the Anthropic-compatible endpoint for pro/thinking chat. Xunfei workflow/audio classes remain available only when `legacy.xunfei.enabled=true`; production services must lazily access those clients only from `xingchen` legacy branches.
+**Architecture:** Mimo uses the OpenAI-compatible endpoint for normal chat, pro pure-text chat, interview AI, ASR, and TTS. Anthropic-compatible and Xunfei workflow/audio classes remain legacy compatibility only; production services must lazily access Xunfei clients only from `xingchen` legacy branches.
 
 **Tech Stack:** Java 17, Spring Boot 3.4, Spring AI OpenAI-compatible client, OkHttp, JUnit 5, Mockito, React/Vite.
 

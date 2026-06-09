@@ -2,12 +2,14 @@ package com.interviewpilot.media.infrastructure.integration;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.interviewpilot.common.config.mimo.MimoCredentialResolver;
 import com.interviewpilot.common.config.mimo.MimoProperties;
 import com.interviewpilot.common.convention.exception.ServiceException;
 import com.interviewpilot.media.api.io.req.LongTextTtsReqDTO;
 import com.interviewpilot.media.api.io.resp.LongTextTtsTaskRespDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -25,7 +27,10 @@ class MimoAudioServiceTest {
     void setUp() {
         properties = new MimoProperties();
         properties.setApiKey("tp-test-key");
-        service = new MimoAudioService(properties);
+        service = new MimoAudioService(
+                properties,
+                new MimoCredentialResolver(new MockEnvironment())
+        );
     }
 
     @Test

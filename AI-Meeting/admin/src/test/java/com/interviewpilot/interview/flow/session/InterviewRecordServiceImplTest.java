@@ -7,9 +7,13 @@ import com.interviewpilot.interview.application.runtime.InterviewSessionRuntimeS
 import com.interviewpilot.interview.application.strategy.DimensionScoreResult;
 import com.interviewpilot.interview.application.strategy.DimensionScoreStrategy;
 import com.interviewpilot.interview.application.strategy.WeightedRadarComputationStrategy;
+import com.interviewpilot.interview.api.io.req.DemeanorScoreDTO;
+import com.interviewpilot.interview.api.io.resp.InterviewRecordRespDTO;
+import com.interviewpilot.interview.api.io.resp.InterviewReviewFeedbackRespDTO;
 import com.interviewpilot.interview.dao.entity.InterviewRecordDO;
 import com.interviewpilot.interview.dao.entity.InterviewSession;
 import com.interviewpilot.interview.dao.mapper.InterviewRecordMapper;
+import com.interviewpilot.interview.flow.report.InterviewReportAiReviewService;
 import com.interviewpilot.interview.flow.report.InterviewRecordServiceImpl;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
@@ -27,9 +31,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -49,6 +56,7 @@ class InterviewRecordServiceImplTest {
         InterviewSessionRuntimeRehydrateService runtimeRehydrateService = mock(InterviewSessionRuntimeRehydrateService.class);
         DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
         WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
+        InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
         InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
         InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
                 cacheService,
@@ -59,7 +67,8 @@ class InterviewRecordServiceImplTest {
                 runtimeSnapshotService,
                 runtimeRehydrateService,
                 dimensionScoreStrategy,
-                weightedRadarComputationStrategy
+                weightedRadarComputationStrategy,
+                reportAiReviewService
         );
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
@@ -96,6 +105,13 @@ class InterviewRecordServiceImplTest {
         when(cacheService.getSessionResumeScore("interview-session-1")).thenReturn(86);
         when(cacheService.getSessionInterviewQuestions("interview-session-1")).thenReturn(Map.of("1", "Describe JVM tuning"));
         when(cacheService.getSessionInterviewDirection("interview-session-1")).thenReturn("backend");
+        when(cacheService.getSessionDemeanorScore("interview-session-1")).thenReturn(82);
+        DemeanorScoreDTO demeanorDetails = new DemeanorScoreDTO();
+        demeanorDetails.setPanicLevel(20);
+        demeanorDetails.setSeriousnessLevel(80);
+        demeanorDetails.setEmoticonHandling(75);
+        demeanorDetails.setCompositeScore(82);
+        when(cacheService.getSessionDemeanorScoreDetails("interview-session-1")).thenReturn(demeanorDetails);
         when(questionService.getBySessionId("interview-session-1")).thenReturn(null);
         when(cacheService.getInterviewTurns("interview-session-1")).thenReturn(List.of(
                 InterviewTurnLog.builder()
@@ -111,6 +127,18 @@ class InterviewRecordServiceImplTest {
                         .feedback("Answer structure is clear and supported by a concrete project example.")
                         .build()
         ));
+        InterviewReviewFeedbackRespDTO aiReview = new InterviewReviewFeedbackRespDTO();
+        aiReview.setOverallComment("AI总体评价：答题结构清晰，但还需要补充量化指标。");
+        aiReview.setHighlights(List.of("能结合项目说明核心思路。"));
+        aiReview.setImprovementTips(List.of("补充指标、异常处理和工程落地细节。"));
+        aiReview.setNextActions(List.of("下一次回答按背景-方案-指标-复盘组织。"));
+        when(reportAiReviewService.generateReviewFeedback(
+                eq("interview-session-1"),
+                eq("backend"),
+                any(),
+                any(),
+                eq("Structured answer")
+        )).thenReturn(aiReview);
         DimensionScoreResult dimensionScore = new DimensionScoreResult();
         dimensionScore.setContentScore(92);
         dimensionScore.setLogicScore(83);
@@ -152,5 +180,100 @@ class InterviewRecordServiceImplTest {
         assertEquals(86, record.getResumeScore());
         assertTrue(record.getSessionSnapshotJson().contains("\"sessionStatus\":\"FINISHED\""));
         assertTrue(record.getSessionSnapshotJson().contains("\"reviewFeedback\""));
+        assertTrue(record.getSessionSnapshotJson().contains("AI总体评价：答题结构清晰"));
+        assertTrue(record.getSessionSnapshotJson().contains("\"demeanorScore\":82"));
+        assertTrue(record.getSessionSnapshotJson().contains("\"demeanorDetails\""));
+        assertTrue(record.getSessionSnapshotJson().contains("\"panicLevel\":20"));
+
+        when(mapper.selectOne(any())).thenReturn(record);
+        InterviewRecordRespDTO report = service.getBySessionId("interview-session-1", 1001L);
+        assertNotNull(report);
+        assertNotNull(report.getReviewFeedback());
+        assertEquals("AI总体评价：答题结构清晰，但还需要补充量化指标。",
+                report.getReviewFeedback().getOverallComment());
+        assertEquals(List.of("下一次回答按背景-方案-指标-复盘组织。"),
+                report.getReviewFeedback().getNextActions());
+        assertNotNull(report.getRadarChart());
+        assertEquals(92, report.getRadarChart().getContentScore());
+        assertEquals(70, report.getRadarChart().getEtiquetteScore());
+        assertEquals("Answer structure is clear and supported by a concrete project example.",
+                report.getPlaybackItems().get(0).getFeedback());
+    }
+
+    @Test
+    void shouldUseChineseRuleBasedReviewWhenAiReviewIsMissing() {
+        InterviewQuestionCacheService cacheService = mock(InterviewQuestionCacheService.class);
+        InterviewSessionOwnershipService ownershipService = mock(InterviewSessionOwnershipService.class);
+        InterviewSessionService sessionService = mock(InterviewSessionService.class);
+        InterviewQuestionService questionService = mock(InterviewQuestionService.class);
+        InterviewFinalizeLockService finalizeLockService = mock(InterviewFinalizeLockService.class);
+        InterviewSessionRuntimeSnapshotService runtimeSnapshotService = mock(InterviewSessionRuntimeSnapshotService.class);
+        InterviewSessionRuntimeRehydrateService runtimeRehydrateService = mock(InterviewSessionRuntimeRehydrateService.class);
+        DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
+        WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
+        InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
+        InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
+        InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
+                cacheService,
+                ownershipService,
+                sessionService,
+                questionService,
+                finalizeLockService,
+                runtimeSnapshotService,
+                runtimeRehydrateService,
+                dimensionScoreStrategy,
+                weightedRadarComputationStrategy,
+                reportAiReviewService
+        );
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
+
+        InterviewRecordDO record = new InterviewRecordDO();
+        record.setId(2L);
+        record.setUserId(1002L);
+        record.setSessionId("session-rule-review");
+        record.setInterviewSuggestions("补充量化指标; 复盘关键技术取舍");
+        record.setContentScore(58);
+        record.setLogicScore(52);
+        record.setProfessionalScore(50);
+        record.setExpressionScore(54);
+        record.setAdaptabilityScore(48);
+        record.setTimeControlScore(70);
+        record.setEtiquetteScore(82);
+        record.setCompositeScore(60);
+        record.setSessionSnapshotJson("""
+                {
+                  "sessionId":"session-rule-review",
+                  "radar":{
+                    "resumeScore":92,
+                    "interviewPerformance":42,
+                    "demeanorEvaluation":82,
+                    "professionalSkills":50,
+                    "potentialIndex":56
+                  },
+                  "turns":[
+                    {
+                      "questionNumber":"1",
+                      "questionContent":"请说明文本风控系统的算法设计。",
+                      "answerContent":"你好",
+                      "score":10,
+                      "feedback":"回答没有覆盖题目要求，需要补充算法路径、评价指标和工程挑战。"
+                    }
+                  ]
+                }
+                """);
+        when(mapper.selectOne(any())).thenReturn(record);
+
+        InterviewRecordRespDTO report = service.getBySessionId("session-rule-review", 1002L);
+
+        assertNotNull(report.getReviewFeedback());
+        assertTrue(report.getReviewFeedback().getOverallComment().contains("整体表现"));
+        assertFalse(report.getReviewFeedback().getOverallComment().contains("Overall performance"));
+        assertTrue(report.getReviewFeedback().getHighlights().stream()
+                .allMatch(line -> !line.contains("Your resume")));
+        assertTrue(report.getReviewFeedback().getImprovementTips().stream()
+                .anyMatch(line -> line.contains("算法路径") || line.contains("量化")));
+        assertEquals(List.of("补充量化指标", "复盘关键技术取舍",
+                        "回答没有覆盖题目要求，需要补充算法路径、评价指标和工程挑战."),
+                report.getReviewFeedback().getNextActions());
     }
 }

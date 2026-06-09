@@ -226,6 +226,30 @@ describe("buildInterviewReportViewModel", () => {
     ]);
   });
 
+  it("labels demeanor radar score as demeanor performance", () => {
+    const viewModel = buildInterviewReportViewModel({
+      id: 8,
+      userId: 1,
+      sessionId: "session-8",
+      radarChart: {
+        resumeScore: 92,
+        interviewPerformance: 10,
+        demeanorEvaluation: 82,
+        professionalSkills: 35,
+        potentialIndex: 36,
+      },
+    });
+
+    expect(viewModel.radarPoints).toContainEqual({
+      label: "神态表现",
+      value: 82,
+    });
+    expect(viewModel.radarPoints).not.toContainEqual({
+      label: "仪态表达",
+      value: 82,
+    });
+  });
+
   it("falls back to snapshot radar when record radar is missing", () => {
     const viewModel = buildInterviewReportViewModel({
       id: 7,

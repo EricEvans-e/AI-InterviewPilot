@@ -35,18 +35,9 @@ export default function QuestionBankInterviewPage() {
     return cameraPreviewRef.current?.captureFrame() ?? null;
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(
-      () => {
-        const stream = camera.isOpen
-          ? cameraPreviewRef.current?.getStream() ?? null
-          : null;
-        setCameraStream(stream);
-      },
-      camera.isOpen ? 500 : 0,
-    );
-    return () => clearTimeout(timer);
-  }, [camera.isOpen]);
+  const handleCameraStreamChange = useCallback((stream: MediaStream | null) => {
+    setCameraStream(stream);
+  }, []);
 
   // Auto-start recording when interview is ready and camera stream is available
   const hasStartedRecordingRef = useRef(false);
@@ -143,6 +134,8 @@ export default function QuestionBankInterviewPage() {
               cameraErrorCopy={camera.errorCopy}
               onCameraError={camera.handleCameraError}
               onToggleExpanded={camera.handleToggleExpanded}
+              onStreamChange={handleCameraStreamChange}
+              isRecording={isRecording}
             />
             <DigitalHumanAvatar
               isSpeaking={isTTSSpeaking}
