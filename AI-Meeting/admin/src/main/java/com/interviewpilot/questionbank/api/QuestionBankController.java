@@ -7,6 +7,7 @@ import com.interviewpilot.common.convention.context.UserContext;
 import com.interviewpilot.common.convention.result.PageInfo;
 import com.interviewpilot.common.convention.result.Result;
 import com.interviewpilot.common.convention.result.Results;
+import com.interviewpilot.questionbank.api.io.req.QuestionExpandReqDTO;
 import com.interviewpilot.questionbank.api.io.req.QuestionGenerateReqDTO;
 import com.interviewpilot.questionbank.api.io.req.QuestionImportReqDTO;
 import com.interviewpilot.questionbank.api.io.req.QuestionPageReqDTO;
@@ -125,8 +126,17 @@ public class QuestionBankController {
     public Result<QuestionCoverageRespDTO> coverage(@RequestParam(required = false) Long collegeId,
                                                     @RequestParam(required = false) Long majorId,
                                                     @RequestParam(required = false) String interviewMode,
+                                                    @RequestParam(required = false) String abilityTag,
+                                                    @RequestParam(required = false) String difficulty,
                                                     @RequestParam(required = false, defaultValue = "5") Integer requiredCount) {
-        return Results.success(questionBankService.coverage(collegeId, majorId, interviewMode, requiredCount));
+        return Results.success(questionBankService.coverage(
+                collegeId,
+                majorId,
+                interviewMode,
+                abilityTag,
+                difficulty,
+                requiredCount
+        ));
     }
 
     /**
@@ -136,6 +146,22 @@ public class QuestionBankController {
     @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
     public Result<List<QuestionRespDTO>> aiGenerate(@RequestBody @Valid QuestionGenerateReqDTO req) {
         List<QuestionRespDTO> result = aiGenerateService.generateQuestions(req).stream()
+                .map(questionDO -> {
+                    QuestionRespDTO respDTO = new QuestionRespDTO();
+                    org.springframework.beans.BeanUtils.copyProperties(questionDO, respDTO);
+                    return respDTO;
+                })
+                .toList();
+        return Results.success(result);
+    }
+
+    /**
+     * AI 基于参考题拓题
+     */
+    @PostMapping("/ai-expand")
+    @SaCheckRole(value = {"teacher", "admin"}, mode = SaMode.OR)
+    public Result<List<QuestionRespDTO>> aiExpand(@RequestBody @Valid QuestionExpandReqDTO req) {
+        List<QuestionRespDTO> result = aiGenerateService.expandQuestions(req).stream()
                 .map(questionDO -> {
                     QuestionRespDTO respDTO = new QuestionRespDTO();
                     org.springframework.beans.BeanUtils.copyProperties(questionDO, respDTO);

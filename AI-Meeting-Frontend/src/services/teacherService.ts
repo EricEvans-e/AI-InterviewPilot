@@ -33,6 +33,7 @@ export interface QuestionCreateDTO {
 }
 
 export type QuestionUpdateDTO = Partial<QuestionCreateDTO>;
+export type QuestionStatus = "draft" | "pending_review" | "approved" | "rejected";
 
 export interface AiGenerateParams {
   collegeId?: number;
@@ -48,6 +49,25 @@ export interface AiGenerateParams {
 }
 
 export interface AiGenerateResult {
+  questions: QuestionCreateDTO[];
+}
+
+export interface AiExpandParams {
+  referenceQuestionIds: number[];
+  collegeId?: number;
+  majorId?: number;
+  questionType?: string;
+  abilityTag?: string;
+  count: number;
+  difficulty?: string;
+  generateReferenceAnswer?: boolean;
+  generateFollowUp?: boolean;
+  generateScoringRule?: boolean;
+  aiType?: string;
+  aiPropertiesId?: number;
+}
+
+export interface AiExpandResult {
   questions: QuestionCreateDTO[];
 }
 
@@ -207,11 +227,31 @@ export const teacherService = {
     return service.delete<void>(`/ip/v1/questions/${id}`);
   },
 
+  updateQuestionStatus(id: number, status: QuestionStatus): Promise<void> {
+    return service.put<void>(`/ip/v1/questions/${id}/status`, null, {
+      params: { status },
+    });
+  },
+
+  async batchUpdateQuestionStatus(ids: number[], status: QuestionStatus): Promise<void> {
+    await Promise.all(ids.map((id) => this.updateQuestionStatus(id, status)));
+  },
+
   aiGenerateQuestions(
     params: AiGenerateParams,
   ): Promise<AiGenerateResult> {
     return service.post<AiGenerateResult>(
       "/ip/v1/questions/ai-generate",
+      params,
+      { timeout: 120_000 },
+    );
+  },
+
+  aiExpandQuestions(
+    params: AiExpandParams,
+  ): Promise<AiExpandResult> {
+    return service.post<AiExpandResult>(
+      "/ip/v1/questions/ai-expand",
       params,
       { timeout: 120_000 },
     );

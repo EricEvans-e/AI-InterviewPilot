@@ -24,6 +24,8 @@ describe("questionBankService.getQuestionCoverage", () => {
       majorId: 22,
       interviewMode: "专业认知",
       requiredCount: 5,
+      difficulty: "hard",
+      abilityTag: "communication",
     });
 
     expect(result.approvedCount).toBe(3);
@@ -33,6 +35,8 @@ describe("questionBankService.getQuestionCoverage", () => {
         majorId: 22,
         interviewMode: "专业认知",
         requiredCount: 5,
+        difficulty: "hard",
+        abilityTag: "communication",
       },
     });
   });

@@ -39,6 +39,11 @@ public class QuestionPageReqDTO {
     private String status;
 
     /**
+     * 题目标题关键字
+     */
+    private String titleKeyword;
+
+    /**
      * 当前页码
      */
     private Integer pageNum = 1;

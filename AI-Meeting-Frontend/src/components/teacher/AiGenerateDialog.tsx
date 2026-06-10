@@ -28,6 +28,17 @@ interface AiGenerateDialogProps {
   isSaving: boolean;
 }
 
+function normalizeCountInput(value: string): number {
+  if (!value.trim()) {
+    return 1;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 1;
+  }
+  return Math.max(1, Math.min(20, Math.trunc(parsed)));
+}
+
 export default function AiGenerateDialog({
   open,
   onOpenChange,
@@ -38,7 +49,7 @@ export default function AiGenerateDialog({
   const [majorId, setMajorId] = useState<number | "">("");
   const [questionType, setQuestionType] = useState("");
   const [abilityTag, setAbilityTag] = useState("");
-  const [count, setCount] = useState(5);
+  const [countInput, setCountInput] = useState("5");
   const [difficulty, setDifficulty] = useState("");
   const [generateFollowUp, setGenerateFollowUp] = useState(false);
   const [generateScoringRule, setGenerateScoringRule] = useState(false);
@@ -92,6 +103,8 @@ export default function AiGenerateDialog({
   }
 
   async function handleGenerate() {
+    const count = normalizeCountInput(countInput);
+    setCountInput(String(count));
     setIsGenerating(true);
     setError(null);
     setGeneratedQuestions([]);
@@ -259,12 +272,9 @@ export default function AiGenerateDialog({
               <Label>数量 (1-20)</Label>
               <Input
                 type="number"
-                value={count}
-                onChange={(e) =>
-                  setCount(
-                    Math.max(1, Math.min(20, Number(e.target.value) || 1)),
-                  )
-                }
+                value={countInput}
+                onChange={(e) => setCountInput(e.target.value)}
+                onBlur={() => setCountInput(String(normalizeCountInput(countInput)))}
                 min={1}
                 max={20}
               />

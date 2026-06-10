@@ -32,10 +32,14 @@ public class QuestionRespDTO {
      */
     private Long collegeId;
 
+    private String collegeName;
+
     /**
      * 目标专业ID
      */
     private Long majorId;
+
+    private String majorName;
 
     /**
      * 能力点标签

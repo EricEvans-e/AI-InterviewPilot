@@ -36,7 +36,9 @@ export interface QuestionRespDTO {
   content?: string;
   questionType?: string;
   collegeId?: number;
+  collegeName?: string;
   majorId?: number;
+  majorName?: string;
   abilityTag?: string;
   difficulty?: string;
   answerTimeSeconds?: number;
@@ -56,6 +58,7 @@ export interface QuestionRespDTO {
 export interface QuestionPageParams {
   collegeId?: number;
   majorId?: number;
+  titleKeyword?: string;
   questionType?: string;
   abilityTag?: string;
   difficulty?: string;
@@ -77,6 +80,8 @@ export interface QuestionCoverageParams {
   majorId?: number;
   interviewMode?: string;
   requiredCount?: number;
+  abilityTag?: string;
+  difficulty?: string;
 }
 
 export interface QuestionCoverageResult {
@@ -91,12 +96,9 @@ export interface QuestionCoverageResult {
 }
 
 export const QUESTION_TYPE_OPTIONS = [
-  { value: "结构化", label: "结构化" },
-  { value: "半结构化", label: "半结构化" },
-  { value: "专业题", label: "专业认知" },
-  { value: "开放题", label: "综合素质" },
-  { value: "情景应变", label: "情景应变" },
-  { value: "自我介绍", label: "自我介绍" },
+  { value: "综合题", label: "综合题" },
+  { value: "专业题", label: "专业题" },
+  { value: "其他题", label: "其他题" },
 ] as const;
 
 export const DIFFICULTY_OPTIONS = [

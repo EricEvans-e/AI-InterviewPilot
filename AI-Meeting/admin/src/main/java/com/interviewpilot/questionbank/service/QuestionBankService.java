@@ -60,6 +60,24 @@ public interface QuestionBankService extends IService<QuestionDO> {
     List<QuestionDO> randomSelect(Long collegeId, Long majorId, String questionType, int count);
 
     /**
+     * 随机选取题目，带能力点和难度筛选。
+     *
+     * @param collegeId    院校ID（可选）
+     * @param majorId      专业ID（可选）
+     * @param questionType 题型（可选）
+     * @param abilityTag   能力点标签（可选）
+     * @param difficulty   难度（可选）
+     * @param count        数量
+     * @return 题目列表
+     */
+    List<QuestionDO> randomSelect(Long collegeId,
+                                  Long majorId,
+                                  String questionType,
+                                  String abilityTag,
+                                  String difficulty,
+                                  int count);
+
+    /**
      * 棰樺簱瑕嗙洊搴︾粺璁?
      *
      * @param collegeId 闄㈡牎ID
@@ -68,7 +86,12 @@ public interface QuestionBankService extends IService<QuestionDO> {
      * @param requiredCount 鏈闈㈣瘯鏈熸湜棰樻暟
      * @return 瑕嗙洊搴︾粺璁?
      */
-    QuestionCoverageRespDTO coverage(Long collegeId, Long majorId, String interviewMode, int requiredCount);
+    QuestionCoverageRespDTO coverage(Long collegeId,
+                                     Long majorId,
+                                     String interviewMode,
+                                     String abilityTag,
+                                     String difficulty,
+                                     int requiredCount);
 
     /**
      * 按能力标签选取题目

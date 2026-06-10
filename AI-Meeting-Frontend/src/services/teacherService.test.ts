@@ -113,4 +113,28 @@ describe("teacherService question import", () => {
       requiredCount: 5,
     });
   });
+
+  it("updates one question status through the status endpoint", async () => {
+    const putSpy = vi.spyOn(requestService, "put").mockResolvedValueOnce(undefined);
+
+    await teacherService.updateQuestionStatus(12, "approved");
+
+    expect(putSpy).toHaveBeenCalledWith("/ip/v1/questions/12/status", null, {
+      params: { status: "approved" },
+    });
+  });
+
+  it("updates question statuses in batch", async () => {
+    const putSpy = vi.spyOn(requestService, "put").mockResolvedValue(undefined);
+
+    await teacherService.batchUpdateQuestionStatus([3, 5], "rejected");
+
+    expect(putSpy).toHaveBeenCalledTimes(2);
+    expect(putSpy).toHaveBeenNthCalledWith(1, "/ip/v1/questions/3/status", null, {
+      params: { status: "rejected" },
+    });
+    expect(putSpy).toHaveBeenNthCalledWith(2, "/ip/v1/questions/5/status", null, {
+      params: { status: "rejected" },
+    });
+  });
 });

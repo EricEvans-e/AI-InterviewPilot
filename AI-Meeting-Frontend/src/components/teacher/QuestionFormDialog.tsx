@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { teacherService } from "@/services/teacherService";
 import type { QuestionCreateDTO } from "@/services/teacherService";
 import type { QuestionRespDTO, CollegeRespDTO, MajorRespDTO } from "@/services/questionBankService";
@@ -149,16 +148,16 @@ export default function QuestionFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "编辑题目" : "新建题目"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-4 pr-4">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto pr-2">
+            <div className="space-y-4 pr-2">
               {/* Title */}
               <div className="space-y-1.5">
                 <Label>
@@ -187,7 +186,7 @@ export default function QuestionFormDialog({
               </div>
 
               {/* Question type + Difficulty */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
                 <div className="space-y-1.5">
                   <Label>
                     题型 <span className="text-red-500">*</span>
@@ -329,9 +328,9 @@ export default function QuestionFormDialog({
                 />
               </div>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="mt-6">
+          <DialogFooter className="mt-6 shrink-0">
             <Button
               type="button"
               variant="outline"
