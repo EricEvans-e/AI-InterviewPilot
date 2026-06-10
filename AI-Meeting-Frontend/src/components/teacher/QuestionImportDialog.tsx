@@ -144,7 +144,7 @@ export default function QuestionImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5 text-sky-600" />
@@ -155,8 +155,8 @@ export default function QuestionImportDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-4">
+        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden md:grid-cols-2">
+          <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
             <div className="space-y-1.5">
               <Label htmlFor="question-import-file">Word 文件</Label>
               <Input
@@ -278,7 +278,7 @@ export default function QuestionImportDialog({
             ) : null}
           </div>
 
-          <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-4">
+          <div className="flex min-h-0 min-w-0 flex-col rounded-md border border-slate-200 bg-slate-50 p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-slate-800">导入预览</h3>
@@ -290,7 +290,7 @@ export default function QuestionImportDialog({
             </div>
 
             {preview ? (
-              <div className="space-y-3">
+              <div className="flex min-h-0 flex-1 flex-col space-y-3">
                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
                   <div className="rounded-md bg-white p-2">
                     <div className="font-semibold text-slate-800">{preview.totalRows}</div>
@@ -306,7 +306,7 @@ export default function QuestionImportDialog({
                   </div>
                 </div>
 
-                <ScrollArea className="h-[300px]">
+                <ScrollArea className="h-[300px] min-h-0 flex-1">
                   <div className="space-y-2 pr-3">
                     {preview.items.slice(0, 30).map((item) => (
                       <div
@@ -339,14 +339,14 @@ export default function QuestionImportDialog({
                 </ScrollArea>
               </div>
             ) : (
-              <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white text-sm text-slate-500">
+              <div className="flex h-[300px] min-h-0 flex-1 items-center justify-center rounded-md border border-dashed border-slate-300 bg-white text-sm text-slate-500">
                 选择 Word 文件后点击解析预览
               </div>
             )}
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-4 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             取消
           </Button>
