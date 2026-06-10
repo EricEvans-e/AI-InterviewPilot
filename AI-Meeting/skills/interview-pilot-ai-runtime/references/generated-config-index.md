@@ -40,11 +40,11 @@ Generated from `application.yaml` and `interview-followup-rule.yaml`. Re-run `sc
 
 | Key | Value |
 | --- | --- |
-| `interview-pilot.agent-binding.general-agent-chat` | `${INTERVIEW_PILOT_AGENT_GENERAL_CHAT:通用智能体}` |
-| `interview-pilot.agent-binding.interview-answer-evaluation` | `${INTERVIEW_PILOT_AGENT_INTERVIEW_ANSWER_EVALUATION:用户答案评分官}` |
-| `interview-pilot.agent-binding.interview-demeanor` | `${INTERVIEW_PILOT_AGENT_INTERVIEW_DEMEANOR:神态分析官}` |
-| `interview-pilot.agent-binding.interview-question-asking` | `${INTERVIEW_PILOT_AGENT_INTERVIEW_QUESTION_ASKING:面试提问官}` |
-| `interview-pilot.agent-binding.interview-question-extraction` | `${INTERVIEW_PILOT_AGENT_INTERVIEW_QUESTION_EXTRACTION:面试出题官}` |
+| `interview-pilot.agent-binding.general-agent-chat` | `${INTERVIEW_PILOT_AGENT_GENERAL_CHAT:Mimo 2.5 通用智能体}` |
+| `interview-pilot.agent-binding.interview-answer-evaluation` | `${INTERVIEW_PILOT_AGENT_INTERVIEW_ANSWER_EVALUATION:Mimo 2.5 答案评分官}` |
+| `interview-pilot.agent-binding.interview-demeanor` | `${INTERVIEW_PILOT_AGENT_INTERVIEW_DEMEANOR:Mimo 2.5 神态分析官}` |
+| `interview-pilot.agent-binding.interview-question-asking` | `${INTERVIEW_PILOT_AGENT_INTERVIEW_QUESTION_ASKING:Mimo 2.5 面试提问官}` |
+| `interview-pilot.agent-binding.interview-question-extraction` | `${INTERVIEW_PILOT_AGENT_INTERVIEW_QUESTION_EXTRACTION:Mimo 2.5 面试出题官}` |
 
 ## interview-pilot.flow-limit
 
@@ -89,6 +89,14 @@ Generated from `application.yaml` and `interview-followup-rule.yaml`. Re-run `sc
 | `interview-pilot.ai-guard.stages.interview-followup.retry-count` | `1` |
 | `interview-pilot.ai-guard.stages.interview-followup.retry-wait-millis` | `100` |
 | `interview-pilot.ai-guard.stages.interview-followup.timeout-millis` | `20000` |
+| `interview-pilot.ai-guard.stages.interview-reference-answer.max-concurrent-calls` | `6` |
+| `interview-pilot.ai-guard.stages.interview-reference-answer.retry-count` | `0` |
+| `interview-pilot.ai-guard.stages.interview-reference-answer.retry-wait-millis` | `0` |
+| `interview-pilot.ai-guard.stages.interview-reference-answer.timeout-millis` | `300000` |
+| `interview-pilot.ai-guard.stages.interview-report-review.max-concurrent-calls` | `6` |
+| `interview-pilot.ai-guard.stages.interview-report-review.retry-count` | `0` |
+| `interview-pilot.ai-guard.stages.interview-report-review.retry-wait-millis` | `0` |
+| `interview-pilot.ai-guard.stages.interview-report-review.timeout-millis` | `300000` |
 
 ## interview-pilot.ai-singleflight
 
