@@ -1,10 +1,13 @@
 import service from "@/lib/request";
+import { questionBankService } from "@/services/questionBankService";
 import type {
   QuestionRespDTO,
   QuestionPageParams,
   PageInfo,
   CollegeRespDTO,
   MajorRespDTO,
+  QuestionCoverageParams,
+  QuestionCoverageResult,
 } from "@/services/questionBankService";
 import type { InterviewRecordResult } from "@/services/interviewService";
 
@@ -47,6 +50,59 @@ export interface AiGenerateParams {
 export interface AiGenerateResult {
   questions: QuestionCreateDTO[];
 }
+
+export interface QuestionImportItemDTO {
+  rowIndex: number;
+  valid: boolean;
+  errorMessage?: string;
+  rawText?: string;
+  title?: string;
+  content?: string;
+  questionType?: string;
+  collegeId?: number;
+  majorId?: number;
+  abilityTag?: string;
+  difficulty?: string;
+  answerTimeSeconds?: number;
+  referenceAnswer?: string;
+  scoringRule?: string;
+  followUpQuestions?: string;
+  sourceRef?: string;
+  year?: number;
+  warnings?: string[];
+}
+
+export interface QuestionImportErrorDTO {
+  rowIndex: number;
+  message: string;
+}
+
+export interface QuestionImportResult {
+  batchId: string;
+  status: "PARSED" | "PARTIAL_FAILED" | "IMPORTED" | "FAILED";
+  totalRows: number;
+  validCount: number;
+  invalidCount: number;
+  importedCount: number;
+  items: QuestionImportItemDTO[];
+  errors: QuestionImportErrorDTO[];
+}
+
+export interface QuestionImportPreviewParams {
+  file: File;
+  importType: "word_table" | "word_section";
+  collegeId?: number;
+  majorId?: number;
+  defaultQuestionType?: string;
+  defaultDifficulty?: string;
+  defaultYear?: number;
+  statusAfterImport?: "draft" | "pending_review" | "approved" | "rejected";
+}
+
+export type {
+  QuestionCoverageParams,
+  QuestionCoverageResult,
+} from "@/services/questionBankService";
 
 export interface ReviewSubmitDTO {
   sessionId: string;
@@ -159,6 +215,42 @@ export const teacherService = {
       params,
       { timeout: 120_000 },
     );
+  },
+
+  previewQuestionImport(
+    params: QuestionImportPreviewParams,
+  ): Promise<QuestionImportResult> {
+    const formData = new FormData();
+    formData.set("file", params.file);
+    formData.set("importType", params.importType);
+    if (params.collegeId !== undefined) formData.set("collegeId", String(params.collegeId));
+    if (params.majorId !== undefined) formData.set("majorId", String(params.majorId));
+    if (params.defaultQuestionType) formData.set("defaultQuestionType", params.defaultQuestionType);
+    if (params.defaultDifficulty) formData.set("defaultDifficulty", params.defaultDifficulty);
+    if (params.defaultYear !== undefined) formData.set("defaultYear", String(params.defaultYear));
+    if (params.statusAfterImport) formData.set("statusAfterImport", params.statusAfterImport);
+    formData.set("dryRun", "true");
+
+    return service.post<QuestionImportResult>(
+      "/ip/v1/questions/import",
+      formData,
+      {
+        timeout: 60_000,
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
+  },
+
+  confirmQuestionImport(batchId: string): Promise<QuestionImportResult> {
+    return service.post<QuestionImportResult>(
+      `/ip/v1/questions/import/${encodeURIComponent(batchId)}/confirm`,
+    );
+  },
+
+  getQuestionCoverage(
+    params: QuestionCoverageParams,
+  ): Promise<QuestionCoverageResult> {
+    return questionBankService.getQuestionCoverage(params);
   },
 
   // Colleges & Majors (reused from questionBankService)

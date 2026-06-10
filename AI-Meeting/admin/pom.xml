@@ -147,6 +147,12 @@
             <version>${easyexcel.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>4.1.2</version>
+        </dependency>
+
         <!-- Lombok: 生成getter/setter/log等，并作为注解处理器参与编译 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

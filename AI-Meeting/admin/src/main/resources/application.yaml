@@ -191,6 +191,16 @@ interview-pilot:
         max-concurrent-calls: 6
         retry-count: 0
         retry-wait-millis: 0
+      interview-report-review:
+        timeout-millis: 300000
+        max-concurrent-calls: 6
+        retry-count: 0
+        retry-wait-millis: 0
+      interview-reference-answer:
+        timeout-millis: 300000
+        max-concurrent-calls: 6
+        retry-count: 0
+        retry-wait-millis: 0
   ai-singleflight:
     enable: true
     mode: hybrid

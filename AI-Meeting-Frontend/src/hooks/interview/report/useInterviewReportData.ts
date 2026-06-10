@@ -11,7 +11,6 @@ import { interviewService } from "@/services/interviewService";
 const REPORT_RECORDING_RETRY_DELAY_MS = 1500;
 const REPORT_RECORDING_RETRY_ATTEMPTS = 40;
 const REPORT_REFERENCE_ANSWER_RETRY_DELAY_MS = 2_000;
-const REPORT_REFERENCE_ANSWER_RETRY_ATTEMPTS = 45;
 const REPORT_AI_REVIEW_RETRY_DELAY_MS = 2_000;
 const REPORT_AI_REVIEW_RETRY_ATTEMPTS = 45;
 
@@ -20,6 +19,42 @@ const waitForRetry = (delayMs: number) =>
     window.setTimeout(resolve, delayMs);
   });
 
+const pollInterviewRecord = async (
+  sessionId: string,
+  attempts: number | null,
+  delayMs: number,
+  shouldStop: (record: ReportQueryData["record"]) => boolean,
+  isRetryableError: (error: unknown) => boolean,
+  shouldContinue?: () => boolean,
+) => {
+  for (let attempt = 0; ; attempt += 1) {
+    if (attempts !== null && attempt >= attempts) {
+      return null;
+    }
+    if (shouldContinue && !shouldContinue()) {
+      return null;
+    }
+    await waitForRetry(delayMs);
+    if (shouldContinue && !shouldContinue()) {
+      return null;
+    }
+    try {
+      const record = await interviewService.getInterviewRecordBySessionId(
+        sessionId,
+      );
+      if (record && shouldStop(record)) {
+        return record;
+      }
+    } catch (pollError) {
+      if (!isRetryableError(pollError)) {
+        throw pollError;
+      }
+    }
+  }
+
+  return null;
+};
+
 const hasMissingReferenceAnswers = (record: ReportQueryData["record"]) => {
   const qaReviews = buildInterviewReportViewModel(record).qaReviews;
   if (qaReviews.length === 0) {
@@ -27,6 +62,31 @@ const hasMissingReferenceAnswers = (record: ReportQueryData["record"]) => {
   }
   return qaReviews.some(
     (item) => !item.referenceAnswer || item.referenceAnswer.trim().length === 0,
+  );
+};
+
+const getReferenceAnswerSignature = (record: ReportQueryData["record"]) => {
+  const qaReviews = buildInterviewReportViewModel(record).qaReviews;
+  return JSON.stringify(
+    qaReviews
+      .filter(
+        (item) =>
+          item.referenceAnswer && item.referenceAnswer.trim().length > 0,
+      )
+      .map((item) => ({
+        questionNumber: item.questionNumber ?? "",
+        referenceAnswer: item.referenceAnswer?.trim() ?? "",
+      })),
+  );
+};
+
+const shouldStopReferenceAnswerPolling = (
+  record: ReportQueryData["record"],
+  baselineSignature: string,
+) => {
+  const currentSignature = getReferenceAnswerSignature(record);
+  return (
+    !hasMissingReferenceAnswers(record) || currentSignature !== baselineSignature
   );
 };
 
@@ -63,9 +123,25 @@ const markRecordReviewFeedbackAsAi = (
   };
 };
 
+const shouldStopAiReviewPolling = (
+  record: ReportQueryData["record"],
+  baselineSignature: string,
+) => {
+  const currentSignature = getReviewFeedbackSignature(record);
+  return hasAiReviewFeedback(record) || currentSignature !== baselineSignature;
+};
+
 export function useInterviewReportData(reportSessionId: string | null) {
   const queryClient = useQueryClient();
   const recordingRetryCountRef = useRef(0);
+  const isAliveRef = useRef(true);
+
+  useEffect(() => {
+    isAliveRef.current = true;
+    return () => {
+      isAliveRef.current = false;
+    };
+  }, [reportSessionId]);
 
   const query = useQuery({
     queryKey: ["interview-record", reportSessionId],
@@ -88,34 +164,46 @@ export function useInterviewReportData(reportSessionId: string | null) {
       if (!reportSessionId) {
         throw new Error("missing report session id");
       }
+      const baselineRecord =
+        queryClient.getQueryData<ReportQueryData>([
+          "interview-record",
+          reportSessionId,
+        ])?.record ?? null;
+      const baselineSignature = getReferenceAnswerSignature(baselineRecord);
       try {
-        return await interviewService.generateInterviewReferenceAnswers(
+        const record = await interviewService.generateInterviewReferenceAnswers(
           reportSessionId,
         );
+        if (record && shouldStopReferenceAnswerPolling(record, baselineSignature)) {
+          return record;
+        }
+
+        const polledRecord = await pollInterviewRecord(
+          reportSessionId,
+          null,
+          REPORT_REFERENCE_ANSWER_RETRY_DELAY_MS,
+          (nextRecord) =>
+            shouldStopReferenceAnswerPolling(nextRecord, baselineSignature),
+          isReferenceAnswerRetryableError,
+          () => isAliveRef.current,
+        );
+        return polledRecord ?? record;
       } catch (error) {
         if (!isReferenceAnswerRetryableError(error)) {
           throw error;
         }
 
-        for (
-          let attempt = 0;
-          attempt < REPORT_REFERENCE_ANSWER_RETRY_ATTEMPTS;
-          attempt += 1
-        ) {
-          await waitForRetry(REPORT_REFERENCE_ANSWER_RETRY_DELAY_MS);
-          try {
-            const record =
-              await interviewService.getInterviewRecordBySessionId(
-                reportSessionId,
-              );
-            if (record && !hasMissingReferenceAnswers(record)) {
-              return record;
-            }
-          } catch (pollError) {
-            if (!isReferenceAnswerRetryableError(pollError)) {
-              throw pollError;
-            }
-          }
+        const polledRecord = await pollInterviewRecord(
+          reportSessionId,
+          null,
+          REPORT_REFERENCE_ANSWER_RETRY_DELAY_MS,
+          (record) =>
+            shouldStopReferenceAnswerPolling(record, baselineSignature),
+          isReferenceAnswerRetryableError,
+          () => isAliveRef.current,
+        );
+        if (polledRecord) {
+          return polledRecord;
         }
 
         throw error;
@@ -147,39 +235,39 @@ export function useInterviewReportData(reportSessionId: string | null) {
         const record = await interviewService.generateInterviewAiReviewFeedback(
           reportSessionId,
         );
-        return markRecordReviewFeedbackAsAi(record);
+        if (shouldStopAiReviewPolling(record, baselineSignature)) {
+          return markRecordReviewFeedbackAsAi(record);
+        }
+
+        const polledRecord = await pollInterviewRecord(
+          reportSessionId,
+          REPORT_AI_REVIEW_RETRY_ATTEMPTS,
+          REPORT_AI_REVIEW_RETRY_DELAY_MS,
+          (nextRecord) =>
+            shouldStopAiReviewPolling(nextRecord, baselineSignature),
+          (pollError) =>
+            pollError instanceof AppError &&
+            pollError.code === ErrorCode.REQUEST_TIMEOUT,
+          () => isAliveRef.current,
+        );
+        return polledRecord ? markRecordReviewFeedbackAsAi(polledRecord) : record;
       } catch (error) {
         if (!(error instanceof AppError) || error.code !== ErrorCode.REQUEST_TIMEOUT) {
           throw error;
         }
 
-        for (
-          let attempt = 0;
-          attempt < REPORT_AI_REVIEW_RETRY_ATTEMPTS;
-          attempt += 1
-        ) {
-          await waitForRetry(REPORT_AI_REVIEW_RETRY_DELAY_MS);
-          try {
-            const record =
-              await interviewService.getInterviewRecordBySessionId(
-                reportSessionId,
-              );
-            const currentSignature = getReviewFeedbackSignature(record);
-            if (
-              record &&
-              (hasAiReviewFeedback(record) ||
-                currentSignature !== baselineSignature)
-            ) {
-              return markRecordReviewFeedbackAsAi(record);
-            }
-          } catch (pollError) {
-            if (
-              !(pollError instanceof AppError) ||
-              pollError.code !== ErrorCode.REQUEST_TIMEOUT
-            ) {
-              throw pollError;
-            }
-          }
+        const polledRecord = await pollInterviewRecord(
+          reportSessionId,
+          REPORT_AI_REVIEW_RETRY_ATTEMPTS,
+          REPORT_AI_REVIEW_RETRY_DELAY_MS,
+          (record) => shouldStopAiReviewPolling(record, baselineSignature),
+          (pollError) =>
+            pollError instanceof AppError &&
+            pollError.code === ErrorCode.REQUEST_TIMEOUT,
+          () => isAliveRef.current,
+        );
+        if (polledRecord) {
+          return markRecordReviewFeedbackAsAi(polledRecord);
         }
 
         throw error;

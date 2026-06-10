@@ -61,7 +61,14 @@ const QUICK_MODES = [
 export default function LobbyPage() {
   const navigate = useNavigate();
   const [startingMode, setStartingMode] = useState<string | null>(null);
-  const lobbyData = useLobbyData();
+  const selectedInterviewMode = "综合素质";
+  const selectedCardCount = 4;
+  const lobbyData = useLobbyData(selectedInterviewMode, selectedCardCount);
+
+  const selectedCardMode =
+    lobbyData.filters.questionTypes.length === 1
+      ? lobbyData.filters.questionTypes[0]
+      : selectedInterviewMode;
 
   const handleStartFromBank = useCallback(
     async (params: {
@@ -114,11 +121,8 @@ export default function LobbyPage() {
       setStartingMode("card");
       try {
         await handleStartFromBank({
-          interviewMode:
-            lobbyData.filters.questionTypes.length === 1
-              ? lobbyData.filters.questionTypes[0]
-              : "综合素质",
-          questionCount: 4,
+          interviewMode: selectedCardMode,
+          questionCount: selectedCardCount,
           collegeId: lobbyData.filters.collegeId,
           majorId: lobbyData.filters.majorId,
           difficulty:
@@ -130,7 +134,7 @@ export default function LobbyPage() {
         setStartingMode(null);
       }
     },
-    [handleStartFromBank, lobbyData.filters],
+    [handleStartFromBank, lobbyData.filters, selectedCardMode],
   );
 
   return (
@@ -211,12 +215,21 @@ export default function LobbyPage() {
             questions={lobbyData.questions}
             colleges={lobbyData.colleges}
             majors={lobbyData.majors}
+            coverage={lobbyData.coverage}
+            coverageLoading={lobbyData.coverageLoading}
+            requiredCount={selectedCardCount}
             loading={lobbyData.questionsLoading}
             pageNum={lobbyData.pageNum}
             totalPages={lobbyData.totalPages}
             totalQuestions={lobbyData.totalQuestions}
             onPageChange={lobbyData.setPageNum}
-            onStart={() => void handleStartFromCard()}
+            onStart={() => {
+              if (lobbyData.coverage && !lobbyData.coverage.canStartImmediately) {
+                alert("当前筛选条件下暂无可用审核题目，请先让老师导入并审核题库。");
+                return;
+              }
+              void handleStartFromCard();
+            }}
           />
         </div>
       </div>

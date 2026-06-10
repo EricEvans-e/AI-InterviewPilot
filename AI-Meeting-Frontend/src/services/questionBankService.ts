@@ -72,6 +72,24 @@ export interface PageInfo<T> {
   pages: number;
 }
 
+export interface QuestionCoverageParams {
+  collegeId?: number;
+  majorId?: number;
+  interviewMode?: string;
+  requiredCount?: number;
+}
+
+export interface QuestionCoverageResult {
+  collegeId?: number;
+  majorId?: number;
+  interviewMode?: string;
+  approvedCount: number;
+  exactMatchCount: number;
+  fallbackCount: number;
+  canStartImmediately: boolean;
+  mayNeedAiGeneration: boolean;
+}
+
 export const QUESTION_TYPE_OPTIONS = [
   { value: "结构化", label: "结构化" },
   { value: "半结构化", label: "半结构化" },
@@ -114,6 +132,14 @@ export const questionBankService = {
   async listMajors(collegeId?: number): Promise<MajorRespDTO[]> {
     return service.get<MajorRespDTO[]>("/ip/v1/majors/list", {
       params: collegeId ? { collegeId } : undefined,
+    });
+  },
+
+  async getQuestionCoverage(
+    params: QuestionCoverageParams,
+  ): Promise<QuestionCoverageResult> {
+    return service.get<QuestionCoverageResult>("/ip/v1/questions/coverage", {
+      params,
     });
   },
 };

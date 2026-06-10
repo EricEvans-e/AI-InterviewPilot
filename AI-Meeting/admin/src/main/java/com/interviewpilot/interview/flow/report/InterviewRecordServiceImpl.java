@@ -697,6 +697,7 @@ public class InterviewRecordServiceImpl extends ServiceImpl<InterviewRecordMappe
         if (turns == null || turns.isEmpty()) {
             turns = runtimeSnapshotService.loadPersistedTurns(sessionId);
         }
+        turns = interviewReferenceAnswerService.attachAvailableReferenceAnswers(sessionId, turns);
         respDTO.setPlaybackItems(buildPlaybackItems(turns));
         respDTO.setReviewFeedback(resolveReviewFeedback(snapshot, turns, radarChart, record));
     }

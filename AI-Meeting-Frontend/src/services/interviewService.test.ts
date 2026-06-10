@@ -134,13 +134,13 @@ describe("interviewService.generateInterviewReferenceAnswers", () => {
       1,
       "/ip/v1/interview/interview/record/session-1/reference-answers",
       undefined,
-      expect.objectContaining({ timeout: 180_000 }),
+      expect.objectContaining({ timeout: 300_000 }),
     );
     expect(postSpy).toHaveBeenNthCalledWith(
       2,
       "/ip/v1/interview/record/session-1/reference-answers",
       undefined,
-      expect.objectContaining({ timeout: 180_000 }),
+      expect.objectContaining({ timeout: 300_000 }),
     );
 
     postSpy.mockRestore();
@@ -161,7 +161,7 @@ describe("interviewService.generateInterviewReferenceAnswers", () => {
     expect(postSpy).toHaveBeenCalledWith(
       "/ip/v1/interview/interview/record/session-2/reference-answers",
       undefined,
-      expect.objectContaining({ timeout: 180_000 }),
+      expect.objectContaining({ timeout: 300_000 }),
     );
   });
 });
@@ -194,13 +194,13 @@ describe("interviewService.generateInterviewAiReviewFeedback", () => {
       1,
       "/ip/v1/interview/interview/record/session-review-1/review-feedback",
       undefined,
-      expect.objectContaining({ timeout: 180_000 }),
+      expect.objectContaining({ timeout: 300_000 }),
     );
     expect(postSpy).toHaveBeenNthCalledWith(
       2,
       "/ip/v1/interview/record/session-review-1/review-feedback",
       undefined,
-      expect.objectContaining({ timeout: 180_000 }),
+      expect.objectContaining({ timeout: 300_000 }),
     );
   });
 
@@ -222,7 +222,7 @@ describe("interviewService.generateInterviewAiReviewFeedback", () => {
     expect(postSpy).toHaveBeenCalledWith(
       "/ip/v1/interview/interview/record/session-review-2/review-feedback",
       undefined,
-      expect.objectContaining({ timeout: 180_000 }),
+      expect.objectContaining({ timeout: 300_000 }),
     );
   });
 });

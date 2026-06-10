@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
-import { Plus, Bot, Search, X } from "lucide-react";
+import { Plus, Bot, Search, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTeacherQuestions } from "@/hooks/teacher/useTeacherQuestions";
 import QuestionBankTable from "@/components/teacher/QuestionBankTable";
 import QuestionFormDialog from "@/components/teacher/QuestionFormDialog";
 import AiGenerateDialog from "@/components/teacher/AiGenerateDialog";
+import QuestionImportDialog from "@/components/teacher/QuestionImportDialog";
 import type { QuestionRespDTO, CollegeRespDTO, MajorRespDTO } from "@/services/questionBankService";
 import type { QuestionCreateDTO } from "@/services/teacherService";
 import { teacherService } from "@/services/teacherService";
@@ -23,6 +24,7 @@ export default function TeacherQuestionsPage() {
     isLoading,
     isFetching,
     setPage,
+    refetch,
     updateFilters,
     createQuestion,
     updateQuestion,
@@ -32,6 +34,7 @@ export default function TeacherQuestionsPage() {
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<QuestionRespDTO | null>(null);
 
   // Filter data
@@ -194,6 +197,10 @@ export default function TeacherQuestionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="mr-1.5 h-4 w-4" />
+            Word 导入
+          </Button>
           <Button variant="outline" onClick={() => setAiOpen(true)}>
             <Bot className="mr-1.5 h-4 w-4" />
             AI 出题
@@ -334,6 +341,15 @@ export default function TeacherQuestionsPage() {
         onOpenChange={setAiOpen}
         onBatchSave={handleAiBatchSave}
         isSaving={createQuestion.isPending}
+      />
+
+      <QuestionImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => {
+          void refetch();
+          window.alert("导入成功，题目已进入待审核状态");
+        }}
       />
     </div>
   );

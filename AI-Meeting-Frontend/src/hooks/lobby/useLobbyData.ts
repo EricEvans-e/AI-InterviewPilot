@@ -6,6 +6,7 @@ import {
   type CollegeRespDTO,
   type MajorRespDTO,
   type QuestionRespDTO,
+  type QuestionCoverageResult,
   type PageInfo,
 } from "@/services/questionBankService";
 
@@ -25,9 +26,14 @@ const EMPTY_FILTERS: LobbyFilters = {
 
 const QUESTION_PAGE_SIZE = 20;
 
-export function useLobbyData() {
+export function useLobbyData(
+  interviewMode = "综合素质",
+  requiredCount = 5,
+) {
   const [filters, setFilters] = useState<LobbyFilters>(EMPTY_FILTERS);
   const [pageNum, setPageNum] = useState(1);
+  const coverageInterviewMode =
+    filters.questionTypes.length === 1 ? filters.questionTypes[0] : interviewMode;
 
   const collegesQuery = useQuery<CollegeRespDTO[]>({
     queryKey: ["lobby", "colleges"],
@@ -70,6 +76,24 @@ export function useLobbyData() {
     queryFn: () => questionBankService.pageQuestions(buildQuestionParams()),
   });
 
+  const coverageQuery = useQuery<QuestionCoverageResult>({
+    queryKey: [
+      "lobby",
+      "coverage",
+      filters.collegeId,
+      filters.majorId,
+      coverageInterviewMode,
+      requiredCount,
+    ],
+    queryFn: () =>
+      questionBankService.getQuestionCoverage({
+        collegeId: filters.collegeId,
+        majorId: filters.majorId,
+        interviewMode: coverageInterviewMode,
+        requiredCount,
+      }),
+  });
+
   const updateFilters = useCallback(
     (patch: Partial<LobbyFilters>) => {
       setFilters((prev) => ({ ...prev, ...patch }));
@@ -107,6 +131,10 @@ export function useLobbyData() {
     totalQuestions: questionsQuery.data?.total ?? 0,
     totalPages: questionsQuery.data?.pages ?? 0,
     questionsLoading: questionsQuery.isLoading,
+    coverage: coverageQuery.data,
+    coverageInterviewMode,
+    coverageLoading: coverageQuery.isLoading,
+    coverageError: coverageQuery.error,
     pageNum,
     setPageNum,
     updateFilters,

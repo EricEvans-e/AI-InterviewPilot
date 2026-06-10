@@ -357,6 +357,73 @@ class InterviewRecordServiceImplTest {
     }
 
     @Test
+    void shouldExposePresetReferenceAnswersOnInitialReportLoad() {
+        InterviewQuestionCacheService cacheService = mock(InterviewQuestionCacheService.class);
+        InterviewSessionOwnershipService ownershipService = mock(InterviewSessionOwnershipService.class);
+        InterviewSessionService sessionService = mock(InterviewSessionService.class);
+        InterviewQuestionService questionService = mock(InterviewQuestionService.class);
+        InterviewFinalizeLockService finalizeLockService = mock(InterviewFinalizeLockService.class);
+        InterviewSessionRuntimeSnapshotService runtimeSnapshotService = mock(InterviewSessionRuntimeSnapshotService.class);
+        InterviewSessionRuntimeRehydrateService runtimeRehydrateService = mock(InterviewSessionRuntimeRehydrateService.class);
+        DimensionScoreStrategy dimensionScoreStrategy = mock(DimensionScoreStrategy.class);
+        WeightedRadarComputationStrategy weightedRadarComputationStrategy = mock(WeightedRadarComputationStrategy.class);
+        InterviewReportAiReviewService reportAiReviewService = mock(InterviewReportAiReviewService.class);
+        InterviewReferenceAnswerService referenceAnswerService = mock(InterviewReferenceAnswerService.class);
+        InterviewRecordMapper mapper = mock(InterviewRecordMapper.class);
+        when(referenceAnswerService.attachAvailableReferenceAnswers(any(), any()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    List<InterviewTurnLog> turns = invocation.getArgument(1, List.class);
+                    turns.get(0).setReferenceAnswer("题库预设参考答案");
+                    return turns;
+                });
+
+        InterviewRecordServiceImpl service = new InterviewRecordServiceImpl(
+                cacheService,
+                ownershipService,
+                sessionService,
+                questionService,
+                finalizeLockService,
+                runtimeSnapshotService,
+                runtimeRehydrateService,
+                dimensionScoreStrategy,
+                weightedRadarComputationStrategy,
+                reportAiReviewService,
+                referenceAnswerService,
+                storageProperties(),
+                mock(TeacherReviewMapper.class)
+        );
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
+
+        InterviewRecordDO record = new InterviewRecordDO();
+        record.setId(31L);
+        record.setUserId(1031L);
+        record.setSessionId("session-preset-reference");
+        record.setSessionSnapshotJson("""
+                {
+                  "sessionId":"session-preset-reference",
+                  "turns":[
+                    {
+                      "questionNumber":"1",
+                      "questionContent":"为什么选择这个专业？",
+                      "answerContent":"因为前景不错",
+                      "score":60,
+                      "feedback":"回答可以更具体"
+                    }
+                  ]
+                }
+                """);
+        when(mapper.selectOne(any())).thenReturn(record);
+
+        InterviewRecordRespDTO report = service.getBySessionId("session-preset-reference", 1031L);
+
+        assertNotNull(report);
+        assertEquals("题库预设参考答案", report.getPlaybackItems().get(0).getReferenceAnswer());
+        verify(referenceAnswerService).attachAvailableReferenceAnswers(eq("session-preset-reference"), any());
+        verify(referenceAnswerService, never()).generateMissingReferenceAnswers(any(), any(), any());
+    }
+
+    @Test
     void shouldGenerateAiReviewFeedbackOnlyWhenRequested() {
         InterviewQuestionCacheService cacheService = mock(InterviewQuestionCacheService.class);
         InterviewSessionOwnershipService ownershipService = mock(InterviewSessionOwnershipService.class);

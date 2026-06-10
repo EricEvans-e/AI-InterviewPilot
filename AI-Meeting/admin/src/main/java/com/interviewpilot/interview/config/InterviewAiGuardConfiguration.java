@@ -60,6 +60,12 @@ public class InterviewAiGuardConfiguration {
         if (InterviewAiGuardStage.INTERVIEW_DEMEANOR.equals(stage)) {
             return new StagePolicy(20000L, 6, 0, 0L);
         }
+        if (InterviewAiGuardStage.INTERVIEW_REPORT_REVIEW.equals(stage)) {
+            return new StagePolicy(300000L, 6, 0, 0L);
+        }
+        if (InterviewAiGuardStage.INTERVIEW_REFERENCE_ANSWER.equals(stage)) {
+            return new StagePolicy(300000L, 6, 0, 0L);
+        }
         return new StagePolicy(20000L, 20, 0, 0L);
     }
 

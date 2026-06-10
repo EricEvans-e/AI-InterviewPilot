@@ -2,7 +2,7 @@ import service, { assertRequestAuthorized, buildApiUrl } from "@/lib/request";
 import { AppError, ErrorCode } from "@/lib/errors";
 import type { AxiosRequestConfig } from "axios";
 
-const INTERVIEW_LONG_TIMEOUT_MS = 180000;
+const INTERVIEW_LONG_TIMEOUT_MS = 300000;
 const INTERVIEW_REPORT_TIMEOUT_MS = 60000;
 
 export interface UploadResumeParams {

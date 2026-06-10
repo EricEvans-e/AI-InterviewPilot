@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.interviewpilot.common.convention.result.PageInfo;
 import com.interviewpilot.questionbank.api.io.req.QuestionPageReqDTO;
 import com.interviewpilot.questionbank.api.io.req.QuestionSaveReqDTO;
+import com.interviewpilot.questionbank.api.io.resp.QuestionCoverageRespDTO;
 import com.interviewpilot.questionbank.api.io.resp.QuestionRespDTO;
 import com.interviewpilot.questionbank.dao.entity.QuestionDO;
 
@@ -57,6 +58,17 @@ public interface QuestionBankService extends IService<QuestionDO> {
      * @return 题目列表
      */
     List<QuestionDO> randomSelect(Long collegeId, Long majorId, String questionType, int count);
+
+    /**
+     * 棰樺簱瑕嗙洊搴︾粺璁?
+     *
+     * @param collegeId 闄㈡牎ID
+     * @param majorId 涓撲笟ID
+     * @param interviewMode 闈㈣瘯妯″紡鎴栭鍨?
+     * @param requiredCount 鏈闈㈣瘯鏈熸湜棰樻暟
+     * @return 瑕嗙洊搴︾粺璁?
+     */
+    QuestionCoverageRespDTO coverage(Long collegeId, Long majorId, String interviewMode, int requiredCount);
 
     /**
      * 按能力标签选取题目
