@@ -50,6 +50,33 @@ class BusinessAgentResolverTest {
     }
 
     @Test
+    void shouldIgnoreActiveProAgentForVisionSceneAndFallbackToCompatibleAgent() {
+        BusinessAgentBindingProperties properties = new BusinessAgentBindingProperties();
+        properties.setInterviewDemeanor("Mimo 2.5 神态分析官");
+
+        AgentPropertiesLoader agentPropertiesLoader = mock(AgentPropertiesLoader.class);
+        AgentPropertiesDO incompatibleActiveAgent = new AgentPropertiesDO();
+        incompatibleActiveAgent.setId(22L);
+        incompatibleActiveAgent.setAgentName("误配置 Pro 神态分析官");
+        incompatibleActiveAgent.setAiProvider("openai");
+        incompatibleActiveAgent.setApiSecret("mimo-v2.5-pro");
+        when(agentPropertiesLoader.getActiveBySceneCode("interview-demeanor")).thenReturn(incompatibleActiveAgent);
+
+        AgentPropertiesDO compatibleAgent = new AgentPropertiesDO();
+        compatibleAgent.setId(9L);
+        compatibleAgent.setAgentName("Mimo 2.5 神态分析官");
+        compatibleAgent.setAiProvider("openai");
+        compatibleAgent.setApiSecret("mimo-v2.5");
+        when(agentPropertiesLoader.getByAgentName("Mimo 2.5 神态分析官")).thenReturn(compatibleAgent);
+
+        BusinessAgentResolver resolver = new BusinessAgentResolver(properties, agentPropertiesLoader);
+        AgentPropertiesDO resolved = resolver.resolveRequired(BusinessAgentScene.INTERVIEW_DEMEANOR);
+
+        assertEquals(9L, resolved.getId());
+        assertEquals("Mimo 2.5 神态分析官", resolved.getAgentName());
+    }
+
+    @Test
     void shouldFailWhenNoConfiguredOrBuiltinAgentExists() {
         BusinessAgentBindingProperties properties = new BusinessAgentBindingProperties();
         properties.setGeneralAgentChat("不存在的通用智能体");

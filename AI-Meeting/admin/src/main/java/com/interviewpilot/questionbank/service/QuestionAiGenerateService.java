@@ -74,6 +74,9 @@ public class QuestionAiGenerateService {
                 req.getGenerateScoringRule(),
                 req.getGenerateFollowUp()
         );
+        log.info("AI expand generated raw question count, requestedCount={}, actualCount={}",
+                req.getCount(), questions.size());
+        questions = limitExpandedQuestions(questions, req.getCount());
         markGeneratedQuestions(questions);
         return questions;
     }
@@ -141,7 +144,6 @@ public class QuestionAiGenerateService {
 
         return String.format("""
                 你是一位高职院校面试题设计专家。现在请基于一批参考题做 AI 拓题。
-
                 目标配置（由人工指定，不允许继承参考题元数据）：
                 - 目标院校：%s
                 - 目标专业：%s
@@ -163,7 +165,6 @@ public class QuestionAiGenerateService {
                 4. 如果目标院校或专业为空，则按通用面试场景生成。
                 5. 如果未要求生成参考答案、追问、评分标准，对应字段返回空字符串。
                 6. 只返回 JSON 数组，不要输出任何说明。
-
                 JSON 每个元素必须包含：
                 - title
                 - content
@@ -305,5 +306,17 @@ public class QuestionAiGenerateService {
 
     private String blankToNull(String value) {
         return StrUtil.isBlank(value) ? null : value;
+    }
+
+    private List<QuestionDO> limitExpandedQuestions(List<QuestionDO> questions, Integer requestedCount) {
+        if (CollUtil.isEmpty(questions) || requestedCount == null || requestedCount <= 0) {
+            return questions;
+        }
+        if (questions.size() <= requestedCount) {
+            return questions;
+        }
+        log.warn("AI expand returned more questions than requested, requestedCount={}, actualCount={}, truncatedCount={}",
+                requestedCount, questions.size(), requestedCount);
+        return new ArrayList<>(questions.subList(0, requestedCount));
     }
 }

@@ -7,7 +7,7 @@
 | 用途 | 协议 | 默认端点 | 默认模型 |
 | --- | --- | --- | --- |
 | 通用聊天 / 面试链路 / 视觉链路 | OpenAI 兼容 | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5` |
-| 高推理纯文本聊天 | OpenAI 兼容 | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5-pro` |
+| 高推理纯文本链路 | OpenAI 兼容 | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5-pro` |
 | 语音识别 ASR | OpenAI 兼容 chat completions | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5-asr` |
 | 语音合成 TTS | OpenAI 兼容 chat completions | `https://token-plan-cn.xiaomimimo.com/v1` | `mimo-v2.5-tts` |
 
@@ -58,7 +58,7 @@ InterviewSessionFacade
 | --- | --- | --- | --- |
 | Mimo OpenAI 兼容 | `openai` | `UniversalAiChatHandler` | 聊天、面试、ASR、TTS 默认链路，使用 `/v1/chat/completions` |
 
-`mimo-v2.5` 可用于通用聊天和需要视觉能力的链路；`mimo-v2.5-pro` 只用于纯文本高推理聊天，不要配置到图片/神态分析等视觉场景。`anthropic` handler 和 `xingchen` / 讯飞工作流仍作为 legacy 兼容保留，但默认初始化 SQL 和前端配置已经切换到 Mimo OpenAI 兼容路径。
+`mimo-v2.5` 可用于通用聊天和需要视觉能力的链路；`mimo-v2.5-pro` 只用于答案评分、面试追问/提问、通用智能体等纯文本高推理链路，不要配置到图片/神态分析等视觉场景。`anthropic` handler 和 `xingchen` / 讯飞工作流仍作为 legacy 兼容保留，但默认初始化 SQL 和前端配置已经切换到 Mimo OpenAI 兼容路径。
 
 ## 面试题输出格式
 
@@ -142,7 +142,13 @@ Mimo TTS 是同步合成接口。`POST /tasks` 和 `GET /tasks/{taskId}` 保留 
 
 ## 前端配置页面
 
-教师后台 `/teacher/ai-config` 默认只新建 `openai` 类型的 Mimo 兼容模型。管理员后台 `/admin/agent-config` 可为出题、评分、追问、神态分析等场景切换 active agent，其中神态分析等视觉场景应使用 `mimo-v2.5`。
+教师后台 `/teacher/ai-config` 默认只新建 `openai` 类型的 Mimo 兼容模型。管理员后台 `/admin/agent-config` 可切换面试场景 active agent：
+
+- `Mimo 2.5 面试出题官`：固定使用 `mimo-v2.5`。简历出题链路是文本优先，但扫描版 PDF 会渲染成图片走视觉 OCR 兜底，因此不能使用 `mimo-v2.5-pro`。
+- `Mimo 2.5 神态分析官`：固定使用 `mimo-v2.5`。神态分析依赖摄像头画面，不能使用不支持视觉的 `mimo-v2.5-pro`。
+- `Mimo 2.5 答案评分官` / `Mimo 2.5 Pro 答案评分官`：纯文本评分链路，可以在 2.5 和 2.5 Pro 之间切换。
+- `Mimo 2.5 面试提问官` / `Mimo 2.5 Pro 面试提问官`：纯文本追问/提问链路，可以在 2.5 和 2.5 Pro 之间切换。
+- `Mimo 2.5 通用智能体` / `Mimo 2.5 Pro 通用智能体`：纯文本通用智能体链路，可以在 2.5 和 2.5 Pro 之间切换。
 
 ## 常见问题
 
@@ -169,8 +175,9 @@ OpenAI 兼容地址保留 `/v1`，代码会自动拼接 `/chat/completions`。`m
 检查 `ai_properties` 表中记录满足 `is_enabled = 1` 且 `del_flag = 0`。前端通过 `GET /api/ip/v1/ai-properties/options` 拉取模型列表。
 ## Report generation behavior
 
-- Interview question generation, follow-up questions, and normal interview chat still default to `mimo-v2.5`.
-- `mimo-v2.5-pro` should remain reserved for pure-text high-reasoning chat paths. Do not bind it to visual flows such as demeanor/image analysis.
+- Interview question generation still defaults to `mimo-v2.5` because scanned-resume OCR can require vision.
+- Follow-up questions, answer scoring, and normal text agent chat default to `mimo-v2.5`, but may be switched to `mimo-v2.5-pro` when higher pure-text reasoning is needed.
+- `mimo-v2.5-pro` should remain reserved for pure-text high-reasoning paths. Do not bind it to visual flows such as resume-image OCR or demeanor/image analysis.
 - Resume-based interview question generation is also a possible vision path: normal PDFs use extracted text, but scanned PDFs are rendered to PNG pages and read through the Mimo vision OCR fallback before question generation. Keep the interview-question extraction agent on `mimo-v2.5`.
 - Final report persistence no longer waits for a synchronous AI review-summary call. The first saved report snapshot uses fast rule-based review content so the report page can open earlier.
 - Manual reference-answer generation still uses AI, but it is no longer part of the first report-load critical path.

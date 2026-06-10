@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bot, Save, Wand2, X } from "lucide-react";
+import { Bot, ChevronDown, ChevronUp, Save, Wand2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -48,6 +48,11 @@ function normalizeCountInput(value: string): number {
   return Math.max(1, Math.min(20, Math.trunc(parsed)));
 }
 
+function getDifficultyLabel(value?: string) {
+  if (!value) return "-";
+  return DIFFICULTY_OPTIONS.find((option) => option.value === value)?.label ?? value;
+}
+
 export default function AiExpandDialog({
   open,
   onOpenChange,
@@ -72,6 +77,7 @@ export default function AiExpandDialog({
   const [selectedModelId, setSelectedModelId] = useState<number | "">("");
 
   const [generatedQuestions, setGeneratedQuestions] = useState<QuestionCreateDTO[]>([]);
+  const [expandedQuestionIndexes, setExpandedQuestionIndexes] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,13 +87,12 @@ export default function AiExpandDialog({
   );
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     teacherService.listColleges().then(setColleges).catch(() => setColleges([]));
     teacherService.getEnabledAiProperties().then(setAiModels).catch(() => setAiModels([]));
     setGeneratedQuestions([]);
+    setExpandedQuestionIndexes([]);
     setError(null);
     setSelectedModelId("");
   }, [open]);
@@ -130,6 +135,7 @@ export default function AiExpandDialog({
     setIsGenerating(true);
     setError(null);
     setGeneratedQuestions([]);
+    setExpandedQuestionIndexes([]);
 
     try {
       const params: AiExpandParams = {
@@ -157,6 +163,19 @@ export default function AiExpandDialog({
 
   const handleRemoveQuestion = (index: number) => {
     setGeneratedQuestions((previous) => previous.filter((_, currentIndex) => currentIndex !== index));
+    setExpandedQuestionIndexes((previous) =>
+      previous
+        .filter((currentIndex) => currentIndex !== index)
+        .map((currentIndex) => (currentIndex > index ? currentIndex - 1 : currentIndex)),
+    );
+  };
+
+  const handleTogglePreview = (index: number) => {
+    setExpandedQuestionIndexes((previous) =>
+      previous.includes(index)
+        ? previous.filter((currentIndex) => currentIndex !== index)
+        : [...previous, index],
+    );
   };
 
   const handleSaveAll = () => {
@@ -373,42 +392,99 @@ export default function AiExpandDialog({
                       生成结果 ({generatedQuestions.length} 道)
                     </h3>
                   </div>
-                  <ScrollArea className="max-h-[300px]">
-                    <div className="space-y-3 pr-4">
-                      {generatedQuestions.map((question, index) => (
-                        <div
-                          key={`${question.title}-${index}`}
-                          className="rounded-md border border-slate-200 bg-slate-50 p-3"
-                        >
-                          <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-3">
+                    {generatedQuestions.map((question, index) => (
+                      <div
+                        key={`${question.title}-${index}`}
+                        className="rounded-md border border-slate-200 bg-slate-50"
+                      >
+                        <div className="flex items-start justify-between gap-2 p-3">
+                          <button
+                            type="button"
+                            className="flex flex-1 items-start justify-between gap-3 text-left"
+                            aria-expanded={expandedQuestionIndexes.includes(index)}
+                            onClick={() => handleTogglePreview(index)}
+                          >
                             <div className="flex-1">
                               <p className="text-sm font-medium text-slate-800">{question.title}</p>
                               <p className="mt-1 text-xs text-slate-500">
                                 {getQuestionTypeLabel(question.questionType)}
-                                {question.difficulty
-                                  ? ` | ${
-                                      DIFFICULTY_OPTIONS.find((option) => option.value === question.difficulty)?.label ??
-                                      question.difficulty
-                                    }`
-                                  : ""}
+                                {question.difficulty ? ` | ${getDifficultyLabel(question.difficulty)}` : ""}
+                                {question.abilityTag ? ` | ${question.abilityTag}` : ""}
                               </p>
                               {question.content ? (
-                                <p className="mt-1.5 line-clamp-2 text-xs text-slate-600">{question.content}</p>
+                                <p
+                                  className={`mt-1.5 text-xs text-slate-600 ${
+                                    expandedQuestionIndexes.includes(index) ? "" : "line-clamp-2"
+                                  }`}
+                                >
+                                  {question.content}
+                                </p>
                               ) : null}
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 shrink-0 text-slate-400 hover:text-red-500"
-                              onClick={() => handleRemoveQuestion(index)}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+                            {expandedQuestionIndexes.includes(index) ? (
+                              <ChevronUp className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                            )}
+                          </button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 text-slate-400 hover:text-red-500"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleRemoveQuestion(index);
+                            }}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                        {expandedQuestionIndexes.includes(index) ? (
+                          <div className="border-t border-slate-200 px-3 py-3 text-xs text-slate-600">
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <div>
+                                <p className="font-medium text-slate-700">题型</p>
+                                <p className="mt-1">{getQuestionTypeLabel(question.questionType)}</p>
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-700">难度</p>
+                                <p className="mt-1">{getDifficultyLabel(question.difficulty)}</p>
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-700">能力点</p>
+                                <p className="mt-1">{question.abilityTag || "-"}</p>
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-700">建议作答时长</p>
+                                <p className="mt-1">
+                                  {question.answerTimeSeconds ? `${question.answerTimeSeconds} 秒` : "-"}
+                                </p>
+                              </div>
+                            </div>
+                            {question.referenceAnswer ? (
+                              <div className="mt-3">
+                                <p className="font-medium text-slate-700">参考答案</p>
+                                <p className="mt-1 whitespace-pre-wrap">{question.referenceAnswer}</p>
+                              </div>
+                            ) : null}
+                            {question.scoringRule ? (
+                              <div className="mt-3">
+                                <p className="font-medium text-slate-700">评分标准</p>
+                                <p className="mt-1 whitespace-pre-wrap">{question.scoringRule}</p>
+                              </div>
+                            ) : null}
+                            {question.followUpQuestions ? (
+                              <div className="mt-3">
+                                <p className="font-medium text-slate-700">追问</p>
+                                <p className="mt-1 whitespace-pre-wrap">{question.followUpQuestions}</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </>
             ) : null}

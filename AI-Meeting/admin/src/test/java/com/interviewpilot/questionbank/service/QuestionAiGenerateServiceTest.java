@@ -90,9 +90,23 @@ class QuestionAiGenerateServiceTest {
                     "questionType":"综合题",
                     "abilityTag":"professional_knowledge",
                     "difficulty":"hard",
-                    "referenceAnswer":"应为空但被模型返回",
-                    "scoringRule":"也应被清空",
-                    "followUpQuestions":"也应被清空"
+                    "referenceAnswer":"should be dropped",
+                    "scoringRule":"should be dropped",
+                    "followUpQuestions":"should be dropped"
+                  },
+                  {
+                    "title":"扩展题目B",
+                    "content":"第二道扩展题",
+                    "questionType":"综合题",
+                    "abilityTag":"professional_knowledge",
+                    "difficulty":"hard"
+                  },
+                  {
+                    "title":"扩展题目C",
+                    "content":"不应超出请求数量",
+                    "questionType":"综合题",
+                    "abilityTag":"professional_knowledge",
+                    "difficulty":"hard"
                   }
                 ]
                 """);
@@ -110,7 +124,7 @@ class QuestionAiGenerateServiceTest {
         assertThat(prompt).contains("避免与参考题重复");
         assertThat(prompt).contains("不要继承参考题的院校、专业或其他元数据");
 
-        assertThat(result).hasSize(1);
+        assertThat(result).hasSize(2);
         assertThat(result.get(0).getCollegeId()).isEqualTo(101L);
         assertThat(result.get(0).getMajorId()).isEqualTo(202L);
         assertThat(result.get(0).getQuestionType()).isEqualTo("综合题");
@@ -120,5 +134,7 @@ class QuestionAiGenerateServiceTest {
         assertThat(result.get(0).getFollowUpQuestions()).isNull();
         assertThat(result.get(0).getStatus()).isEqualTo("pending_review");
         assertThat(result.get(0).getIsAiGenerated()).isTrue();
+        assertThat(result).extracting(QuestionDO::getTitle)
+                .containsExactly("扩展题目A", "扩展题目B");
     }
 }

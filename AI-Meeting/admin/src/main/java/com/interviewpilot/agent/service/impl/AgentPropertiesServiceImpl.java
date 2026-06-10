@@ -15,7 +15,9 @@ import com.interviewpilot.agent.api.io.req.AgentPropertiesReqDTO;
 import com.interviewpilot.agent.api.io.resp.AgentPropertiesRespDTO;
 import com.interviewpilot.agent.api.io.resp.SceneBindingRespDTO;
 import com.interviewpilot.agent.application.BusinessAgentScene;
+import com.interviewpilot.common.convention.exception.ClientException;
 import com.interviewpilot.common.enums.AgentTagType;
+import com.interviewpilot.common.enums.InterviewErrorCodeEnum;
 import com.interviewpilot.toolkit.ai.AgentPropertiesLoader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -242,6 +244,7 @@ public class AgentPropertiesServiceImpl extends ServiceImpl<AgentPropertiesMappe
             List<String> candidateNames = scene.getCandidateAgentNames();
             List<SceneBindingRespDTO.CandidateAgent> candidates = allAgents.stream()
                     .filter(a -> scene.getCode().equals(a.getSceneCode()) || candidateNames.contains(a.getAgentName()))
+                    .filter(scene::supportsAgent)
                     .map(a -> {
                         SceneBindingRespDTO.CandidateAgent ca = new SceneBindingRespDTO.CandidateAgent();
                         ca.setId(a.getId());
@@ -260,6 +263,19 @@ public class AgentPropertiesServiceImpl extends ServiceImpl<AgentPropertiesMappe
     @Override
     @Transactional
     public void activateAgent(String sceneCode, Long agentId) {
+        BusinessAgentScene scene = BusinessAgentScene.fromCode(sceneCode)
+                .orElseThrow(() -> new ClientException(
+                        "unknown agent scene=" + sceneCode,
+                        InterviewErrorCodeEnum.AGENT_CONFIG_NOT_FOUND
+                ));
+        AgentPropertiesDO targetAgent = getById(agentId);
+        if (targetAgent == null || !scene.supportsAgent(targetAgent)) {
+            throw new ClientException(
+                    "agent is not compatible with scene=" + sceneCode + ", agentId=" + agentId,
+                    InterviewErrorCodeEnum.AGENT_CONFIG_NOT_FOUND
+            );
+        }
+
         // Deactivate all agents currently active for this scene
         LambdaUpdateWrapper<AgentPropertiesDO> deactivateWrapper = Wrappers.lambdaUpdate(AgentPropertiesDO.class)
                 .eq(AgentPropertiesDO::getSceneCode, sceneCode)
@@ -282,7 +298,6 @@ public class AgentPropertiesServiceImpl extends ServiceImpl<AgentPropertiesMappe
         agentPropertiesLoader.refreshActiveAgents();
     }
 }
-
 
 
 

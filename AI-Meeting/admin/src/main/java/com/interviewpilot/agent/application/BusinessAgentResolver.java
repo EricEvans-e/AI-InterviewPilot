@@ -23,10 +23,18 @@ public class BusinessAgentResolver {
     public AgentPropertiesDO resolveRequired(BusinessAgentScene scene) {
         // 1. 优先查 DB 中 is_active=1 + scene_code 匹配的 agent
         AgentPropertiesDO activeAgent = agentPropertiesLoader.getActiveBySceneCode(scene.getCode());
-        if (activeAgent != null) {
+        if (activeAgent != null && scene.supportsAgent(activeAgent)) {
             log.info("Resolved business agent from scene binding, scene={}, agentName={}, agentId={}, provider={}",
                     scene.getCode(), activeAgent.getAgentName(), activeAgent.getId(), activeAgent.getAiProvider());
             return activeAgent;
+        }
+        if (activeAgent != null) {
+            log.warn("Ignored incompatible active business agent, scene={}, agentName={}, agentId={}, provider={}, model={}",
+                    scene.getCode(),
+                    activeAgent.getAgentName(),
+                    activeAgent.getId(),
+                    activeAgent.getAiProvider(),
+                    activeAgent.getApiSecret());
         }
 
         // 2. Fallback: YAML 配置的 agent name → enum 候选名（保留原有逻辑）
@@ -39,7 +47,7 @@ public class BusinessAgentResolver {
 
         for (String candidateAgentName : candidateAgentNames) {
             AgentPropertiesDO agentProperties = agentPropertiesLoader.getByAgentName(candidateAgentName);
-            if (agentProperties != null) {
+            if (agentProperties != null && scene.supportsAgent(agentProperties)) {
                 if (StrUtil.isNotBlank(configuredAgentName) && !configuredAgentName.trim().equals(candidateAgentName)) {
                     log.warn(
                             "Configured agent not found, fallback matched scene={}, configuredName={}, matchedName={}, agentId={}",
@@ -53,6 +61,14 @@ public class BusinessAgentResolver {
                             scene.getCode(), candidateAgentName, agentProperties.getId());
                 }
                 return agentProperties;
+            }
+            if (agentProperties != null) {
+                log.warn("Ignored incompatible fallback business agent, scene={}, candidateName={}, agentId={}, provider={}, model={}",
+                        scene.getCode(),
+                        candidateAgentName,
+                        agentProperties.getId(),
+                        agentProperties.getAiProvider(),
+                        agentProperties.getApiSecret());
             }
         }
 

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import AiExpandDialog from "@/components/teacher/AiExpandDialog";
 import { teacherService } from "@/services/teacherService";
 
@@ -138,5 +138,91 @@ describe("AiExpandDialog", () => {
 
     fireEvent.blur(countInput);
     expect(countInput.value).toBe("5");
+  });
+
+  it("expands a generated question to preview detailed fields", async () => {
+    vi.mocked(teacherService.aiExpandQuestions).mockResolvedValue({
+      questions: [
+        {
+          title: "扩展题 1",
+          content: "请结合一次真实经历说明你的优势。",
+          questionType: "综合题",
+          difficulty: "medium",
+          abilityTag: "communication",
+          referenceAnswer: "先概括场景，再说明行动和结果。",
+          scoringRule: "内容完整 40%；表达清晰 30%；逻辑结构 30%",
+          followUpQuestions: "如果结果不理想，你会怎么复盘？",
+        },
+      ],
+    });
+
+    render(
+      <AiExpandDialog
+        open
+        onOpenChange={vi.fn()}
+        selectedQuestionIds={[11]}
+        selectedQuestions={[{ id: 11, title: "样例题 1" }]}
+        onBatchSave={vi.fn()}
+        isSaving={false}
+      />,
+    );
+
+    await waitFor(() => expect(teacherService.listColleges).toHaveBeenCalled());
+
+    const comboboxes = screen.getAllByRole("combobox");
+    fireEvent.change(comboboxes[3]!, { target: { value: "综合题" } });
+    fireEvent.click(screen.getByRole("button", { name: "开始拓题" }));
+
+    await screen.findByText("扩展题 1");
+
+    expect(screen.queryByText("参考答案")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /扩展题 1/ }));
+
+    expect(screen.getByText("参考答案")).toBeTruthy();
+    expect(screen.getByText("先概括场景，再说明行动和结果。")).toBeTruthy();
+    expect(screen.getByText("评分标准")).toBeTruthy();
+    expect(screen.getByText("内容完整 40%；表达清晰 30%；逻辑结构 30%")).toBeTruthy();
+    expect(screen.getByText("追问")).toBeTruthy();
+    expect(screen.getByText("如果结果不理想，你会怎么复盘？")).toBeTruthy();
+  });
+
+  it("does not add a nested scroll area for generated results", async () => {
+    vi.mocked(teacherService.aiExpandQuestions).mockResolvedValue({
+      questions: [
+        {
+          title: "扩展题 1",
+          content: "请结合一次真实经历说明你的优势。",
+          questionType: "综合题",
+          difficulty: "medium",
+          referenceAnswer: "参考答案 1",
+          followUpQuestions: "追问 1",
+        },
+      ],
+    });
+
+    render(
+      <AiExpandDialog
+        open
+        onOpenChange={vi.fn()}
+        selectedQuestionIds={[11]}
+        selectedQuestions={[{ id: 11, title: "样例题 1" }]}
+        onBatchSave={vi.fn()}
+        isSaving={false}
+      />,
+    );
+
+    await waitFor(() => expect(teacherService.listColleges).toHaveBeenCalled());
+
+    const comboboxes = screen.getAllByRole("combobox");
+    fireEvent.change(comboboxes[3]!, { target: { value: "综合题" } });
+    fireEvent.click(screen.getByRole("button", { name: "开始拓题" }));
+    await screen.findByText("扩展题 1");
+
+    const nestedScrollContainer = Array.from(document.querySelectorAll("div")).find((element) =>
+      element.className.includes("max-h-[300px]"),
+    );
+
+    expect(nestedScrollContainer).toBeUndefined();
   });
 });

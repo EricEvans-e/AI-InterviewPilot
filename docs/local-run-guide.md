@@ -388,6 +388,32 @@ rg -n "tp-[A-Za-z0-9]{20,}" . -S
 | Redis 启动时报 `Bind for 0.0.0.0:6379 failed` | 先执行 `docker stop interviewpilot-redis` 释放 6379，再重新执行 `docker compose up -d mysql mongo redis` |
 ---
 
+## Teacher Question Bank Runtime Notes
+
+- Standard Word templates are committed at [docs/templates/question-bank-import-template.docx](docs/templates/question-bank-import-template.docx) and [docs/templates/题库导入标准模板.docx](docs/templates/%E9%A2%98%E5%BA%93%E5%AF%BC%E5%85%A5%E6%A0%87%E5%87%86%E6%A8%A1%E6%9D%BF.docx).
+- Teacher question management lives at `http://localhost:5173/teacher/questions` after login.
+- The normalized question types used by the current teacher UI are `综合题`, `专业题`, and `其他题`.
+- Teacher-side filters should support title keyword, college, major, question type, difficulty, status, and direct page switching.
+- The teacher list should display each question's college and major names, not only ids.
+- Batch actions currently expected to work are approve, reject, delete, and AI expand.
+- Word import supports:
+  - `word_table`: table-header mode.
+  - `word_section`: section/paragraph mode.
+  - weakly structured field blocks such as `题目:` / `题型:` / `能力点:` / `参考答案:` / `评分规则:` / `来源:` with either Chinese or ASCII colons.
+- Import confirmation writes parsed questions into the main question bank. If no explicit override is provided, imported questions should default to `pending_review`.
+- AI expand calls `/api/ip/v1/questions/ai-expand`. Selected questions are style references only; metadata must come from the current dialog configuration.
+- AI-expanded questions should be manually reviewed before student-side use.
+
+### Suggested Teacher Verification Pass
+
+1. Log in as `admin` or a teacher account and open `/teacher/questions`.
+2. Verify title search plus the combined filters for college, major, question type, difficulty, and status.
+3. Verify direct page-number switching together with previous/next pagination buttons.
+4. Open create/edit dialogs and confirm the content area scrolls independently while footer actions remain visible.
+5. Import one `.docx` from `docs/templates/`, preview it, then confirm the import and verify the new questions appear in `pending_review`.
+6. Multi-select several questions and verify batch approve, batch reject, and batch delete.
+7. Multi-select several questions, open AI expand, set explicit metadata, generate a small batch, and save it back to the bank.
+
 ## Report and Reference Answer Runtime Notes
 
 - Resume PDF extraction is text-first. For normal PDFs, PDFBox text extraction is passed to the interview-question model as `resume_text` with `resume_extraction_mode=pdf_text`.

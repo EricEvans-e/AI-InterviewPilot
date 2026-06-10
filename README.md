@@ -207,6 +207,15 @@ AI-InterviewPilot/
 - Interview conclusion is also manual on the report page. Clicking `生成 AI 结论` triggers a longer AI request, and the current report view updates in place after the AI result is saved.
 - If the `生成 AI 结论` request times out on the client side, the frontend continues polling the saved report and replaces the initial rule-based summary once the AI conclusion is ready.
 
+### Question bank readiness notes
+
+- Teacher question management now supports title search plus combined filtering by college, major, question type, difficulty, and status.
+- The teacher page supports batch approve, batch reject, batch delete, and batch AI expand on selected questions.
+- Standard question types are normalized to `综合题`, `专业题`, and `其他题`. Existing legacy values are still tolerated during import parsing.
+- Word import supports both table-based and section-based `.docx` files. The parser accepts structured field lines such as `题目:` / `题型:` / `能力点:` / `参考答案:` with either Chinese or ASCII colons.
+- Import templates are committed in [docs/templates/question-bank-import-template.docx](docs/templates/question-bank-import-template.docx) and [docs/templates/题库导入标准模板.docx](docs/templates/%E9%A2%98%E5%BA%93%E5%AF%BC%E5%85%A5%E6%A0%87%E5%87%86%E6%A8%A1%E6%9D%BF.docx).
+- AI expand uses selected questions only as style references. Generated metadata is determined by the current dialog configuration, and saved questions should stay in `pending_review` until a teacher approves them.
+
 ### 环境要求
 
 | 组件 | 版本要求 |

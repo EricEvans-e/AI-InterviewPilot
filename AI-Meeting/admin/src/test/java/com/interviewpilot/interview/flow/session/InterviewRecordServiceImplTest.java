@@ -277,7 +277,7 @@ class InterviewRecordServiceImplTest {
         assertEquals(List.of("补充量化指标", "复盘关键技术取舍",
                         "回答没有覆盖题目要求，需要补充算法路径、评价指标和工程挑战."),
                 report.getReviewFeedback().getNextActions());
-        verify(referenceAnswerService, never()).attachAvailableReferenceAnswers(any(), any());
+        verify(referenceAnswerService).attachAvailableReferenceAnswers(eq("session-rule-review"), any());
         verify(referenceAnswerService, never()).generateMissingReferenceAnswers(any(), any(), any());
     }
 

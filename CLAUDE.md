@@ -123,6 +123,7 @@ All APIs are prefixed with `/api/ip/v1/`.
 | `aiService` | `AiMessageController` | SSE |
 | `agentService` | `AgentController` | SSE |
 | `interviewService` | `InterviewSessionController` + `InterviewRecordController` | REST |
+| `questionBankService` + `teacherService` question-bank APIs | `QuestionBankController` | REST |
 | `mimoTtsService` | `XunfeiTtsController` | REST |
 | `xunfeiTtsService` | legacy alias re-exporting `mimoTtsService` | REST |
 | `AudioToTextWebSocket` | `AudioTranscriptionWebSocketHandler` | WebSocket |
@@ -146,6 +147,26 @@ Current TTS paths:
 `/api/ip/v1/xunfei/tts/**` remains a backend compatibility alias, but new frontend code should use Mimo paths.
 
 Mimo TTS is synchronous. `/tasks` and `/tasks/{taskId}` keep the old task-shaped API surface for compatibility; new code should prefer `/synthesize` and read `audioBase64`.
+
+Question bank routes used by the current frontend:
+
+```text
+/api/ip/v1/questions/page
+/api/ip/v1/questions/coverage
+/api/ip/v1/questions/import
+/api/ip/v1/questions/import/{batchId}
+/api/ip/v1/questions/import/{batchId}/confirm
+/api/ip/v1/questions/ai-generate
+/api/ip/v1/questions/ai-expand
+/api/ip/v1/questions/{id}/status
+```
+
+Teacher question-bank expectations:
+
+- Standard question types are `综合题`, `专业题`, and `其他题`. Import parsing still accepts several legacy labels, but new frontend code should use the three normalized values.
+- Word import supports `word_table` and `word_section`. The parser also accepts weakly structured field blocks such as `题目:` / `题型:` / `参考答案:` with either Chinese or ASCII colons.
+- AI expand uses selected questions only as style reference. It does not inherit college, major, question type, or other metadata unless the dialog explicitly sends them.
+- AI-generated and AI-expanded questions should be saved as `pending_review` for manual review before they enter the student-facing bank.
 
 ## Frontend Interview UI Notes
 
