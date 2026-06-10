@@ -6,63 +6,32 @@ import LobbyGrid from "@/components/lobby/LobbyGrid";
 import { useLobbyData } from "@/hooks/lobby/useLobbyData";
 import { interviewService } from "@/services/interviewService";
 import { ROUTES } from "@/lib/constants";
-import {
-  Shuffle,
-  Timer,
-  GraduationCap,
-  Briefcase,
-  Layers,
-  Loader2,
-} from "lucide-react";
+import { Shuffle, Timer, Loader2 } from "lucide-react";
 
 const QUICK_MODES = [
   {
-    key: "random",
-    label: "随机模拟",
-    description: "随机抽取题目，快速进入面试",
+    key: "practice",
+    label: "开始练习",
+    description: "基于当前筛选条件抽取 5 道题，适合日常练习。",
     icon: Shuffle,
-    interviewMode: "综合素质",
+    interviewMode: "综合题",
     questionCount: 5,
   },
   {
     key: "full",
     label: "全真模拟",
-    description: "固定题量 + 严格计时，还原真实考场",
+    description: "基于当前筛选条件抽取 10 道题，适合完整模拟。",
     icon: Timer,
-    interviewMode: "综合素质",
+    interviewMode: "综合题",
     questionCount: 10,
-  },
-  {
-    key: "college",
-    label: "按院校备考",
-    description: "选择目标院校，针对性练习",
-    icon: GraduationCap,
-    interviewMode: "综合素质",
-    questionCount: 5,
-  },
-  {
-    key: "major",
-    label: "按专业备考",
-    description: "选择目标专业，专项突破",
-    icon: Briefcase,
-    interviewMode: "专业认知",
-    questionCount: 5,
-  },
-  {
-    key: "type",
-    label: "按题型练习",
-    description: "选择题型，逐个击破",
-    icon: Layers,
-    interviewMode: "半结构化",
-    questionCount: 5,
   },
 ] as const;
 
 export default function LobbyPage() {
   const navigate = useNavigate();
   const [startingMode, setStartingMode] = useState<string | null>(null);
-  const selectedInterviewMode = "综合素质";
-  const selectedCardCount = 4;
+  const selectedInterviewMode = "综合题";
+  const selectedCardCount = 5;
   const lobbyData = useLobbyData(selectedInterviewMode, selectedCardCount);
 
   const selectedCardMode =
@@ -77,18 +46,14 @@ export default function LobbyPage() {
       collegeId?: number;
       majorId?: number;
       difficulty?: string;
+      abilityTag?: string;
     }) => {
       try {
         const result = await interviewService.createSessionFromBank(params);
-        // Navigate to question-bank specific interview page
-        navigate(
-          `${ROUTES.interviewBank}/${encodeURIComponent(result.sessionId)}`,
-        );
+        navigate(`${ROUTES.interviewBank}/${encodeURIComponent(result.sessionId)}`);
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : "创建面试失败，请重试";
+          error instanceof Error ? error.message : "创建面试失败，请重试";
         alert(message);
       }
     },
@@ -108,6 +73,10 @@ export default function LobbyPage() {
             lobbyData.filters.difficulties.length === 1
               ? lobbyData.filters.difficulties[0]
               : undefined,
+          abilityTag:
+            lobbyData.filters.abilityTags.length === 1
+              ? lobbyData.filters.abilityTags[0]
+              : undefined,
         });
       } finally {
         setStartingMode(null);
@@ -116,40 +85,47 @@ export default function LobbyPage() {
     [handleStartFromBank, lobbyData.filters],
   );
 
-  const handleStartFromCard = useCallback(
-    async () => {
-      setStartingMode("card");
-      try {
-        await handleStartFromBank({
-          interviewMode: selectedCardMode,
-          questionCount: selectedCardCount,
-          collegeId: lobbyData.filters.collegeId,
-          majorId: lobbyData.filters.majorId,
-          difficulty:
-            lobbyData.filters.difficulties.length === 1
-              ? lobbyData.filters.difficulties[0]
-              : undefined,
-        });
-      } finally {
-        setStartingMode(null);
-      }
-    },
-    [handleStartFromBank, lobbyData.filters, selectedCardMode],
-  );
+  const handleStartFromCard = useCallback(async () => {
+    setStartingMode("card");
+    try {
+      await handleStartFromBank({
+        interviewMode: selectedCardMode,
+        questionCount: selectedCardCount,
+        collegeId: lobbyData.filters.collegeId,
+        majorId: lobbyData.filters.majorId,
+        difficulty:
+          lobbyData.filters.difficulties.length === 1
+            ? lobbyData.filters.difficulties[0]
+            : undefined,
+        abilityTag:
+          lobbyData.filters.abilityTags.length === 1
+            ? lobbyData.filters.abilityTags[0]
+            : undefined,
+      });
+    } finally {
+      setStartingMode(null);
+    }
+  }, [handleStartFromBank, lobbyData.filters, selectedCardMode]);
 
   return (
     <div className="h-full overflow-y-auto bg-white">
-      <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-        {/* Header */}
+      <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-slate-900">题库面试大厅</h1>
           <p className="text-sm text-slate-500">
-            选择模拟方式，开始你的面试练习。
+            先用左侧筛选院校、专业、题型和难度，再选择练习方式开始模拟。
           </p>
         </div>
 
-        {/* Quick entry modes */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+          <p className="text-sm font-medium text-slate-900">练习方式说明</p>
+          <div className="mt-2 space-y-1 text-sm text-slate-600">
+            <p>开始练习会基于当前筛选条件抽取 5 道题，适合日常练习。</p>
+            <p>全真模拟会基于当前筛选条件抽取 10 道题，适合完整模拟。</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
           {QUICK_MODES.map((mode) => {
             const Icon = mode.icon;
             const isStarting = startingMode === mode.key;
@@ -185,7 +161,6 @@ export default function LobbyPage() {
           })}
         </div>
 
-        {/* Main content: filters + grid */}
         <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
           <LobbyFilterBar
             filters={lobbyData.filters}
@@ -196,9 +171,7 @@ export default function LobbyPage() {
             onCollegeChange={(collegeId) =>
               lobbyData.updateFilters({ collegeId, majorId: undefined })
             }
-            onMajorChange={(majorId) =>
-              lobbyData.updateFilters({ majorId })
-            }
+            onMajorChange={(majorId) => lobbyData.updateFilters({ majorId })}
             onToggleQuestionType={(value) =>
               lobbyData.toggleArrayFilter("questionTypes", value)
             }

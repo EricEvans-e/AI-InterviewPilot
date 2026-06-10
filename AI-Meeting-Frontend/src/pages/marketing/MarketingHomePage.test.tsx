@@ -89,4 +89,12 @@ describe("MarketingHomePage", () => {
       },
     });
   });
+
+  it("uses the shared application logo in the hero header", () => {
+    renderPage(false);
+
+    expect(screen.getByAltText("InterviewPilot").getAttribute("src")).toBe(
+      "/app-logo.png",
+    );
+  });
 });

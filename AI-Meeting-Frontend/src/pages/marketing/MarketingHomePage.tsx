@@ -10,7 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { APP_BRAND_NAME } from "@/lib/branding";
+import { APP_BRAND_NAME, APP_LOGO_SRC } from "@/lib/branding";
 import { ROUTES } from "@/lib/constants";
 import { useAppSelector } from "@/store/hooks";
 import {
@@ -71,7 +71,7 @@ export default function MarketingHomePage() {
           <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6 md:px-8">
             <div className="flex items-center gap-3">
               <img
-                src="/ip-mark.svg"
+                src={APP_LOGO_SRC}
                 alt={APP_BRAND_NAME}
                 className="h-8 w-8 rounded-full border border-white/25 object-cover"
               />

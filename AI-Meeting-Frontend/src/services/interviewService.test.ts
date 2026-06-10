@@ -111,6 +111,37 @@ describe("interviewService.saveInterviewRecordFromRedis", () => {
   });
 });
 
+describe("interviewService.createSessionFromBank", () => {
+  it("posts question-bank filters including abilityTag and difficulty", async () => {
+    const postSpy = vi.spyOn(requestService, "post").mockResolvedValueOnce({
+      sessionId: "session-bank-1",
+      status: "READY",
+      sessionMode: "questionBank",
+    });
+
+    await interviewService.createSessionFromBank({
+      collegeId: 11,
+      majorId: 22,
+      interviewMode: "专业题",
+      questionCount: 5,
+      difficulty: "hard",
+      abilityTag: "communication",
+    });
+
+    expect(postSpy).toHaveBeenCalledWith(
+      "/ip/v1/interview/sessions/from-bank",
+      {
+        collegeId: 11,
+        majorId: 22,
+        interviewMode: "专业题",
+        questionCount: 5,
+        difficulty: "hard",
+        abilityTag: "communication",
+      },
+    );
+  });
+});
+
 describe("interviewService.generateInterviewReferenceAnswers", () => {
   it("falls back to legacy path when the new route is unavailable", async () => {
     const record = {

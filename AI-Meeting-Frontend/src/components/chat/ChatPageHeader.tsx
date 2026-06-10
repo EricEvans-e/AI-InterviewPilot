@@ -1,4 +1,4 @@
-import { APP_BRAND_NAME } from "@/lib/branding";
+import { APP_BRAND_NAME, APP_LOGO_SRC } from "@/lib/branding";
 
 type ChatPageHeaderProps = {
   selectedModelName?: string;
@@ -11,7 +11,7 @@ export default function ChatPageHeader({
     <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white/50 px-6 py-4 backdrop-blur-sm">
       <div className="flex items-center gap-2">
         <img
-          src="/ip-mark.svg"
+          src={APP_LOGO_SRC}
           alt={APP_BRAND_NAME}
           className="h-8 w-8 rounded-full border border-slate-200 object-cover"
         />

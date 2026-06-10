@@ -82,7 +82,12 @@ public class InterviewSessionServiceImpl implements InterviewSessionService {
         int count = req.getQuestionCount() == null || req.getQuestionCount() <= 0 ? 5 : req.getQuestionCount();
         String questionType = mapInterviewModeToQuestionType(req.getInterviewMode());
         List<QuestionDO> questions = questionBankService.randomSelect(
-                req.getCollegeId(), req.getMajorId(), questionType, count);
+                req.getCollegeId(),
+                req.getMajorId(),
+                questionType,
+                req.getAbilityTag(),
+                req.getDifficulty(),
+                count);
         if (questions == null || questions.isEmpty()) {
             throw new ClientException("题库中没有符合条件的题目");
         }

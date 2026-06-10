@@ -41,6 +41,7 @@ export interface CreateSessionFromBankParams {
   interviewMode: string;
   questionCount?: number;
   difficulty?: string;
+  abilityTag?: string;
 }
 
 export interface ExtractInterviewQuestionsResult {

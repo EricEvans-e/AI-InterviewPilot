@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { APP_BRAND_NAME } from "@/lib/branding";
+import { APP_BRAND_NAME, APP_LOGO_SRC } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 
 type SidebarHeaderProps = {
@@ -26,7 +26,7 @@ export default function SidebarHeader({
         )}
       >
         <img
-          src="/ip-mark.svg"
+          src={APP_LOGO_SRC}
           alt={APP_BRAND_NAME}
           className="h-7 w-7 rounded-full border border-slate-200 object-cover"
         />

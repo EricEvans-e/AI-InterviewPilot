@@ -107,14 +107,16 @@ export default function LobbyGrid({
                 key={question.id}
                 question={question}
                 collegeName={
-                  question.collegeId != null
+                  question.collegeName ??
+                  (question.collegeId != null
                     ? collegeMap.get(question.collegeId)
-                    : undefined
+                    : undefined)
                 }
                 majorName={
-                  question.majorId != null
+                  question.majorName ??
+                  (question.majorId != null
                     ? majorMap.get(question.majorId)
-                    : undefined
+                    : undefined)
                 }
                 onStart={onStart}
               />

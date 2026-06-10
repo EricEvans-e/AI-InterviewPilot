@@ -34,4 +34,9 @@ public class InterviewFromBankReqDTO {
      * 难度: easy|medium|hard（可选）
      */
     private String difficulty;
+
+    /**
+     * 能力点标签（可选）
+     */
+    private String abilityTag;
 }

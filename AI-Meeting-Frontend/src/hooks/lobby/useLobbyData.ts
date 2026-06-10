@@ -26,10 +26,7 @@ const EMPTY_FILTERS: LobbyFilters = {
 
 const QUESTION_PAGE_SIZE = 20;
 
-export function useLobbyData(
-  interviewMode = "综合素质",
-  requiredCount = 5,
-) {
+export function useLobbyData(interviewMode = "综合题", requiredCount = 5) {
   const [filters, setFilters] = useState<LobbyFilters>(EMPTY_FILTERS);
   const [pageNum, setPageNum] = useState(1);
   const coverageInterviewMode =
@@ -83,6 +80,8 @@ export function useLobbyData(
       filters.collegeId,
       filters.majorId,
       coverageInterviewMode,
+      filters.abilityTags,
+      filters.difficulties,
       requiredCount,
     ],
     queryFn: () =>
@@ -91,16 +90,17 @@ export function useLobbyData(
         majorId: filters.majorId,
         interviewMode: coverageInterviewMode,
         requiredCount,
+        abilityTag:
+          filters.abilityTags.length === 1 ? filters.abilityTags[0] : undefined,
+        difficulty:
+          filters.difficulties.length === 1 ? filters.difficulties[0] : undefined,
       }),
   });
 
-  const updateFilters = useCallback(
-    (patch: Partial<LobbyFilters>) => {
-      setFilters((prev) => ({ ...prev, ...patch }));
-      setPageNum(1);
-    },
-    [],
-  );
+  const updateFilters = useCallback((patch: Partial<LobbyFilters>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+    setPageNum(1);
+  }, []);
 
   const resetFilters = useCallback(() => {
     setFilters(EMPTY_FILTERS);

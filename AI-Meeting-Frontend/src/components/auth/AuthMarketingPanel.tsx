@@ -1,5 +1,9 @@
 import { CheckCircle2 } from "lucide-react";
-import { APP_BRAND_NAME, APP_MARKETING_TAGLINE } from "@/lib/branding";
+import {
+  APP_BRAND_NAME,
+  APP_LOGO_SRC,
+  APP_MARKETING_TAGLINE,
+} from "@/lib/branding";
 
 const highlights = [
   "对话记录与资料安全保存",
@@ -10,6 +14,19 @@ const highlights = [
 export default function AuthMarketingPanel() {
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <img
+          src={APP_LOGO_SRC}
+          alt={APP_BRAND_NAME}
+          className="h-14 w-14 rounded-2xl border border-slate-200 object-cover shadow-sm"
+        />
+        <div className="space-y-1">
+          <div className="text-lg font-semibold text-slate-900">
+            {APP_BRAND_NAME}
+          </div>
+          <div className="text-sm text-slate-500">{APP_MARKETING_TAGLINE}</div>
+        </div>
+      </div>
       <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
         {APP_BRAND_NAME} · {APP_MARKETING_TAGLINE}
       </div>
