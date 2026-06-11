@@ -73,7 +73,7 @@ export default function MarketingHomePage() {
               <img
                 src={APP_LOGO_SRC}
                 alt={APP_BRAND_NAME}
-                className="h-8 w-8 rounded-full border border-white/25 object-cover"
+                className="h-10 w-10 rounded-full border border-white/25 object-cover shadow-sm"
               />
               <span className="text-base font-semibold">{APP_BRAND_NAME}</span>
             </div>

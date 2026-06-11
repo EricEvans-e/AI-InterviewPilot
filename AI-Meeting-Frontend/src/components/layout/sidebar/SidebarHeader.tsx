@@ -28,7 +28,7 @@ export default function SidebarHeader({
         <img
           src={APP_LOGO_SRC}
           alt={APP_BRAND_NAME}
-          className="h-7 w-7 rounded-full border border-slate-200 object-cover"
+          className="h-10 w-10 rounded-full border border-slate-200 object-cover shadow-sm"
         />
         {!isCollapsed && (
           <span className="text-sm font-medium text-slate-900">

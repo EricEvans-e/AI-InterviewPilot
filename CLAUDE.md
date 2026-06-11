@@ -18,8 +18,8 @@ Backend:
 ```bash
 cd AI-Meeting
 docker-compose up -d
-./mvnw -B -ntp clean verify -Dmaven.test.skip=true
-./mvnw test
+./mvnw -B -ntp clean verify -Dmaven.test.skip=true  # CI skips tests
+./mvnw -q -pl admin test                              # run tests locally
 ./mvnw spring-boot:run -pl admin
 ```
 
@@ -48,6 +48,11 @@ Root backend package: `com.interviewpilot`. The single Maven module `admin/` is 
 | `ai` | `com.interviewpilot.ai` | General AI chat. Defaults to Xiaomi Mimo through OpenAI-compatible and Anthropic-compatible protocols |
 | `agent` | `com.interviewpilot.agent` | Interview agent configuration and scene binding; legacy Xunfei workflow client remains for compatibility |
 | `media` | `com.interviewpilot.media` | Mimo-backed ASR WebSocket transport and synchronous TTS REST APIs |
+| `questionbank` | `com.interviewpilot.questionbank` | Question bank CRUD, AI generation/expansion, import parsing |
+| `student` | `com.interviewpilot.student` | Student profiles and target college/major |
+| `teacher` | `com.interviewpilot.teacher` | Teacher reports and reviews |
+| `conversation` | `com.interviewpilot.conversation` | Message persistence and streaming support |
+| `toolkit` | `com.interviewpilot.toolkit` | Shared utilities |
 | `user` | `com.interviewpilot.user` | User accounts and admin permissions |
 | `auth` | `com.interviewpilot.auth` | Sa-Token auth, WebSocket auth, permission checks |
 | `common` | `com.interviewpilot.common` | Shared infra: DB, Redis, thread pools, result and exception conventions |

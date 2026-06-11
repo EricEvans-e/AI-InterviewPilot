@@ -18,7 +18,7 @@ export default function AuthMarketingPanel() {
         <img
           src={APP_LOGO_SRC}
           alt={APP_BRAND_NAME}
-          className="h-14 w-14 rounded-2xl border border-slate-200 object-cover shadow-sm"
+          className="h-20 w-20 rounded-2xl border border-slate-200 object-cover shadow-md"
         />
         <div className="space-y-1">
           <div className="text-lg font-semibold text-slate-900">
