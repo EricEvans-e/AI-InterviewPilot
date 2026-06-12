@@ -181,18 +181,227 @@ CREATE TABLE IF NOT EXISTS `teacher_review` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='teacher review';
 
 ALTER TABLE `t_user`
-    ADD COLUMN IF NOT EXISTS `role` varchar(32) NOT NULL DEFAULT 'student' COMMENT 'student|teacher|admin' AFTER `mail`,
-    ADD COLUMN IF NOT EXISTS `open_id` varchar(128) DEFAULT NULL COMMENT 'wechat open id' AFTER `role`;
+    COMMENT = 'bootstrap user extension anchor';
 
-ALTER TABLE `interview_record`
-    ADD COLUMN IF NOT EXISTS `content_score` int DEFAULT NULL AFTER `resume_score`,
-    ADD COLUMN IF NOT EXISTS `logic_score` int DEFAULT NULL AFTER `content_score`,
-    ADD COLUMN IF NOT EXISTS `professional_score` int DEFAULT NULL AFTER `logic_score`,
-    ADD COLUMN IF NOT EXISTS `expression_score` int DEFAULT NULL AFTER `professional_score`,
-    ADD COLUMN IF NOT EXISTS `adaptability_score` int DEFAULT NULL AFTER `expression_score`,
-    ADD COLUMN IF NOT EXISTS `time_control_score` int DEFAULT NULL AFTER `adaptability_score`,
-    ADD COLUMN IF NOT EXISTS `etiquette_score` int DEFAULT NULL AFTER `time_control_score`,
-    ADD COLUMN IF NOT EXISTS `composite_score` int DEFAULT NULL AFTER `etiquette_score`,
-    ADD COLUMN IF NOT EXISTS `college_id` bigint DEFAULT NULL AFTER `composite_score`,
-    ADD COLUMN IF NOT EXISTS `major_id` bigint DEFAULT NULL AFTER `college_id`,
-    ADD COLUMN IF NOT EXISTS `session_mode` varchar(32) DEFAULT 'resume' AFTER `major_id`;
+SET @current_schema = DATABASE();
+
+SET @t_user_add_role = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 't_user'
+              AND COLUMN_NAME = 'role'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `t_user` ADD COLUMN `role` varchar(32) NOT NULL DEFAULT ''student'' COMMENT ''student|teacher|admin'' AFTER `mail`'
+    )
+);
+PREPARE t_user_add_role_stmt FROM @t_user_add_role;
+EXECUTE t_user_add_role_stmt;
+DEALLOCATE PREPARE t_user_add_role_stmt;
+
+SET @t_user_add_open_id = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 't_user'
+              AND COLUMN_NAME = 'open_id'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `t_user` ADD COLUMN `open_id` varchar(128) DEFAULT NULL COMMENT ''wechat open id'' AFTER `role`'
+    )
+);
+PREPARE t_user_add_open_id_stmt FROM @t_user_add_open_id;
+EXECUTE t_user_add_open_id_stmt;
+DEALLOCATE PREPARE t_user_add_open_id_stmt;
+
+SET @interview_record_add_content_score = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'content_score'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `content_score` int DEFAULT NULL AFTER `resume_score`'
+    )
+);
+PREPARE interview_record_add_content_score_stmt FROM @interview_record_add_content_score;
+EXECUTE interview_record_add_content_score_stmt;
+DEALLOCATE PREPARE interview_record_add_content_score_stmt;
+
+SET @interview_record_add_logic_score = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'logic_score'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `logic_score` int DEFAULT NULL AFTER `content_score`'
+    )
+);
+PREPARE interview_record_add_logic_score_stmt FROM @interview_record_add_logic_score;
+EXECUTE interview_record_add_logic_score_stmt;
+DEALLOCATE PREPARE interview_record_add_logic_score_stmt;
+
+SET @interview_record_add_professional_score = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'professional_score'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `professional_score` int DEFAULT NULL AFTER `logic_score`'
+    )
+);
+PREPARE interview_record_add_professional_score_stmt FROM @interview_record_add_professional_score;
+EXECUTE interview_record_add_professional_score_stmt;
+DEALLOCATE PREPARE interview_record_add_professional_score_stmt;
+
+SET @interview_record_add_expression_score = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'expression_score'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `expression_score` int DEFAULT NULL AFTER `professional_score`'
+    )
+);
+PREPARE interview_record_add_expression_score_stmt FROM @interview_record_add_expression_score;
+EXECUTE interview_record_add_expression_score_stmt;
+DEALLOCATE PREPARE interview_record_add_expression_score_stmt;
+
+SET @interview_record_add_adaptability_score = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'adaptability_score'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `adaptability_score` int DEFAULT NULL AFTER `expression_score`'
+    )
+);
+PREPARE interview_record_add_adaptability_score_stmt FROM @interview_record_add_adaptability_score;
+EXECUTE interview_record_add_adaptability_score_stmt;
+DEALLOCATE PREPARE interview_record_add_adaptability_score_stmt;
+
+SET @interview_record_add_time_control_score = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'time_control_score'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `time_control_score` int DEFAULT NULL AFTER `adaptability_score`'
+    )
+);
+PREPARE interview_record_add_time_control_score_stmt FROM @interview_record_add_time_control_score;
+EXECUTE interview_record_add_time_control_score_stmt;
+DEALLOCATE PREPARE interview_record_add_time_control_score_stmt;
+
+SET @interview_record_add_etiquette_score = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'etiquette_score'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `etiquette_score` int DEFAULT NULL AFTER `time_control_score`'
+    )
+);
+PREPARE interview_record_add_etiquette_score_stmt FROM @interview_record_add_etiquette_score;
+EXECUTE interview_record_add_etiquette_score_stmt;
+DEALLOCATE PREPARE interview_record_add_etiquette_score_stmt;
+
+SET @interview_record_add_composite_score = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'composite_score'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `composite_score` int DEFAULT NULL AFTER `etiquette_score`'
+    )
+);
+PREPARE interview_record_add_composite_score_stmt FROM @interview_record_add_composite_score;
+EXECUTE interview_record_add_composite_score_stmt;
+DEALLOCATE PREPARE interview_record_add_composite_score_stmt;
+
+SET @interview_record_add_college_id = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'college_id'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `college_id` bigint DEFAULT NULL AFTER `composite_score`'
+    )
+);
+PREPARE interview_record_add_college_id_stmt FROM @interview_record_add_college_id;
+EXECUTE interview_record_add_college_id_stmt;
+DEALLOCATE PREPARE interview_record_add_college_id_stmt;
+
+SET @interview_record_add_major_id = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'major_id'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `major_id` bigint DEFAULT NULL AFTER `college_id`'
+    )
+);
+PREPARE interview_record_add_major_id_stmt FROM @interview_record_add_major_id;
+EXECUTE interview_record_add_major_id_stmt;
+DEALLOCATE PREPARE interview_record_add_major_id_stmt;
+
+SET @interview_record_add_session_mode = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @current_schema
+              AND TABLE_NAME = 'interview_record'
+              AND COLUMN_NAME = 'session_mode'
+        ),
+        'SELECT 1',
+        'ALTER TABLE `interview_record` ADD COLUMN `session_mode` varchar(32) DEFAULT ''resume'' AFTER `major_id`'
+    )
+);
+PREPARE interview_record_add_session_mode_stmt FROM @interview_record_add_session_mode;
+EXECUTE interview_record_add_session_mode_stmt;
+DEALLOCATE PREPARE interview_record_add_session_mode_stmt;

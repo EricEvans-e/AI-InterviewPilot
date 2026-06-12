@@ -23,8 +23,9 @@ class SchemaBootstrapSqlTest {
         assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS `question`"));
         assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS `interview_session_question`"));
         assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS `teacher_review`"));
-        assertTrue(sql.contains("ADD COLUMN IF NOT EXISTS `content_score`"));
-        assertTrue(sql.contains("ADD COLUMN IF NOT EXISTS `session_mode`"));
+        assertTrue(sql.contains("information_schema.COLUMNS"));
+        assertTrue(sql.contains("COLUMN_NAME = 'content_score'"));
+        assertTrue(sql.contains("COLUMN_NAME = 'session_mode'"));
     }
 
     @Test
