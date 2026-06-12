@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useStudentProfile } from "@/hooks/profile/useStudentProfile";
+import { authService } from "@/services/authService";
 import type {
   StudentProfileRespDTO,
   StudentProfileSaveReqDTO,
@@ -299,6 +300,92 @@ function StudentProfileForm({
   );
 }
 
+function PasswordChangeCard() {
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    if (newPassword !== confirmPassword) {
+      setError("两次输入的新密码不一致");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await authService.changePassword({
+        oldPassword,
+        newPassword,
+        confirmPassword,
+      });
+      setSuccess(true);
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "密码修改失败");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>修改密码</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="oldPassword">当前密码</Label>
+            <Input
+              id="oldPassword"
+              type="password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">新密码</Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">确认新密码</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {success && <p className="text-sm text-green-600">密码修改成功</p>}
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              修改密码
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 const getProfileFormKey = (profile: StudentProfileRespDTO) =>
   JSON.stringify({
     schoolName: profile.schoolName ?? "",
@@ -338,7 +425,7 @@ export default function StudentProfilePage() {
 
   return (
     <div className="h-full overflow-y-auto bg-white">
-      <div className="mx-auto max-w-2xl px-6 py-10">
+      <div className="mx-auto max-w-2xl space-y-6 px-6 py-10">
         <StudentProfileForm
           key={profile ? getProfileFormKey(profile) : "empty-profile"}
           profile={profile ?? {}}
@@ -346,6 +433,7 @@ export default function StudentProfilePage() {
           isSaving={isSaving}
           saveError={saveError}
         />
+        <PasswordChangeCard />
       </div>
     </div>
   );

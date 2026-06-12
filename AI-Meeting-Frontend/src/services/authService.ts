@@ -12,6 +12,12 @@ import type {
   UserRole,
 } from "@/types/auth";
 
+export interface ChangePasswordReqDTO {
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -141,6 +147,10 @@ export const authService = {
     return service.get<ResultBoolean>("/ip/v1/users/has-username", {
       params: { username },
     });
+  },
+
+  changePassword: (data: ChangePasswordReqDTO) => {
+    return service.put<void, ChangePasswordReqDTO>("/ip/v1/users/password", data);
   },
 
   sendSmsCode: async (

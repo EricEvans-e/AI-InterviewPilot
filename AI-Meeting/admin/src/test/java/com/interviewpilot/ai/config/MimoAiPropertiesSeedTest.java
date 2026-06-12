@@ -11,6 +11,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MimoAiPropertiesSeedTest {
 
     @Test
+    void aiPropertiesSchemaAndSeed_ShouldIncludeDefaultModelFlag() throws Exception {
+        String migrationSql = Files.readString(
+                Path.of("src/main/resources/sql/ai_properties_default_flag.sql"),
+                StandardCharsets.UTF_8
+        );
+
+        assertTrue(migrationSql.contains("ALTER TABLE ai_properties"),
+                "fresh database init should include a migration that adds is_default");
+        assertTrue(migrationSql.contains("ADD COLUMN is_default"),
+                "fresh database init should add is_default to ai_properties");
+        assertTrue(migrationSql.contains("UPDATE ai_properties"),
+                "fresh database init should mark one seeded model as default");
+    }
+
+    @Test
     void mimoProChatSeed_ShouldUseOpenAiCompatibleTextRoute() throws Exception {
         String seedSql = Files.readString(
                 Path.of("src/main/resources/sql/ai_properties.sql"),

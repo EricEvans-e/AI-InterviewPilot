@@ -80,6 +80,8 @@ public interface UserService extends IService<UserDO> {
      */
     void update(UserUpdateReqDTO requestParam, String currentUsername);
 
+    void changePassword(String currentUsername, String oldPassword, String newPassword);
+
     /**
      * 用户登录
      *
@@ -109,4 +111,3 @@ public interface UserService extends IService<UserDO> {
 
     AdminStatsRespDTO getStats();
 }
-

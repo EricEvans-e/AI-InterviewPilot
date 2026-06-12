@@ -16,7 +16,9 @@ services:
       - ./admin/src/main/resources/sql/admin_permission.sql:/docker-entrypoint-initdb.d/02-admin_permission.sql:ro
       - ./admin/src/main/resources/sql/agent_properties.sql:/docker-entrypoint-initdb.d/03-agent_properties.sql:ro
       - ./admin/src/main/resources/sql/ai_properties.sql:/docker-entrypoint-initdb.d/04-ai_properties.sql:ro
-      - ./admin/src/main/resources/sql/t_user.sql:/docker-entrypoint-initdb.d/05-t_user.sql:ro
+      - ./admin/src/main/resources/sql/ai_properties_default_flag.sql:/docker-entrypoint-initdb.d/05-ai_properties_default_flag.sql:ro
+      - ./admin/src/main/resources/sql/t_user.sql:/docker-entrypoint-initdb.d/06-t_user.sql:ro
+      - ./admin/src/main/resources/sql/bootstrap_schema_extension.sql:/docker-entrypoint-initdb.d/07-bootstrap_schema_extension.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${MYSQL_PASSWORD:-122333}"]
       interval: 15s

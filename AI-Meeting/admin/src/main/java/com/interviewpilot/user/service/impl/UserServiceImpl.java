@@ -158,6 +158,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     }
 
     @Override
+    public void changePassword(String currentUsername, String oldPassword, String newPassword) {
+        if (StrUtil.isBlank(currentUsername)) {
+            throw new ClientException("current user is not logged in");
+        }
+        if (StrUtil.isBlank(oldPassword) || StrUtil.isBlank(newPassword)) {
+            throw new ClientException("password cannot be empty");
+        }
+
+        UserDO userDO = baseMapper.selectOne(
+                Wrappers.lambdaQuery(UserDO.class)
+                        .eq(UserDO::getUsername, currentUsername)
+                        .eq(UserDO::getDelFlag, 0));
+        if (userDO == null) {
+            throw new ClientException("user does not exist");
+        }
+        if (!userDO.getPassword().equals(oldPassword)) {
+            throw new ClientException("incorrect password");
+        }
+
+        userDO.setPassword(newPassword);
+        baseMapper.updateById(userDO);
+    }
+
+    @Override
     public UserLoginRespDTO login(UserLoginReqDTO requestParam) {
         UserDO userDO = baseMapper.selectOne(
                 Wrappers.lambdaQuery(UserDO.class)

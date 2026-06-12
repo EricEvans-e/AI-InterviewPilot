@@ -30,6 +30,7 @@ import com.interviewpilot.user.api.io.req.UserLoginReqDTO;
 import com.interviewpilot.user.api.io.req.UserPageReqDTO;
 import com.interviewpilot.user.api.io.req.UserPhoneLoginReqDTO;
 import com.interviewpilot.user.api.io.req.UserRegisterReqDTO;
+import com.interviewpilot.user.api.io.req.UserChangePasswordReqDTO;
 import com.interviewpilot.user.api.io.req.UserUpdateReqDTO;
 import com.interviewpilot.user.dao.entity.UserDO;
 import com.interviewpilot.user.service.SmsCodeService;
@@ -106,6 +107,22 @@ public class UserController {
     public Result<Void> update(@RequestBody UserUpdateReqDTO requestParam,
                                @CurrentUser String currentUsername) {
         userService.update(requestParam, currentUsername);
+        return Results.success();
+    }
+
+    @PutMapping("/password")
+    public Result<Void> changePassword(@RequestBody UserChangePasswordReqDTO requestParam,
+                                       @CurrentUser String currentUsername) {
+        if (requestParam == null) {
+            throw new ClientException("request body cannot be empty");
+        }
+        if (requestParam.getNewPassword() == null || requestParam.getNewPassword().trim().isEmpty()) {
+            throw new ClientException("new password cannot be empty");
+        }
+        if (!requestParam.getNewPassword().equals(requestParam.getConfirmPassword())) {
+            throw new ClientException("password confirmation does not match");
+        }
+        userService.changePassword(currentUsername, requestParam.getOldPassword(), requestParam.getNewPassword());
         return Results.success();
     }
 
