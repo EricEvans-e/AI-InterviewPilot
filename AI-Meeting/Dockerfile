@@ -16,6 +16,10 @@ RUN mvn dependency:go-offline -B
 COPY . .
 
 RUN mvn clean package -Dmaven.test.skip=true -B
+RUN set -eux; \
+    jar_path="$(find /app/admin/target -maxdepth 1 -type f -name 'interview-pilot-admin-*.jar' | head -n 1)"; \
+    test -n "$jar_path"; \
+    cp "$jar_path" /app/app.jar
 
 FROM ${RUNTIME_IMAGE}
 
@@ -33,9 +37,7 @@ WORKDIR /app
 
 RUN mkdir -p /app/logs /app/data && chown -R interviewpilot:interviewpilot /app
 
-COPY --from=builder /app/admin/target/interviewpilot-admin-*.jar app.jar
-
-RUN chown interviewpilot:interviewpilot app.jar
+COPY --from=builder --chown=interviewpilot:interviewpilot /app/app.jar /app/app.jar
 
 USER interviewpilot
 
@@ -49,4 +51,4 @@ ENV INTERVIEW_PILOT_LOG_DIR=/app/logs
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8002/actuator/health || exit 1
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
