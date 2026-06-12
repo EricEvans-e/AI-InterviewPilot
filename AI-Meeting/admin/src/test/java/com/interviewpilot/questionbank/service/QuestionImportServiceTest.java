@@ -151,6 +151,36 @@ class QuestionImportServiceTest {
     }
 
     @Test
+    void shouldPreviewQuestionsFromMixedQuestionParagraphAndReferenceTables() throws Exception {
+        QuestionBankService questionBankService = mock(QuestionBankService.class);
+        QuestionImportService service = new QuestionImportServiceImpl(questionBankService);
+
+        QuestionImportRespDTO preview = service.preview(
+                wordFileWithParagraphQuestionsAndReferenceTables(),
+                QuestionImportReqDTO.builder()
+                        .importType("word_section")
+                        .defaultQuestionType("\u7efc\u5408\u9898")
+                        .defaultDifficulty("medium")
+                        .defaultYear(2026)
+                        .statusAfterImport("pending_review")
+                        .dryRun(true)
+                        .build(),
+                7L
+        );
+
+        assertEquals("PARSED", preview.getStatus());
+        assertEquals(2, preview.getValidCount());
+        assertEquals("\u4f60\u4e3a\u4ec0\u4e48\u62a5\u6211\u4eec\u5b66\u6821\u7684\u6570\u5b57\u5316\u8bbe\u8ba1\u4e0e\u5236\u9020\u6280\u672f(\u6c7d\u8f66\u6a21\u5177\u65b9\u5411)\u8fd9\u4e2a\u4e13\u4e1a\u5462\uff1f",
+                preview.getItems().get(0).getTitle());
+        assertEquals("\u7efc\u5408\u9898", preview.getItems().get(0).getQuestionType());
+        assertTrue(preview.getItems().get(0).getReferenceAnswer().contains("\u53c2\u8003\u4e00"));
+        assertTrue(preview.getItems().get(0).getReferenceAnswer().contains("\u6211\u62a5\u8003\u8fd9\u4e2a\u4e13\u4e1a"));
+        assertTrue(preview.getItems().get(0).getReferenceAnswer().contains("\u53c2\u8003\u4e8c"));
+        assertEquals("\u8fd9\u4e2a\u4e13\u4e1a\u4ee5\u540e\u80fd\u505a\u4ec0\u4e48\uff1f", preview.getItems().get(1).getTitle());
+        assertTrue(preview.getItems().get(1).getReferenceAnswer().contains("\u667a\u80fd\u5236\u9020"));
+    }
+
+    @Test
     void shouldImportTitleOnlyWordSectionUsingDefaultQuestionType() throws Exception {
         QuestionBankService questionBankService = mock(QuestionBankService.class);
         QuestionImportService service = new QuestionImportServiceImpl(questionBankService);
@@ -396,5 +426,35 @@ class QuestionImportServiceTest {
                     output.toByteArray()
             );
         }
+    }
+
+    private MockMultipartFile wordFileWithParagraphQuestionsAndReferenceTables() throws Exception {
+        try (XWPFDocument document = new XWPFDocument();
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            document.createParagraph().createRun().setText(
+                    "\u4f60\u4e3a\u4ec0\u4e48\u62a5\u6211\u4eec\u5b66\u6821\u7684\u6570\u5b57\u5316\u8bbe\u8ba1\u4e0e\u5236\u9020\u6280\u672f(\u6c7d\u8f66\u6a21\u5177\u65b9\u5411)\u8fd9\u4e2a\u4e13\u4e1a\u5462\uff1f\ue61a");
+            singleCellTable(document, "\u6a21\u62df\u9898 2025 \u676d\u5dde\u79d1\u6280\u804c\u4e1a\u6280\u672f\u5b66\u9662 \u6570\u5b57\u5316\u8bbe\u8ba1\u4e0e\u5236\u9020\u6280\u672f");
+            singleCellTable(document,
+                    "\u2588 \u53c2\u8003\u4e00\u56de\u7b54\u793a\u4f8b\uff1a\u5c0a\u656c\u7684\u9762\u8bd5\u5b98\uff0c\u6211\u62a5\u8003\u8fd9\u4e2a\u4e13\u4e1a\uff0c\u662f\u56e0\u4e3a\u6211\u5bf9\u667a\u80fd\u5236\u9020\u548c\u6a21\u5177\u8bbe\u8ba1\u5f88\u611f\u5174\u8da3\u3002");
+            singleCellTable(document,
+                    "\u2588 \u53c2\u8003\u4e8c\u6211\u8ba4\u4e3a\u8fd9\u4e2a\u4e13\u4e1a\u65e2\u6709\u673a\u68b0\u5236\u9020\u57fa\u7840\uff0c\u53c8\u878d\u5165\u4e86\u6570\u5b57\u5316\u6280\u672f\uff0c\u5f88\u9002\u5408\u6211\u672a\u6765\u53d1\u5c55\u3002");
+            document.createParagraph().createRun().setText("\u8fd9\u4e2a\u4e13\u4e1a\u4ee5\u540e\u80fd\u505a\u4ec0\u4e48\uff1f\ue61a");
+            singleCellTable(document, "\u6a21\u62df\u9898 2025 \u676d\u5dde\u79d1\u6280\u804c\u4e1a\u6280\u672f\u5b66\u9662 \u6570\u5b57\u5316\u8bbe\u8ba1\u4e0e\u5236\u9020\u6280\u672f");
+            singleCellTable(document,
+                    "\u2588 \u53c2\u8003\u4e00\u56de\u7b54\u793a\u4f8b\uff1a\u6bd5\u4e1a\u540e\u53ef\u4ee5\u4ece\u4e8b\u667a\u80fd\u5236\u9020\u4ea7\u7ebf\u8fd0\u8425\u3001CAD/CAM \u7f16\u7a0b\u3001\u6a21\u5177\u8bbe\u8ba1\u4e0e\u6570\u5b57\u5316\u5de5\u827a\u7b49\u5de5\u4f5c\u3002");
+
+            document.write(output);
+            return new MockMultipartFile(
+                    "file",
+                    "questions-paragraph-table-section.docx",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    output.toByteArray()
+            );
+        }
+    }
+
+    private void singleCellTable(XWPFDocument document, String text) {
+        XWPFTable table = document.createTable(1, 1);
+        table.getRow(0).getCell(0).setText(text);
     }
 }

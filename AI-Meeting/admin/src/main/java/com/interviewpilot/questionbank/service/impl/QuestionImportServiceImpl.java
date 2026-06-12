@@ -11,6 +11,7 @@ import com.interviewpilot.questionbank.api.io.resp.QuestionImportRespDTO;
 import com.interviewpilot.questionbank.service.QuestionBankService;
 import com.interviewpilot.questionbank.service.QuestionImportService;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.xwpf.usermodel.IBodyElement;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
@@ -52,6 +53,8 @@ public class QuestionImportServiceImpl implements QuestionImportService {
 
     private static final Pattern LEGACY_META_PATTERN = Pattern.compile("\u3010([^\\u3011]+)\u3011([^\\u3010]+)");
     private static final Pattern LEGACY_QUESTION_PATTERN = Pattern.compile("^\\s*\\d+\\s*[.\\u3001]\\s*(.+)$");
+    private static final Pattern PRIVATE_USE_CHAR_PATTERN = Pattern.compile("[\\p{Co}]");
+    private static final Pattern REFERENCE_TABLE_PATTERN = Pattern.compile("^[█■]?\\s*(参考[一二三四五六七八九十0-9]+)(.*)$");
 
     private final QuestionBankService questionBankService;
     private final Map<String, QuestionImportRespDTO> batches = new ConcurrentHashMap<>();
@@ -174,9 +177,30 @@ public class QuestionImportServiceImpl implements QuestionImportService {
         Map<String, String> legacyMetadata = new LinkedHashMap<>();
         int rowIndex = 0;
 
-        for (XWPFParagraph paragraph : document.getParagraphs()) {
-            String text = normalize(paragraph.getText());
+        for (IBodyElement element : document.getBodyElements()) {
+            String text = switch (element.getElementType()) {
+                case PARAGRAPH -> normalize(((XWPFParagraph) element).getText());
+                case TABLE -> normalize(extractTableText((XWPFTable) element));
+                default -> null;
+            };
             if (StrUtil.isBlank(text)) {
+                continue;
+            }
+
+            if (element.getElementType() == org.apache.poi.xwpf.usermodel.BodyElementType.TABLE) {
+                if (isQuestionBannerTable(text)) {
+                    continue;
+                }
+                if (current != null && isReferenceTableText(text)) {
+                    appendRawText(current, text);
+                    appendReferenceAnswer(current, normalizeReferenceTableText(text));
+                    continue;
+                }
+                if (current == null) {
+                    continue;
+                }
+                appendRawText(current, text);
+                applyLooseFields(current, text);
                 continue;
             }
 
@@ -224,30 +248,27 @@ public class QuestionImportServiceImpl implements QuestionImportService {
                 continue;
             }
 
+            if (isLikelyPlainQuestionTitle(text)) {
+                if (current != null) {
+                    validate(current);
+                    items.add(current);
+                }
+                rowIndex++;
+                current = newBaseItem(rowIndex, request);
+                applyLegacyMetadata(current, legacyMetadata, request);
+                String questionTitle = sanitizeQuestionText(text);
+                current.setTitle(questionTitle);
+                current.setContent(questionTitle);
+                appendRawText(current, questionTitle);
+                continue;
+            }
+
             if (current == null) {
                 continue;
             }
 
             appendRawText(current, text);
-            String reference = extractValue(text, FIELD_REFERENCE_ANSWER);
-            if (reference != null) {
-                current.setReferenceAnswer(reference);
-                continue;
-            }
-            String scoringRule = extractValue(text, FIELD_SCORING_RULE);
-            if (scoringRule != null) {
-                current.setScoringRule(scoringRule);
-                continue;
-            }
-            String followUp = extractValue(text, FIELD_FOLLOW_UP);
-            if (followUp != null) {
-                current.setFollowUpQuestions(followUp);
-                continue;
-            }
-            String source = extractValue(text, FIELD_SOURCE);
-            if (source != null) {
-                current.setSourceRef(source);
-            }
+            applyLooseFields(current, text);
         }
 
         if (current != null) {
@@ -383,6 +404,84 @@ public class QuestionImportServiceImpl implements QuestionImportService {
         item.setRawText(StrUtil.isBlank(item.getRawText()) ? text : item.getRawText() + "\n" + text);
     }
 
+    private void applyLooseFields(QuestionImportItemRespDTO item, String text) {
+        String reference = extractValue(text, FIELD_REFERENCE_ANSWER);
+        if (reference != null) {
+            item.setReferenceAnswer(reference);
+            return;
+        }
+        String scoringRule = extractValue(text, FIELD_SCORING_RULE);
+        if (scoringRule != null) {
+            item.setScoringRule(scoringRule);
+            return;
+        }
+        String followUp = extractValue(text, FIELD_FOLLOW_UP);
+        if (followUp != null) {
+            item.setFollowUpQuestions(followUp);
+            return;
+        }
+        String source = extractValue(text, FIELD_SOURCE);
+        if (source != null) {
+            item.setSourceRef(source);
+        }
+    }
+
+    private String extractTableText(XWPFTable table) {
+        return table.getRows().stream()
+                .flatMap(row -> row.getTableCells().stream())
+                .map(XWPFTableCell::getText)
+                .map(this::normalize)
+                .filter(StrUtil::isNotBlank)
+                .collect(Collectors.joining("\n"));
+    }
+
+    private boolean isQuestionBannerTable(String text) {
+        return compactText(text).startsWith("\u6a21\u62df\u9898");
+    }
+
+    private boolean isReferenceTableText(String text) {
+        return REFERENCE_TABLE_PATTERN.matcher(compactText(text)).matches();
+    }
+
+    private String normalizeReferenceTableText(String text) {
+        String compact = compactText(text);
+        Matcher matcher = REFERENCE_TABLE_PATTERN.matcher(compact);
+        if (!matcher.matches()) {
+            return text;
+        }
+        String label = matcher.group(1);
+        String remainder = matcher.group(2);
+        remainder = remainder.replaceFirst("^(回答示例|示例回答)", "");
+        remainder = remainder.replaceFirst("^[：:]", "");
+        remainder = normalize(remainder);
+        return StrUtil.isBlank(remainder) ? label : label + "：" + remainder;
+    }
+
+    private void appendReferenceAnswer(QuestionImportItemRespDTO item, String text) {
+        if (StrUtil.isBlank(text)) {
+            return;
+        }
+        item.setReferenceAnswer(StrUtil.isBlank(item.getReferenceAnswer())
+                ? text
+                : item.getReferenceAnswer() + "\n\n" + text);
+    }
+
+    private boolean isLikelyPlainQuestionTitle(String text) {
+        String sanitized = sanitizeQuestionText(text);
+        return StrUtil.isNotBlank(sanitized)
+                && !sanitized.contains("\uff1a")
+                && !sanitized.contains(":")
+                && (sanitized.endsWith("\uff1f") || sanitized.endsWith("?"));
+    }
+
+    private String sanitizeQuestionText(String text) {
+        return normalize(PRIVATE_USE_CHAR_PATTERN.matcher(text == null ? "" : text).replaceAll(""));
+    }
+
+    private String compactText(String text) {
+        return sanitizeQuestionText(text).replaceAll("\\s+", "");
+    }
+
     private void validate(QuestionImportItemRespDTO item) {
         if (StrUtil.isBlank(item.getTitle())) {
             item.setValid(false);
@@ -445,7 +544,7 @@ public class QuestionImportServiceImpl implements QuestionImportService {
         if (value == null) {
             return null;
         }
-        return value.replace('\u00a0', ' ').trim();
+        return PRIVATE_USE_CHAR_PATTERN.matcher(value.replace('\u00a0', ' ')).replaceAll("").trim();
     }
 
     private String firstNotBlank(String first, String second) {
