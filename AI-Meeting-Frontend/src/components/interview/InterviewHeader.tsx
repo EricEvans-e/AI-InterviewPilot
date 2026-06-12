@@ -40,13 +40,13 @@ export default function InterviewHeader({
     <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white/70 px-6 py-4 backdrop-blur-sm">
       <div>
         <h2 className="text-lg font-semibold text-slate-900">
-          Java 高级开发工程师模拟面试室
+          Java 高级开发工程师面试间
         </h2>
         <p className="text-sm text-slate-500">实时面试练习</p>
       </div>
       <div className="flex items-center gap-3">
         <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
-          {isReady ? "面试进行中" : "待上传简历"}
+          {isReady ? "面试进行中" : "等待上传简历"}
         </div>
         {currentQuestionNumber && !isInterviewFinished ? (
           <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">

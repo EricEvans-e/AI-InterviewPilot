@@ -148,11 +148,11 @@ export function useAudioTranscriptionController(
       dispatchTranscription({
         kind: "reset",
       });
-      connectTransport();
       await startStream();
       if (activeStartTokenRef.current !== startToken) {
         return;
       }
+      connectTransport();
       setIsRecording(true);
     } catch (startError) {
       console.error("Start recording failed:", startError);

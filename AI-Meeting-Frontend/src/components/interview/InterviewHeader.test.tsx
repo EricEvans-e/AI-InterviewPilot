@@ -3,6 +3,27 @@ import { describe, expect, it, vi } from "vitest";
 import InterviewHeader from "@/components/interview/InterviewHeader";
 
 describe("InterviewHeader", () => {
+  it("uses 面试间 in the room title", () => {
+    render(
+      <InterviewHeader
+        isReady
+        currentQuestionNumber="1"
+        currentQuestionContent="请先做一个简短的自我介绍"
+        isCurrentQuestionFollowUp={false}
+        currentFollowUpCount={0}
+        isInterviewFinished={false}
+        totalInterviewScore={null}
+        isCameraOpen={false}
+        isEndingInterview={false}
+        onToggleCamera={vi.fn()}
+        onOpenSketchpad={vi.fn()}
+        onEndInterview={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Java 高级开发工程师面试间")).toBeTruthy();
+  });
+
   it("shows self-introduction as the current stage for the first opening question", () => {
     render(
       <InterviewHeader

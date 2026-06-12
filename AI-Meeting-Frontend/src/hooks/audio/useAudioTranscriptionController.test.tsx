@@ -73,7 +73,7 @@ describe("useAudioTranscriptionController", () => {
       await result.current.startRecording();
     });
 
-    expect(transportState.connect).toHaveBeenCalledTimes(1);
+    expect(transportState.connect).not.toHaveBeenCalled();
     expect(transportState.disconnect).toHaveBeenCalled();
     expect(streamState.stop).toHaveBeenCalled();
     expect(result.current.isRecording).toBe(false);

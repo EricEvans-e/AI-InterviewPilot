@@ -52,6 +52,10 @@ export function useMicrophonePcmStream({
     await stop();
 
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("MediaDevices.getUserMedia is not supported");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
