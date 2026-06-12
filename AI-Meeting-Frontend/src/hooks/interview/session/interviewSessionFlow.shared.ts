@@ -40,6 +40,7 @@ export type InterviewMessageActions = {
       streamStep?: number;
       streamDelayMs?: number;
       tts?: ChatMessage["tts"];
+      questionNumber?: string | null;
     },
   ) => Promise<void>;
   appendNextQuestionMessage: (

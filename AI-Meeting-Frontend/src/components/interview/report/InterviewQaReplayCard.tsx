@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { isSelfIntroductionQuestion } from "@/lib/interviewQuestionLabel";
 import { ROUTES } from "@/lib/constants";
 import {
   buildReportSearch,
@@ -66,7 +67,9 @@ export default function InterviewQaReplayCard({
         : `追问（第 ${index + 1} 条）`;
     }
     if (item.questionNumber) {
-      return `主问题 ${item.questionNumber}`;
+      return isSelfIntroductionQuestion(item.questionNumber, item.question)
+        ? "自我介绍"
+        : `主问题 ${item.questionNumber}`;
     }
     return `第 ${index + 1} 题`;
   };
@@ -121,12 +124,14 @@ export default function InterviewQaReplayCard({
   const renderReviewItem = ({
     item,
     label,
+    itemKey,
     feedbackKey,
     isChild,
     animationDelay = 0,
   }: {
     item: QaReview;
     label: string;
+    itemKey: string;
     feedbackKey: string;
     isChild: boolean;
     animationDelay?: number;
@@ -137,6 +142,7 @@ export default function InterviewQaReplayCard({
 
     return (
       <motion.div
+        key={itemKey}
         layout
         className={cn(
           "rounded-lg border p-4",
@@ -349,6 +355,7 @@ export default function InterviewQaReplayCard({
               {renderReviewItem({
                 item: group.parent,
                 label: resolveRoundLabel(group.parent, groupIndex),
+                itemKey: `${group.id}::parent`,
                 feedbackKey: `${group.id}::parent`,
                 isChild: false,
               })}
@@ -370,6 +377,7 @@ export default function InterviewQaReplayCard({
                       renderReviewItem({
                         item: followUp,
                         label: resolveRoundLabel(followUp, followUpIndex),
+                        itemKey: `${group.id}::followup-${followUpIndex}`,
                         feedbackKey: `${group.id}::followup-${followUpIndex}`,
                         isChild: true,
                         animationDelay: followUpIndex * 0.05,

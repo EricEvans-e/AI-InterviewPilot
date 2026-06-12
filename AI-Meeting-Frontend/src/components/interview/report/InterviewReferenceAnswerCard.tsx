@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { isSelfIntroductionQuestion } from "@/lib/interviewQuestionLabel";
 import { cn } from "@/lib/utils";
 import type { QaReview } from "@/components/interview/report/types";
 
@@ -30,7 +31,9 @@ const buildReferenceItems = (qaReviews: QaReview[]): ReferenceItem[] => {
     .map((item, index) => {
       const label = item.isFollowUp
         ? `追问 ${item.questionNumber || index + 1}`
-        : `主问题 ${item.questionNumber || index + 1}`;
+        : isSelfIntroductionQuestion(item.questionNumber, item.question)
+          ? "自我介绍"
+          : `主问题 ${item.questionNumber || index + 1}`;
 
       return {
         key: `${item.questionNumber || "qa"}-${index}`,

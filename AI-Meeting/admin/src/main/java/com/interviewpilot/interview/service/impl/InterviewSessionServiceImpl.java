@@ -22,6 +22,7 @@ import com.interviewpilot.interview.dao.repository.InterviewSessionRepository;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewSessionService;
 import com.interviewpilot.interview.service.model.InterviewSessionStatus;
+import com.interviewpilot.interview.shared.InterviewOpeningQuestionSupport;
 import com.interviewpilot.questionbank.dao.entity.QuestionDO;
 import com.interviewpilot.questionbank.service.QuestionBankService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -111,7 +113,7 @@ public class InterviewSessionServiceImpl implements InterviewSessionService {
         interviewSessionRepository.save(session);
 
         // 4) 将抽取的题目写入 interview_session_question 关联表，并缓存到 Redis。
-        Map<String, String> questionMap = new HashMap<>();
+        List<String> selectedQuestions = new ArrayList<>();
         for (int i = 0; i < questions.size(); i++) {
             QuestionDO q = questions.get(i);
             InterviewSessionQuestionDO link = new InterviewSessionQuestionDO();
@@ -121,10 +123,10 @@ public class InterviewSessionServiceImpl implements InterviewSessionService {
             link.setCreateTime(new Date());
             sessionQuestionMapper.insert(link);
 
-            String questionNumber = String.valueOf(i + 1);
             String questionContent = buildQuestionContent(q);
-            questionMap.put(questionNumber, questionContent);
+            selectedQuestions.add(questionContent);
         }
+        LinkedHashMap<String, String> questionMap = InterviewOpeningQuestionSupport.toQuestionMap(selectedQuestions);
         interviewQuestionCacheService.cacheInterviewQuestions(sessionId, new ArrayList<>(questionMap.values()));
         // 以 Map 方式写入，保证题号与内容对应关系正确。
         cacheQuestionsByNumber(sessionId, questionMap);

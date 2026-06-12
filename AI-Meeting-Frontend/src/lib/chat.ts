@@ -31,6 +31,7 @@ export type ChatMessage = {
   id: string;
   role: ChatRole;
   content: string;
+  questionNumber?: string | null;
   reasoning?: string;
   timestamp: number;
   status?: ChatMessageStatus;

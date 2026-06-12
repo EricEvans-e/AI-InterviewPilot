@@ -13,6 +13,7 @@ import com.interviewpilot.interview.application.guard.core.InterviewAiGuardExcep
 import com.interviewpilot.interview.application.guard.core.InterviewAiGuardStage;
 import com.interviewpilot.interview.application.guard.lock.InterviewAiSessionLockService;
 import com.interviewpilot.interview.shared.InterviewAiInvoker;
+import com.interviewpilot.interview.shared.InterviewOpeningQuestionSupport;
 import com.interviewpilot.interview.shared.InterviewResponseParser;
 import com.interviewpilot.interview.service.InterviewQuestionCacheService;
 import com.interviewpilot.interview.service.InterviewQuestionService;
@@ -406,8 +407,8 @@ public class InterviewQuestionExtractionService {
                 interviewQuestionCacheService.cacheResumeContext(reqDTO.getSessionId(), resumeContext);
             }
 
-            List<String> questions = normalizeStringList(responseMap.get("questions"));
-            if (questions.isEmpty()) {
+            List<String> parsedQuestions = normalizeStringList(responseMap.get("questions"));
+            if (parsedQuestions.isEmpty()) {
                 String smallTalk = interviewResponseParser.asString(responseMap.get("smallTalk"));
                 response.setErrorMessage(StrUtil.isNotBlank(smallTalk)
                         ? "workflow fell back to smallTalk instead of interview questions"
@@ -416,6 +417,7 @@ public class InterviewQuestionExtractionService {
                         reqDTO.getSessionId(), smallTalk);
                 return false;
             }
+            List<String> questions = InterviewOpeningQuestionSupport.prependSelfIntroduction(parsedQuestions);
 
             interviewQuestionCacheService.cacheInterviewQuestions(reqDTO.getSessionId(), questions);
             Map<String, String> questionMap =

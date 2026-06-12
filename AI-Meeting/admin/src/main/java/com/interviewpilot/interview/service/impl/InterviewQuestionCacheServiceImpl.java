@@ -17,6 +17,7 @@ import com.interviewpilot.interview.service.InterviewScoreService;
 import com.interviewpilot.interview.service.cache.InterviewCacheKeys;
 import com.interviewpilot.interview.service.model.InterviewFlowState;
 import com.interviewpilot.interview.service.model.InterviewTurnLog;
+import com.interviewpilot.interview.shared.InterviewOpeningQuestionSupport;
 import com.interviewpilot.questionbank.dao.entity.QuestionDO;
 import com.interviewpilot.questionbank.dao.mapper.QuestionMapper;
 import lombok.RequiredArgsConstructor;
@@ -488,6 +489,7 @@ public class InterviewQuestionCacheServiceImpl implements InterviewQuestionCache
                         String cacheKey = INTERVIEW_QUESTIONS_KEY + sessionId;
                         stringRedisTemplate.delete(cacheKey);
 
+                        questionsMap = InterviewOpeningQuestionSupport.prependSelfIntroduction(questionsMap);
                         if (!questionsMap.isEmpty()) {
                             stringRedisTemplate.opsForHash().putAll(cacheKey, questionsMap);
                             stringRedisTemplate.expire(cacheKey, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
@@ -502,10 +504,12 @@ public class InterviewQuestionCacheServiceImpl implements InterviewQuestionCache
 
                 // JSON 不可用时回退到列表字段写入缓存。
                 if (question.getQuestions() != null && !question.getQuestions().isEmpty()) {
-                    cacheInterviewQuestions(sessionId, question.getQuestions());
-                    log.info("Loaded questions from MongoDB (list), sessionId={}, count={}", sessionId, question.getQuestions().size());
-                    return;
-                }
+            List<String> normalizedQuestions =
+                    InterviewOpeningQuestionSupport.prependSelfIntroduction(question.getQuestions());
+            cacheInterviewQuestions(sessionId, normalizedQuestions);
+            log.info("Loaded questions from MongoDB (list), sessionId={}, count={}", sessionId, normalizedQuestions.size());
+            return;
+        }
             }
 
             // MongoDB 无数据时，回退到 MySQL interview_session_question + question 表（题库模式）。
@@ -538,7 +542,7 @@ public class InterviewQuestionCacheServiceImpl implements InterviewQuestionCache
         Map<Long, QuestionDO> questionById = questions.stream()
                 .collect(Collectors.toMap(QuestionDO::getId, q -> q));
 
-        Map<String, String> questionMap = new LinkedHashMap<>();
+        Map<String, String> orderedQuestionMap = new LinkedHashMap<>();
         for (InterviewSessionQuestionDO link : links) {
             QuestionDO q = questionById.get(link.getQuestionId());
             if (q == null) {
@@ -546,9 +550,10 @@ public class InterviewQuestionCacheServiceImpl implements InterviewQuestionCache
             }
             String questionNumber = String.valueOf(link.getSeqIndex() + 1);
             String content = buildQuestionContent(q);
-            questionMap.put(questionNumber, content);
+            orderedQuestionMap.put(questionNumber, content);
         }
 
+        Map<String, String> questionMap = InterviewOpeningQuestionSupport.prependSelfIntroduction(orderedQuestionMap);
         if (!questionMap.isEmpty()) {
             String cacheKey = INTERVIEW_QUESTIONS_KEY + sessionId;
             stringRedisTemplate.delete(cacheKey);

@@ -22,9 +22,7 @@ describe("InterviewReferenceAnswerCard", () => {
     );
 
     expect(screen.getByText("暂无参考答案")).toBeTruthy();
-    expect(
-      screen.queryByText("回答概述了方法，但缺少实现细节。"),
-    ).toBeNull();
+    expect(screen.queryByText("回答概述了方法，但缺少实现细节。")).toBeNull();
     expect(
       screen.getByRole("button", { name: "生成参考答案" }),
     ).toBeTruthy();
@@ -102,8 +100,29 @@ describe("InterviewReferenceAnswerCard", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: "生成中..." }),
-    ).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "生成中..." })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("labels the first self introduction main question explicitly", () => {
+    render(
+      <InterviewReferenceAnswerCard
+        isLoading={false}
+        qaReviews={[
+          {
+            questionNumber: "1",
+            question: "请先做一个自我介绍",
+            answer: "我是张三，来自软件工程专业。",
+            score: 88,
+            referenceAnswer: "介绍教育背景、项目经历与求职动机。",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("自我介绍")).toBeTruthy();
+    expect(screen.queryByText("主问题 1")).toBeNull();
   });
 });

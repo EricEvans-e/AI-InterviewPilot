@@ -44,6 +44,7 @@ function ChatList({
               <ChatBubble
                 role={msg.role}
                 content={msg.content}
+                questionNumber={msg.questionNumber}
                 reasoning={msg.reasoning}
                 status={msg.status}
                 variant={msg.variant}

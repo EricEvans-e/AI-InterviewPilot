@@ -42,6 +42,7 @@ type CreateAssistantMessageOptions = {
   status?: ChatMessageStatus;
   variant?: ChatMessageVariant;
   tts?: ChatMessageTts;
+  questionNumber?: string | null;
   progressSteps?: string[];
   activeProgressStep?: number;
 };
@@ -68,6 +69,7 @@ export const createAssistantMessage = (
   status: options?.status ?? CHAT_MESSAGE_STATUS.done,
   variant: options?.variant ?? CHAT_MESSAGE_VARIANT.default,
   tts: options?.tts,
+  questionNumber: options?.questionNumber,
   progressSteps: options?.progressSteps,
   activeProgressStep: options?.activeProgressStep,
 });

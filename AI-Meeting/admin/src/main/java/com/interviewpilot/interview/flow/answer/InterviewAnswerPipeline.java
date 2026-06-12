@@ -26,6 +26,7 @@ import com.interviewpilot.interview.service.InterviewSessionService;
 import com.interviewpilot.interview.service.model.InterviewFlowState;
 import com.interviewpilot.interview.service.model.InterviewRuntimeLoadMode;
 import com.interviewpilot.interview.service.model.InterviewTurnLog;
+import com.interviewpilot.interview.shared.InterviewOpeningQuestionSupport;
 import com.interviewpilot.questionbank.dao.entity.QuestionDO;
 import com.interviewpilot.questionbank.service.QuestionBankService;
 import io.micrometer.core.instrument.Metrics;
@@ -558,7 +559,12 @@ public class InterviewAnswerPipeline {
                 return;
             }
 
-            int seqIndex = parseQuestionSeqIndex(ctx.currentQuestionNumber);
+            Map<String, String> sessionQuestions =
+                    interviewQuestionCacheService.getSessionInterviewQuestions(ctx.sessionId);
+            int seqIndex = InterviewOpeningQuestionSupport.resolveQuestionBankSeqIndex(
+                    sessionQuestions,
+                    ctx.currentQuestionNumber
+            );
             if (seqIndex < 0) {
                 return;
             }
@@ -589,17 +595,6 @@ public class InterviewAnswerPipeline {
     /**
      * 解析题号对应的序号（0-based）。题号 "1" → 0, "2" → 1, ...
      */
-    private int parseQuestionSeqIndex(String questionNumber) {
-        if (StrUtil.isBlank(questionNumber)) {
-            return -1;
-        }
-        try {
-            return Integer.parseInt(questionNumber.trim()) - 1;
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
-    }
-
     private InterviewFlowState ensureInterviewFlow(String sessionId) {
         InterviewFlowState state = interviewFlowStateMachine.current(sessionId);
         if (state != null) {

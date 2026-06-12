@@ -122,6 +122,7 @@ export function useInterviewMessageStream() {
         streamStep?: number;
         streamDelayMs?: number;
         tts?: ChatMessage["tts"];
+        questionNumber?: string | null;
       },
     ) => {
       const normalizedContent = content.trim();
@@ -135,6 +136,7 @@ export function useInterviewMessageStream() {
           createAssistantMessage(normalizedContent, {
             variant: options?.variant,
             tts: options?.tts,
+            questionNumber: options?.questionNumber,
           }),
         ]);
         return;
@@ -147,6 +149,7 @@ export function useInterviewMessageStream() {
         status: CHAT_MESSAGE_STATUS.streaming,
         variant: options?.variant,
         tts: options?.tts,
+        questionNumber: options?.questionNumber,
       });
 
       setMessages((prev) => [...prev, streamingMessage]);
@@ -225,6 +228,7 @@ export function useInterviewMessageStream() {
           autoPlay: true,
           cacheKey: questionKey,
         },
+        questionNumber: nextQuestionNumber ?? null,
       });
     },
     [appendAssistantMessage],

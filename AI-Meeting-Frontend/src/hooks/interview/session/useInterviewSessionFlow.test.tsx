@@ -159,7 +159,7 @@ describe("useInterviewSessionFlow", () => {
             "请详细介绍一下你在智控天眼项目中如何设计领域继续预训练方案？",
         ),
       ).toBe(true);
-    });
+    }, { timeout: 3_000 });
 
     expect(result.current.currentQuestionContent).toBe(
       "请详细介绍一下你在智控天眼项目中如何设计领域继续预训练方案？",

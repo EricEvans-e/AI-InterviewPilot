@@ -94,6 +94,7 @@ export default function QuestionBankInterviewPage() {
           <InterviewHeader
             isReady={isReady}
             currentQuestionNumber={interview.currentQuestionNumber}
+            currentQuestionContent={interview.currentQuestionContent}
             isCurrentQuestionFollowUp={interview.isCurrentQuestionFollowUp}
             currentFollowUpCount={interview.currentFollowUpCount}
             isInterviewFinished={interview.isFinished}

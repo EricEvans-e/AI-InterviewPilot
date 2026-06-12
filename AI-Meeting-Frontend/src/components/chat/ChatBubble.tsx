@@ -11,11 +11,13 @@ import ChatReasoningPanel from "@/components/chat/ChatReasoningPanel";
 import ChatMessageContent from "@/components/chat/ChatMessageContent";
 import ChatProgressBubble from "@/components/chat/ChatProgressBubble";
 import { Button } from "@/components/ui/button";
+import { getInterviewQuestionLabel } from "@/lib/interviewQuestionLabel";
 import { Loader2, Pause, Play } from "lucide-react";
 
 type ChatBubbleProps = {
   role: ChatRole;
   content: string;
+  questionNumber?: string | null;
   reasoning?: string;
   assistantAvatarSrc?: string;
   status?: ChatMessageStatus;
@@ -31,6 +33,7 @@ type ChatBubbleProps = {
 export default function ChatBubble({
   role,
   content,
+  questionNumber,
   reasoning,
   status,
   variant,
@@ -52,7 +55,11 @@ export default function ChatBubble({
   const isProgress =
     !isUser && messageVariant === CHAT_MESSAGE_VARIANT.progress;
   const isInterviewQuestion =
-    !isUser && Boolean(tts?.autoPlay) && !isFeedback && !isSystem && !isProgress;
+    !isUser &&
+    Boolean(tts?.autoPlay) &&
+    !isFeedback &&
+    !isSystem &&
+    !isProgress;
   const hasReasoning = !isUser && Boolean(reasoning);
   const shouldRenderMessage = isProgress || Boolean(content) || !reasoning;
   const shouldRenderTtsControl =
@@ -127,7 +134,9 @@ export default function ChatBubble({
                 {isInterviewQuestion ? (
                   <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-slate-500">
                     <span className="rounded-full bg-white/80 px-2 py-0.5 text-slate-700 shadow-sm">
-                      {isFollowUp ? "追问问题" : "当前题目"}
+                      {isFollowUp
+                        ? "追问问题"
+                        : getInterviewQuestionLabel(questionNumber, content)}
                     </span>
                   </div>
                 ) : null}

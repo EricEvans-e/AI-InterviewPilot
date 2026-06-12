@@ -1,9 +1,11 @@
 import { NotebookPen, Video, VideoOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isSelfIntroductionQuestion } from "@/lib/interviewQuestionLabel";
 
 type InterviewHeaderProps = {
   isReady: boolean;
   currentQuestionNumber: string | null;
+  currentQuestionContent?: string | null;
   isCurrentQuestionFollowUp: boolean;
   currentFollowUpCount: number;
   isInterviewFinished: boolean;
@@ -18,6 +20,7 @@ type InterviewHeaderProps = {
 export default function InterviewHeader({
   isReady,
   currentQuestionNumber,
+  currentQuestionContent,
   isCurrentQuestionFollowUp,
   currentFollowUpCount,
   isInterviewFinished,
@@ -28,6 +31,11 @@ export default function InterviewHeader({
   onOpenSketchpad,
   onEndInterview,
 }: InterviewHeaderProps) {
+  const isSelfIntroductionStage = isSelfIntroductionQuestion(
+    currentQuestionNumber,
+    currentQuestionContent,
+  );
+
   return (
     <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white/70 px-6 py-4 backdrop-blur-sm">
       <div>
@@ -42,7 +50,9 @@ export default function InterviewHeader({
         </div>
         {currentQuestionNumber && !isInterviewFinished ? (
           <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
-            当前题号：{currentQuestionNumber}
+            {isSelfIntroductionStage
+              ? "当前环节：自我介绍"
+              : `当前题号：${currentQuestionNumber}`}
           </div>
         ) : null}
         {isCurrentQuestionFollowUp && !isInterviewFinished ? (
