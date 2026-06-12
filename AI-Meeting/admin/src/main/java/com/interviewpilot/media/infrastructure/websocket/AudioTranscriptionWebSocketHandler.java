@@ -18,10 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import java.io.Closeable;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -42,6 +40,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class AudioTranscriptionWebSocketHandler {
 
     private static final int WEBSOCKET_MESSAGE_BUFFER_BYTES = 64 * 1024;
+    private static final long TRANSCRIPTION_FLUSH_INTERVAL_MS = 700L;
 
     private static volatile MimoAudioService mimoAudioService;
     private static volatile WebSocketAuthService webSocketAuthService;
@@ -148,8 +147,7 @@ public class AudioTranscriptionWebSocketHandler {
                 return;
             }
 
-            context.audioOutputStream.write(audioData);
-            context.audioOutputStream.flush();
+            context.appendAudio(audioData);
         } catch (Exception ex) {
             log.error("Failed to process audio chunk, userId={}, sessionId={}", userId, sessionId, ex);
             sendMessage(session, createResponse("error", "Failed to process audio chunk: " + ex.getMessage(), null));
@@ -253,8 +251,7 @@ public class AudioTranscriptionWebSocketHandler {
             if (raced != null && raced.active.get() && !raced.stopRequested.get()) {
                 context.active.set(false);
                 context.stopRequested.set(true);
-                closeQuietly(context.audioOutputStream);
-                closeQuietly(context.audioInputStream);
+                cancelTranscriptionFlush(context);
                 sendMessage(session, createResponse("transcription_already_started",
                         "Transcription is already started", null));
                 return;
@@ -273,31 +270,9 @@ public class AudioTranscriptionWebSocketHandler {
                 log.error("MimoAudioService is not injected yet, cannot start transcription. sessionId={}", sessionId);
                 return null;
             }
-            PipedInputStream audioInputStream = new PipedInputStream(64 * 1024);
-            PipedOutputStream audioOutputStream = new PipedOutputStream(audioInputStream);
             AtomicBoolean active = new AtomicBoolean(true);
-            TranscriptionSessionContext context = new TranscriptionSessionContext(audioInputStream, audioOutputStream, active);
-
-            CompletableFuture<String> future = mimoAudioService.realTimeAudioToText(audioInputStream, update ->
-                    {
-                        context.lastUpdate.set(update);
-                        sendMessage(session, createResponse("transcription", "Partial snapshot", update, true));
-                    }
-            );
-
-            future.whenComplete((finalResult, throwable) -> {
-                if (throwable != null && !isExpectedStopException(context, throwable)) {
-                    log.error("Transcription failed, userId={}, sessionId={}", userId, sessionId, throwable);
-                    sendMessage(session, createResponse("error", "Transcription failed: " + throwable.getMessage(), null));
-                } else {
-                    log.info("Transcription finished, userId={}, sessionId={}", userId, sessionId);
-                    if (finalResult != null) {
-                        sendMessage(session, createResponse("final", "Transcription completed",
-                                buildFinalUpdate(finalResult, context.lastUpdate.get()), true));
-                    }
-                }
-                cleanupTranscriptionContext(sessionId, context);
-            });
+            TranscriptionSessionContext context = new TranscriptionSessionContext(active);
+            scheduleTranscriptionFlush(session, userId, sessionId, context);
             return context;
         } catch (Exception ex) {
             log.error("Failed to create transcription session, userId={}, sessionId={}", userId, sessionId, ex);
@@ -312,40 +287,83 @@ public class AudioTranscriptionWebSocketHandler {
         }
         context.active.set(false);
         context.stopRequested.set(true);
-        closeQuietly(context.audioOutputStream);
+        cancelTranscriptionFlush(context);
         return true;
     }
 
     private void cleanupTranscriptionContext(String sessionId, TranscriptionSessionContext context) {
         TRANSCRIPTION_CONTEXTS.remove(sessionId, context);
         context.active.set(false);
-        closeQuietly(context.audioOutputStream);
-        closeQuietly(context.audioInputStream);
+        cancelTranscriptionFlush(context);
     }
 
-    private boolean isExpectedStopException(TranscriptionSessionContext context, Throwable throwable) {
-        if (!context.stopRequested.get()) {
-            return false;
-        }
-        Throwable cursor = throwable;
-        while (cursor != null) {
-            String msg = cursor.getMessage();
-            if (msg != null && (msg.contains("Pipe closed") || msg.contains("Stream closed"))) {
-                return true;
-            }
-            cursor = cursor.getCause();
-        }
-        return false;
-    }
-
-    private void closeQuietly(Closeable closeable) {
-        if (closeable == null) {
+    private void scheduleTranscriptionFlush(Session session,
+                                            String userId,
+                                            String sessionId,
+                                            TranscriptionSessionContext context) {
+        if (heartbeatExecutor == null) {
+            log.warn("scheduledExecutorService is not injected, skip transcription flush, sessionId={}", sessionId);
             return;
         }
-        try {
-            closeable.close();
-        } catch (IOException ignored) {
-            // no-op
+        ScheduledFuture<?> task = heartbeatExecutor.scheduleAtFixedRate(
+                () -> flushTranscriptionSnapshot(session, userId, sessionId, context, false),
+                TRANSCRIPTION_FLUSH_INTERVAL_MS,
+                TRANSCRIPTION_FLUSH_INTERVAL_MS,
+                TimeUnit.MILLISECONDS
+        );
+        context.flushTask.set(task);
+    }
+
+    private void flushTranscriptionSnapshot(Session session,
+                                            String userId,
+                                            String sessionId,
+                                            TranscriptionSessionContext context,
+                                            boolean finalize) {
+        if (context == null) {
+            return;
+        }
+        byte[] snapshot = context.snapshotAudio();
+        if (snapshot.length == 0) {
+            if (finalize) {
+                cleanupTranscriptionContext(sessionId, context);
+            }
+            return;
+        }
+        if (!context.inFlight.compareAndSet(false, true)) {
+            return;
+        }
+        CompletableFuture.supplyAsync(() -> mimoAudioService.streamAudioToText(snapshot, "audio/pcm", update -> {
+                    context.lastUpdate.set(update);
+                    sendMessage(session, createResponse("transcription", "Partial snapshot", update, true));
+                }))
+                .whenComplete((finalResult, throwable) -> {
+                    context.inFlight.set(false);
+                    if (throwable != null) {
+                        if (!context.stopRequested.get()) {
+                            log.error("Transcription failed, userId={}, sessionId={}", userId, sessionId, throwable);
+                            sendMessage(session, createResponse("error",
+                                    "Transcription failed: " + throwable.getMessage(), null));
+                        }
+                        if (finalize) {
+                            cleanupTranscriptionContext(sessionId, context);
+                        }
+                        return;
+                    }
+
+                    if (finalize && finalResult != null) {
+                        sendMessage(session, createResponse("final", "Transcription completed",
+                                buildFinalUpdate(finalResult, context.lastUpdate.get()), true));
+                    }
+                    if (finalize) {
+                        cleanupTranscriptionContext(sessionId, context);
+                    }
+                });
+    }
+
+    private void cancelTranscriptionFlush(TranscriptionSessionContext context) {
+        ScheduledFuture<?> task = context != null ? context.flushTask.getAndSet(null) : null;
+        if (task != null) {
+            task.cancel(true);
         }
     }
 
@@ -535,18 +553,23 @@ public class AudioTranscriptionWebSocketHandler {
     }
 
     private static class TranscriptionSessionContext {
-        private final PipedInputStream audioInputStream;
-        private final PipedOutputStream audioOutputStream;
         private final AtomicBoolean active;
         private final AtomicBoolean stopRequested = new AtomicBoolean(false);
         private final AtomicReference<RealtimeTranscriptionUpdate> lastUpdate = new AtomicReference<>();
+        private final AtomicReference<ScheduledFuture<?>> flushTask = new AtomicReference<>();
+        private final AtomicBoolean inFlight = new AtomicBoolean(false);
+        private final ByteArrayOutputStream audioBuffer = new ByteArrayOutputStream();
 
-        private TranscriptionSessionContext(PipedInputStream audioInputStream,
-                                            PipedOutputStream audioOutputStream,
-                                            AtomicBoolean active) {
-            this.audioInputStream = audioInputStream;
-            this.audioOutputStream = audioOutputStream;
+        private TranscriptionSessionContext(AtomicBoolean active) {
             this.active = active;
+        }
+
+        private synchronized void appendAudio(byte[] audioData) throws IOException {
+            audioBuffer.write(audioData);
+        }
+
+        private synchronized byte[] snapshotAudio() {
+            return audioBuffer.toByteArray();
         }
     }
 }

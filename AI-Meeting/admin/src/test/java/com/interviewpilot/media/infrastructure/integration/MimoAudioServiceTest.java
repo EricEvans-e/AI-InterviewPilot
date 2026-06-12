@@ -83,6 +83,49 @@ class MimoAudioServiceTest {
     }
 
     @Test
+    void parseAsrStreamText_ShouldReadDeltaStringContent() {
+        JSONObject chunk = JSONObject.parseObject("""
+                {
+                  "choices": [
+                    {
+                      "delta": {
+                        "content": "你好"
+                      }
+                    }
+                  ]
+                }
+                """);
+
+        assertEquals("你好", service.parseAsrStreamText(chunk));
+    }
+
+    @Test
+    void parseAsrStreamText_ShouldReadDeltaArrayTextBlocks() {
+        JSONObject chunk = JSONObject.parseObject("""
+                {
+                  "choices": [
+                    {
+                      "delta": {
+                        "content": [
+                          {
+                            "type": "output_text",
+                            "text": "杭州"
+                          },
+                          {
+                            "type": "output_text",
+                            "text": "科技"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """);
+
+        assertEquals("杭州科技", service.parseAsrStreamText(chunk));
+    }
+
+    @Test
     void buildTtsRequestBody_ShouldPutTargetTextInAssistantMessageAndAudioOptions() {
         LongTextTtsReqDTO request = new LongTextTtsReqDTO();
         request.setText("你好，欢迎参加模拟面试。");

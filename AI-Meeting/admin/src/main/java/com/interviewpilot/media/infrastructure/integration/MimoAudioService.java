@@ -17,12 +17,15 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okio.BufferedSource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +34,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
@@ -103,6 +107,43 @@ public class MimoAudioService {
         JSONObject body = buildAsrRequestBody(audioBytes, mimeType);
         JSONObject response = postChatCompletions(body);
         return parseAsrText(response);
+    }
+
+    public String streamAudioToText(byte[] audioBytes,
+                                    String mimeType,
+                                    AudioResultCallback callback) {
+        validateCredentials();
+        JSONObject body = buildAsrRequestBody(audioBytes, mimeType);
+        body.put("stream", true);
+        AtomicInteger revision = new AtomicInteger(0);
+        String mergedText = "";
+        try (Response response = postChatCompletionsStream(body)) {
+            if (!response.isSuccessful()) {
+                String responseBody = response.body() != null ? response.body().string() : "";
+                log.error("Mimo streaming ASR request failed, status={}, body={}", response.code(), responseBody);
+                throw new ServiceException("Mimo streaming ASR request failed, HTTP status: " + response.code());
+            }
+            if (response.body() == null) {
+                throw new ServiceException("Mimo streaming ASR response is empty");
+            }
+            BufferedSource source = response.body().source();
+            String line;
+            while ((line = source.readUtf8Line()) != null) {
+                String payload = extractStreamPayload(line);
+                if (payload == null) {
+                    continue;
+                }
+                if ("[DONE]".equals(payload)) {
+                    break;
+                }
+                mergedText = consumeAsrStreamChunk(payload, mergedText, callback, revision);
+            }
+        } catch (ServiceException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new ServiceException("Failed to call Mimo streaming ASR API: " + ex.getMessage());
+        }
+        return mergedText;
     }
 
     public LongTextTtsTaskRespDTO createTask(LongTextTtsReqDTO requestParam) {
@@ -187,6 +228,78 @@ public class MimoAudioService {
             return text.toString().trim();
         }
         return "";
+    }
+
+    public String parseAsrStreamText(JSONObject response) {
+        JSONArray choices = response != null ? response.getJSONArray("choices") : null;
+        if (choices == null || choices.isEmpty()) {
+            return "";
+        }
+        JSONObject choice = choices.getJSONObject(0);
+        JSONObject delta = choice != null ? choice.getJSONObject("delta") : null;
+        if (delta == null) {
+            return "";
+        }
+        Object content = delta.get("content");
+        if (content instanceof String text) {
+            return text.trim();
+        }
+        if (content instanceof JSONArray blocks) {
+            StringBuilder text = new StringBuilder();
+            for (Object blockObject : blocks) {
+                if (blockObject instanceof JSONObject block && StrUtil.isNotBlank(block.getString("text"))) {
+                    text.append(block.getString("text"));
+                }
+            }
+            return text.toString().trim();
+        }
+        return "";
+    }
+
+    private String consumeAsrStreamChunk(String payload,
+                                         String currentText,
+                                         AudioResultCallback callback,
+                                         AtomicInteger revision) {
+        String mergedText = currentText;
+        try (BufferedReader reader = new BufferedReader(new StringReader(payload))) {
+            String jsonLine;
+            while ((jsonLine = reader.readLine()) != null) {
+                String normalized = jsonLine.trim();
+                if (normalized.isEmpty()) {
+                    continue;
+                }
+                JSONObject chunk = JSONObject.parseObject(normalized);
+                String deltaText = parseAsrStreamText(chunk);
+                if (StrUtil.isBlank(deltaText)) {
+                    continue;
+                }
+                String next = MimoStreamingTranscriptAccumulator.merge(mergedText, deltaText);
+                if (next.equals(mergedText)) {
+                    continue;
+                }
+                mergedText = next;
+                if (callback != null) {
+                    callback.onResult(new RealtimeTranscriptionUpdate(
+                            mergedText,
+                            mergedText,
+                            "",
+                            mergedText,
+                            revision.incrementAndGet(),
+                            "partial",
+                            0,
+                            deltaText,
+                            null,
+                            null,
+                            null,
+                            null,
+                            false
+                    ));
+                }
+            }
+        } catch (IOException ex) {
+            throw new ServiceException("Failed to parse Mimo streaming ASR payload: " + ex.getMessage());
+        }
+        return mergedText;
     }
 
     public JSONObject buildTtsRequestBody(LongTextTtsReqDTO requestParam) {
@@ -281,6 +394,38 @@ public class MimoAudioService {
         } catch (Exception ex) {
             throw new ServiceException("Failed to call Mimo audio API: " + ex.getMessage());
         }
+    }
+
+    private Response postChatCompletionsStream(JSONObject body) throws IOException {
+        String apiKey = resolveApiKey();
+        String baseUrl = StrUtil.blankToDefault(properties.getOpenaiBaseUrl(), MimoProperties.DEFAULT_OPENAI_BASE_URL);
+        String url = trimTrailingSlash(baseUrl) + "/chat/completions";
+        Request request = new Request.Builder()
+                .url(url)
+                .post(RequestBody.create(body.toJSONString(), JSON_MEDIA_TYPE))
+                .addHeader("api-key", apiKey)
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "text/event-stream")
+                .build();
+        return HTTP_CLIENT.newCall(request).execute();
+    }
+
+    private String extractStreamPayload(String line) {
+        if (line == null) {
+            return null;
+        }
+        String normalized = line.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        if (normalized.startsWith("data:")) {
+            return normalized.substring("data:".length()).trim();
+        }
+        if (normalized.startsWith("{")) {
+            return normalized;
+        }
+        return null;
     }
 
     private String resolveApiKey() {
