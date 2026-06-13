@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import InterviewHeader from "@/components/interview/InterviewHeader";
 
 describe("InterviewHeader", () => {
-  it("uses 面试间 in the room title", () => {
+  it("uses 面试间 as the room title", () => {
     render(
       <InterviewHeader
         isReady
@@ -21,7 +21,7 @@ describe("InterviewHeader", () => {
       />,
     );
 
-    expect(screen.getByText("Java 高级开发工程师面试间")).toBeTruthy();
+    expect(screen.getByText("面试间")).toBeTruthy();
   });
 
   it("shows self-introduction as the current stage for the first opening question", () => {
